@@ -1,0 +1,88 @@
+<topbar title="首页" />
+<scroll-view scroll-y class="page home-page">
+  <view class="notice">《德友酒吧》欢迎您！ 每晚7:30单桌SNG快速赛开赛。</view>
+
+  <view class="hero">
+    <image class="hero-img" src="/assets/hero-bar.svg" mode="aspectFill" />
+    <view class="hero-copy">
+      <view class="hero-title">德友酒吧</view>
+      <view class="hero-subtitle">南京专业扑克主题酒吧</view>
+    </view>
+  </view>
+
+  <view class="store card">
+    <image class="store-thumb" src="/assets/product-special.svg" mode="aspectFill" />
+    <view class="store-main">
+      <view class="store-top">
+        <text class="store-name">{{store.name}}</text>
+        <text class="store-status">{{store.status}}</text>
+      </view>
+      <view class="store-bottom">
+        <view class="store-address">{{store.address}} <text class="link" bindtap="copyAddress">[点击导航]</text></view>
+        <view class="store-side">
+          <view class="side-label"><text class="side-symbol">⌖</text>位置</view>
+          <view class="side-scan">扫码</view>
+        </view>
+      </view>
+    </view>
+    <view class="store-arrow" bindtap="switchStore">›</view>
+  </view>
+
+  <view class="quick card">
+    <button class="quick-item" bindtap="scanOrder">
+      <view class="quick-icon icon-food">
+        <view class="food-knob"></view>
+        <view class="food-dome"></view>
+        <view class="food-line"></view>
+      </view>
+      <text>扫码点餐</text>
+    </button>
+    <button class="quick-item" data-url="/pages/activity/activity" bindtap="go">
+      <view class="quick-icon icon-ticket">
+        <view class="ticket-pin left"></view>
+        <view class="ticket-pin right"></view>
+        <view class="ticket-line"></view>
+        <view class="ticket-line short"></view>
+        <view class="ticket-line"></view>
+      </view>
+      <text>活动报名</text>
+    </button>
+    <button class="quick-item" bindtap="showPartner">
+      <view class="quick-icon icon-partner">
+        <view class="partner-head">
+          <view class="partner-eye"></view>
+          <view class="partner-eye"></view>
+        </view>
+        <view class="partner-body"></view>
+      </view>
+      <text>共享合伙人</text>
+    </button>
+    <button class="quick-item" bindtap="showCoupon">
+      <view class="quick-icon icon-ticket">
+        <view class="ticket-pin left"></view>
+        <view class="ticket-pin right"></view>
+        <view class="ticket-line"></view>
+        <view class="ticket-line short"></view>
+        <view class="ticket-line"></view>
+      </view>
+      <text>优惠券</text>
+    </button>
+  </view>
+
+  <view class="section-title">桌游套餐</view>
+  <view class="product-list">
+    <view class="product-card card" wx:for="{{featured}}" wx:key="id">
+      <image class="product-img" src="{{item.image}}" mode="aspectFill" />
+      <view class="product-info">
+        <view class="product-name">{{item.name}}</view>
+        <view class="product-desc">{{item.desc}}</view>
+        <view class="product-price">¥{{item.price}}.00/<text>{{item.unit}}</text></view>
+      </view>
+      <view class="add-btn" data-id="{{item.id}}" bindtap="addCart">
+        <view class="plus-line plus-h"></view>
+        <view class="plus-line plus-v"></view>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+<main-tabbar active="home" />

@@ -1,0 +1,22 @@
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="d1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1A120E"/>
+      <stop offset="1" stop-color="#090A0B"/>
+    </linearGradient>
+    <linearGradient id="d2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B782F5"/>
+      <stop offset="1" stop-color="#5A2F98"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" rx="18" fill="url(#d1)"/>
+  <ellipse cx="150" cy="236" rx="84" ry="20" fill="#0F0F10"/>
+  <path d="M138 70H162L153 164H147L138 70Z" fill="#E9E9E9"/>
+  <path d="M132 164H168V176C168 183.732 161.732 190 154 190H146C138.268 190 132 183.732 132 176V164Z" fill="#E9E9E9"/>
+  <path d="M150 90L168 132H132L150 90Z" fill="url(#d2)"/>
+  <path d="M137 121C144 113 156 113 163 121C157 129 143 129 137 121Z" fill="#E6D8FF" opacity="0.55"/>
+  <circle cx="214" cy="82" r="10" fill="#F5D57A"/>
+  <circle cx="223" cy="92" r="10" fill="#F5D57A" opacity="0.8"/>
+  <rect x="42" y="220" width="216" height="14" rx="7" fill="#7D5322"/>
+  <text x="150" y="56" text-anchor="middle" font-size="22" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#FFFFFF">鸡尾酒饮品</text>
+</svg>

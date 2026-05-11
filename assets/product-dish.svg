@@ -1,0 +1,18 @@
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="f1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#211611"/>
+      <stop offset="1" stop-color="#0D1012"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" rx="18" fill="url(#f1)"/>
+  <ellipse cx="150" cy="176" rx="98" ry="54" fill="#EFECE0"/>
+  <ellipse cx="150" cy="176" rx="72" ry="34" fill="#F7F4EA"/>
+  <circle cx="120" cy="160" r="16" fill="#D94E48"/>
+  <circle cx="150" cy="170" r="18" fill="#D94E48"/>
+  <circle cx="180" cy="160" r="16" fill="#D94E48"/>
+  <path d="M94 126C124 96 176 96 206 126C192 143 108 143 94 126Z" fill="#B97A2F"/>
+  <path d="M120 114L138 144L116 140L120 114Z" fill="#FFDA84"/>
+  <path d="M182 114L164 144L186 140L182 114Z" fill="#FFDA84"/>
+  <text x="150" y="58" text-anchor="middle" font-size="22" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#FFFFFF">热菜下酒</text>
+</svg>

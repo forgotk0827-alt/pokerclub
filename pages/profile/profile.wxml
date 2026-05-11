@@ -1,0 +1,93 @@
+<topbar title="我的信息" />
+<scroll-view scroll-y class="page profile-page">
+  <view class="profile-hero">
+    <view class="avatar">{{member.avatarText}}</view>
+    <view class="profile-main">
+      <view class="nickname">{{member.nickname}}</view>
+      <view class="badge">{{member.level}}</view>
+    </view>
+    <view class="qr-box">
+      <view class="qr-code"></view>
+      <text class="qr-label">会员二维码</text>
+    </view>
+  </view>
+
+  <view class="vip-banner card">
+    <view class="vip-text">开通会员享专属特权</view>
+    <button class="vip-btn" bindtap="openVip">立即开通</button>
+  </view>
+
+  <view class="stats card">
+    <view class="stat">
+      <text class="stat-num">{{member.balance}}</text>
+      <text class="stat-label">储值卡余额</text>
+    </view>
+    <view class="split"></view>
+    <view class="stat">
+      <text class="stat-num">{{member.points}}</text>
+      <text class="stat-label">我的积分</text>
+    </view>
+  </view>
+
+  <view class="grid-row">
+    <view class="mini-card gem-card">
+      <view class="mini-title">我的宝石</view>
+      <view class="mini-num">{{member.gems}}</view>
+    </view>
+    <view class="mini-card invite-card">
+      <view class="mini-title">中扑院赛事邀请函碎片</view>
+      <view class="mini-num">{{member.invitePieces}}</view>
+    </view>
+  </view>
+
+  <view class="assistant card">
+    <view>
+      <view class="assistant-title">{{member.consultant}}</view>
+      <view class="assistant-desc">有任何问题随时联系我哦！</view>
+    </view>
+    <button class="ghost-btn mini-action" bindtap="contact">联系顾问</button>
+  </view>
+
+  <view class="menu card">
+    <view class="menu-title">我的</view>
+    <view class="menu-grid">
+      <button class="menu-item" bindtap="goSignups">
+        <text class="menu-icon">◫</text>
+        <text>我的报名</text>
+      </button>
+      <button class="menu-item" bindtap="goPoints">
+        <text class="menu-icon">◍</text>
+        <text>我的积分</text>
+      </button>
+      <button class="menu-item" bindtap="goOrders">
+        <text class="menu-icon">▣</text>
+        <text>我的订单</text>
+      </button>
+      <button class="menu-item" bindtap="goFavorites">
+        <text class="menu-icon">⚑</text>
+        <text>我的收藏</text>
+      </button>
+    </view>
+  </view>
+
+  <view class="records-title">最近记录</view>
+  <view class="record card" wx:for="{{signups}}" wx:key="id">
+    <view>
+      <view class="record-name">{{item.title}}</view>
+      <view class="record-sub">{{item.date}}</view>
+    </view>
+    <view class="record-status">{{item.status}}</view>
+  </view>
+  <view wx:if="{{!signups.length}}" class="empty-tip">暂无报名记录</view>
+
+  <view class="records-title">订单概览</view>
+  <view class="record card" wx:for="{{orders}}" wx:key="id">
+    <view>
+      <view class="record-name">{{item.id}}</view>
+      <view class="record-sub">{{item.storeName}} · {{item.createdAt}}</view>
+    </view>
+    <view class="record-status">{{item.status}}</view>
+  </view>
+  <view wx:if="{{!orders.length}}" class="empty-tip">暂无订单记录</view>
+</scroll-view>
+<main-tabbar active="profile" />

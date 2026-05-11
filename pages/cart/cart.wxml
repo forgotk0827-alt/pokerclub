@@ -1,0 +1,40 @@
+<topbar title="购物车" />
+<view class="page cart-page">
+  <view class="cart-head">
+    <text class="cart-count">已点{{summary.count}}份</text>
+    <button class="clear-btn" bindtap="clearCart">清空</button>
+  </view>
+
+  <scroll-view scroll-y class="cart-list">
+    <view wx:if="{{cart.length}}">
+      <view class="cart-item" wx:for="{{cart}}" wx:key="id">
+        <image class="cart-img" src="{{item.image}}" mode="aspectFill" />
+        <view class="cart-info">
+          <view class="cart-name">{{item.name}}</view>
+          <view class="cart-desc">{{item.desc}}</view>
+          <view class="cart-meta">
+            <text class="cart-price">¥{{item.price}}.00</text>
+            <text class="cart-unit">x{{item.count}}</text>
+          </view>
+        </view>
+        <view class="stepper">
+          <button class="step-btn" data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">-</button>
+          <text class="step-num">{{item.count}}</text>
+          <button class="step-btn" data-id="{{item.id}}" data-delta="1" bindtap="changeCount">+</button>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="empty-state">
+      <text class="empty-text">暂无商品数据</text>
+    </view>
+  </scroll-view>
+
+  <view class="checkout-bar">
+    <view class="pay-info">
+      <text>应付:</text>
+      <text class="pay-amount">¥{{summary.total}}元</text>
+    </view>
+    <button class="checkout-btn" bindtap="checkout">立即下单</button>
+  </view>
+</view>
+<main-tabbar active="cart" />

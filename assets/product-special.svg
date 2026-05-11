@@ -1,0 +1,19 @@
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="s1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101B2B"/>
+      <stop offset="1" stop-color="#07111C"/>
+    </linearGradient>
+    <linearGradient id="s2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2D27B"/>
+      <stop offset="1" stop-color="#B9842E"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" rx="18" fill="url(#s1)"/>
+  <circle cx="150" cy="150" r="86" fill="#0D1A2A" stroke="url(#s2)" stroke-width="6"/>
+  <circle cx="150" cy="150" r="58" fill="#10263D" stroke="#E5C77C" stroke-width="4"/>
+  <text x="150" y="136" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">ROYAL</text>
+  <text x="150" y="160" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">DEYOU</text>
+  <text x="150" y="184" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">SPECIAL</text>
+  <path d="M60 224L240 224" stroke="url(#s2)" stroke-width="6" stroke-linecap="round"/>
+</svg>

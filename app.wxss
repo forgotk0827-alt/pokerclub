@@ -1,0 +1,93 @@
+page {
+  min-height: 100%;
+  background: #050807;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+}
+
+view,
+text,
+scroll-view,
+button,
+input {
+  box-sizing: border-box;
+}
+
+button {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1;
+  color: inherit;
+  font: inherit;
+}
+
+button::after {
+  border: 0;
+}
+
+.page {
+  min-height: 100vh;
+  padding-bottom: 150rpx;
+  background: #050807;
+}
+
+.section-title {
+  padding: 30rpx 22rpx 20rpx;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.card {
+  margin: 0 22rpx 24rpx;
+  border-radius: 8rpx;
+  background: #242526;
+  overflow: hidden;
+}
+
+.muted {
+  color: #a6a6a6;
+}
+
+.price {
+  color: #ef5b58;
+  font-weight: 900;
+}
+
+.accent {
+  color: #ef5b58;
+}
+
+.primary-btn {
+  min-height: 74rpx;
+  padding: 0 34rpx;
+  border-radius: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e45855;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.ghost-btn {
+  min-height: 64rpx;
+  padding: 0 30rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.26);
+  border-radius: 34rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.line-clamp {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

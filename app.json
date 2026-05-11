@@ -1,0 +1,20 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/menu/menu",
+    "pages/activity/activity",
+    "pages/cart/cart",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundTextStyle": "light",
+    "backgroundColor": "#050807"
+  },
+  "usingComponents": {
+    "topbar": "/components/topbar/topbar",
+    "main-tabbar": "/components/tabbar/tabbar"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

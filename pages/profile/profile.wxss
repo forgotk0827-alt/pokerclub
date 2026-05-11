@@ -1,0 +1,268 @@
+.profile-page {
+  padding-bottom: 150rpx;
+  background: #050807;
+}
+
+.profile-hero {
+  min-height: 360rpx;
+  padding: 38rpx 22rpx 34rpx;
+  display: grid;
+  grid-template-columns: 170rpx 1fr 150rpx;
+  gap: 22rpx;
+  align-items: center;
+  background: #242526;
+}
+
+.avatar {
+  width: 170rpx;
+  height: 170rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4rpx solid #fff;
+  background: #93a8e6;
+  color: #fff;
+  font-size: 76rpx;
+  font-weight: 700;
+}
+
+.profile-main {
+  min-width: 0;
+}
+
+.nickname {
+  color: #fff;
+  font-size: 54rpx;
+  line-height: 68rpx;
+  font-weight: 700;
+}
+
+.badge {
+  margin-top: 18rpx;
+  width: 164rpx;
+  height: 50rpx;
+  border-radius: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffb100;
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.qr-box {
+  text-align: center;
+}
+
+.qr-code {
+  width: 128rpx;
+  height: 128rpx;
+  margin: 0 auto;
+  border-radius: 8rpx;
+  background:
+    linear-gradient(90deg, #fff 10%, transparent 10%, transparent 20%, #fff 20%, #fff 30%, transparent 30%, transparent 40%, #fff 40%, #fff 50%, transparent 50%, transparent 60%, #fff 60%, #fff 70%, transparent 70%, transparent 80%, #fff 80%),
+    linear-gradient(#fff 10%, transparent 10%, transparent 20%, #fff 20%, #fff 30%, transparent 30%, transparent 40%, #fff 40%, #fff 50%, transparent 50%, transparent 60%, #fff 60%, #fff 70%, transparent 70%, transparent 80%, #fff 80%),
+    #111;
+  background-size: 100% 100%;
+}
+
+.qr-label {
+  display: block;
+  margin-top: 10rpx;
+  color: #ffb100;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.vip-banner {
+  margin-top: 22rpx;
+  min-height: 130rpx;
+  padding: 0 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, #ff6286, #f7af87);
+}
+
+.vip-text {
+  color: #fff;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.vip-btn {
+  min-width: 180rpx;
+  height: 70rpx;
+  border-radius: 36rpx;
+  background: #fff;
+  color: #e25754;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.stats {
+  height: 150rpx;
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  color: #242526;
+}
+
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.split {
+  width: 1rpx;
+  background: #ececec;
+}
+
+.stat-num {
+  font-size: 50rpx;
+  font-weight: 900;
+}
+
+.stat-label {
+  margin-top: 10rpx;
+  color: #9a9a9a;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.grid-row {
+  margin: 0 22rpx 24rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.mini-card {
+  min-height: 194rpx;
+  padding: 26rpx 22rpx;
+  border-radius: 8rpx;
+  background: #fff;
+  color: #242526;
+}
+
+.gem-card {
+  border-left: 6rpx solid #6f53ff;
+}
+
+.invite-card {
+  border: 6rpx solid #f89b4e;
+  background: #20395b;
+  color: #fff;
+}
+
+.mini-title {
+  font-size: 32rpx;
+  line-height: 42rpx;
+  font-weight: 800;
+}
+
+.mini-num {
+  margin-top: 18rpx;
+  font-size: 60rpx;
+  font-weight: 900;
+}
+
+.assistant {
+  min-height: 124rpx;
+  padding: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  color: #242526;
+}
+
+.assistant-title {
+  font-size: 34rpx;
+  line-height: 42rpx;
+  font-weight: 800;
+}
+
+.assistant-desc {
+  margin-top: 8rpx;
+  color: #7f7f7f;
+  font-size: 26rpx;
+}
+
+.mini-action {
+  color: #e25754;
+}
+
+.menu {
+  padding: 24rpx 0 18rpx;
+  background: #fff;
+  color: #242526;
+}
+
+.menu-title,
+.records-title {
+  padding: 0 26rpx 18rpx;
+  color: #242526;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  color: #242526;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.menu-icon {
+  font-size: 58rpx;
+  line-height: 58rpx;
+}
+
+.record {
+  min-height: 106rpx;
+  padding: 20rpx 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  color: #242526;
+}
+
+.record-name {
+  font-size: 28rpx;
+  line-height: 36rpx;
+  font-weight: 800;
+}
+
+.record-sub {
+  margin-top: 8rpx;
+  color: #8f8f8f;
+  font-size: 24rpx;
+}
+
+.record-status {
+  color: #ef5b58;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.empty-tip {
+  padding: 10rpx 26rpx 20rpx;
+  color: #a6a6a6;
+  font-size: 24rpx;
+}

@@ -1,0 +1,68 @@
+<topbar title="活动报名" />
+<view class="page activity-page">
+  <view class="date-band">
+    <button wx:for="{{dates}}" wx:key="key" class="date-item {{activeDay === item.key ? 'date-active' : ''}}" data-key="{{item.key}}" bindtap="selectDay">
+      <text>{{item.date}}</text>
+      <text class="date-big">{{item.label}}</text>
+    </button>
+  </view>
+
+  <view class="chips">
+    <button wx:for="{{types}}" wx:key="name" class="chip {{activeType === item.name ? 'chip-active' : ''}}" data-name="{{item.name}}" bindtap="selectType">{{item.name}}</button>
+  </view>
+
+  <view class="activity-tools">
+    <button class="tool-card" bindtap="showPartner">
+      <text class="tool-icon">◉</text>
+      <text>共享合伙人</text>
+    </button>
+    <button class="tool-card" bindtap="showCoupon">
+      <text class="tool-icon">≡</text>
+      <text>优惠券</text>
+    </button>
+  </view>
+
+  <scroll-view scroll-y class="activity-list">
+    <view class="activity-card" wx:for="{{list}}" wx:key="id">
+      <view class="activity-head">
+        <view class="activity-title">{{item.title}}</view>
+        <view class="activity-status">{{item.status === 'open' ? '报名中' : '活动已结束'}}</view>
+      </view>
+      <view class="activity-body">
+        <image wx:if="{{item.image}}" class="activity-img" src="{{item.image}}" mode="aspectFill" />
+        <view class="activity-meta">
+          <view class="meta-line"><text class="meta-icon">◷</text><text>{{item.date}}</text></view>
+          <view class="meta-line"><text class="meta-icon">⌖</text><text class="line-clamp">{{item.location}}</text></view>
+          <view class="meta-line muted"><text class="meta-icon">◷</text><text>{{item.deadline}}</text></view>
+        </view>
+        <view class="activity-price">¥{{item.price}}.00</view>
+      </view>
+      <view class="join-row">
+        <view class="avatars">
+          <view wx:for="{{avatarList}}" wx:key="*this" class="avatar">{{item}}</view>
+        </view>
+        <view class="quota"><text>{{item.joined}}</text>/{{item.quota}}</view>
+      </view>
+      <view wx:if="{{item.status !== 'open'}}" class="ended-mark">已过期</view>
+      <button class="join-btn {{item.status !== 'open' ? 'join-disabled' : ''}}" data-id="{{item.id}}" bindtap="openSignup">
+        {{item.status === 'open' ? '立即报名' : '已结束'}}
+      </button>
+    </view>
+    <view wx:if="{{!list.length}}" class="empty">暂无活动</view>
+  </scroll-view>
+
+  <view wx:if="{{modalVisible}}" class="modal-mask" bindtap="closeModal">
+    <view class="signup-panel" catchtap="noop">
+      <view class="panel-title">{{selected.title}}</view>
+      <view class="panel-desc">报名需购买“{{selected.productName}}”，支付完成后计入当前门店报名记录。</view>
+      <view class="panel-row"><text>活动时间</text><text>{{selected.date}}</text></view>
+      <view class="panel-row"><text>报名商品</text><text class="accent">¥{{selected.price}}.00</text></view>
+      <view class="panel-row"><text>活动说明</text><text>名额有限，取消与退款规则由后台配置。</text></view>
+      <view class="panel-actions">
+        <button class="ghost-btn" bindtap="closeModal">取消</button>
+        <button class="primary-btn" bindtap="confirmSignup">购买并报名</button>
+      </view>
+    </view>
+  </view>
+</view>
+<main-tabbar active="activity" />

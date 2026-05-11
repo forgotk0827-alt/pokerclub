@@ -1,0 +1,152 @@
+.cart-page {
+  padding-bottom: 150rpx;
+}
+
+.cart-head {
+  height: 78rpx;
+  padding: 0 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #efefef;
+  color: #666;
+}
+
+.cart-count {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.clear-btn {
+  color: #666;
+  font-size: 28rpx;
+}
+
+.cart-list {
+  height: calc(100vh - 358rpx);
+  background: #050807;
+}
+
+.cart-item {
+  margin: 20rpx 22rpx 0;
+  padding: 22rpx;
+  display: flex;
+  align-items: center;
+  border-radius: 8rpx;
+  background: #242526;
+}
+
+.cart-img {
+  width: 128rpx;
+  height: 128rpx;
+  background: #111;
+}
+
+.cart-info {
+  min-width: 0;
+  flex: 1;
+  padding: 0 18rpx;
+}
+
+.cart-name {
+  color: #fff;
+  font-size: 28rpx;
+  line-height: 36rpx;
+  font-weight: 900;
+}
+
+.cart-desc {
+  margin-top: 8rpx;
+  color: #a2a2a2;
+  font-size: 24rpx;
+  line-height: 32rpx;
+}
+
+.cart-meta {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.cart-price {
+  color: #ef5b58;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.cart-unit {
+  color: #bababa;
+  font-size: 24rpx;
+}
+
+.stepper {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.step-btn {
+  width: 46rpx;
+  height: 46rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef5b58;
+  color: #111;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.step-num {
+  width: 36rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.empty-state {
+  padding-top: 220rpx;
+  text-align: center;
+}
+
+.empty-text {
+  color: #fff;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.checkout-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 124rpx;
+  height: 104rpx;
+  display: flex;
+  align-items: center;
+  background: #242526;
+}
+
+.pay-info {
+  flex: 1;
+  padding-left: 44rpx;
+  color: #fff;
+  font-size: 31rpx;
+  font-weight: 900;
+}
+
+.pay-amount {
+  color: #ef5b58;
+  margin-left: 10rpx;
+}
+
+.checkout-btn {
+  width: 248rpx;
+  height: 104rpx;
+  background: #e45855;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 900;
+}
