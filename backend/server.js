@@ -1331,119 +1331,101 @@ function postJson(url, body) {
   })
 }
 
+function defaultPrintTemplate() {
+  return [
+    '<CB>破壳派酒吧</CB>',
+    '<C>{{storeName}}</C>',
+    '------------------------------',
+    '订单号：{{orderId}}',
+    '门店：{{storeName}}',
+    '时间：{{createdAt}}',
+    '类型：{{mode}}',
+    '桌号：{{tableName}}',
+    '------------------------------',
+    '<B>商品明细</B>',
+    '{{items}}',
+    '------------------------------',
+    '<RIGHT>合计：{{total}}</RIGHT>',
+    '状态：{{status}}',
+    '',
+    '<C>谢谢惠顾，欢迎再来</C>'
+  ].join('\n')
+}
+
+function legacyPrintTemplate() {
+  return '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
+}
+
+function normalizePrintTemplate(template) {
+  const value = String(template || '').trim()
+  if (!value || value === legacyPrintTemplate()) return defaultPrintTemplate()
+  return value
+}
+
 function buildReceiptContent(order, store) {
+  const template = normalizePrintTemplate(db && db.globalSettings ? db.globalSettings.printTemplate : '')
+  return renderReceiptTemplate(template, buildReceiptContext(order, store))
+}
+
+function buildReceiptContext(order, store) {
   const items = Array.isArray(order.items) ? order.items : []
   const mode = order.mode || '堂食'
   const tableName = order.tableName || (order.tableNo ? `${order.tableNo}号桌` : '未指定')
-  const lines = [
-    '<CB>破壳派酒吧</CB>',
-    '<BR>',
-    `<C>${escapeReceipt(store.shortName || store.name || order.storeName || '')}</C>`,
-    '<BR>',
-    '------------------------------',
-    '<BR>',
-    `订单号：${escapeReceipt(order.id)}`,
-    '<BR>',
-    `门店：${escapeReceipt(order.storeName || store.shortName || store.name || '')}`,
-    '<BR>',
-    `时间：${escapeReceipt(order.createdAt || now())}`,
-    '<BR>',
-    `类型：${escapeReceipt(mode)}`,
-    '<BR>',
-    `桌号：${escapeReceipt(tableName)}`,
-    '<BR>',
-    '------------------------------',
-    '<BR>',
-    '<B>商品明细</B>',
-    '<BR>'
-  ]
+  const storeName = order.storeName || store.shortName || store.name || ''
+  const itemLines = []
   items.forEach((item) => {
     const count = Number(item.count || 0)
     const price = Number(item.price || 0)
     const subtotal = price * count
-    lines.push(`${escapeReceipt(item.name || '')}`)
-    lines.push('<BR>')
-    lines.push(`  ${money(price)} x ${count}    ${money(subtotal)}`)
-    lines.push('<BR>')
+    itemLines.push(`${escapeReceipt(item.name || '')}`)
+    itemLines.push(`  ${money(price)} x ${count}    ${money(subtotal)}`)
   })
-  lines.push('------------------------------')
-  lines.push('<BR>')
-  lines.push(`<RIGHT>合计：${money(order.total)}</RIGHT>`)
-  lines.push('<BR>')
-  lines.push(`状态：${escapeReceipt(order.status || '')}`)
-  lines.push('<BR>')
-  lines.push('<BR>')
-  lines.push('<C>谢谢惠顾，欢迎再来</C>')
-  lines.push('<BR><BR>')
-  return lines.join('')
+  const itemCount = items.reduce((sum, item) => sum + Number(item.count || 0), 0)
+  return {
+    barName: '破壳派酒吧',
+    storeName,
+    orderId: order.id || '',
+    orderNo: order.id || '',
+    createdAt: order.createdAt || now(),
+    time: order.createdAt || now(),
+    printTime: now(),
+    mode,
+    type: mode,
+    tableName,
+    tableNo: order.tableNo || '',
+    memberName: order.nickname || order.memberName || '',
+    memberId: order.memberId || '',
+    remark: order.remark || order.note || '',
+    note: order.note || order.remark || '',
+    status: order.status || '',
+    total: money(order.total),
+    totalAmount: Number(order.total || 0).toFixed(2),
+    itemCount,
+    items: itemLines.join('\n'),
+    itemRows: itemLines.join('\n')
+  }
+}
+
+function renderReceiptTemplate(template, context) {
+  const text = normalizePrintTemplate(template).replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+    if (!Object.prototype.hasOwnProperty.call(context, key)) return ''
+    return context[key]
+  })
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n/g, '<BR>')
+    .replace(/(<BR>){3,}/g, '<BR><BR>')
 }
 
 function escapeReceipt(value) {
-  return String(value === undefined || value === null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '＜')
-    .replace(/>/g, '＞')
-}
-
-function money(value) {
-  return `¥${Number(value || 0).toFixed(2)}`
-}
-
-buildReceiptContent = function buildReceiptContent(order, store) {
-  const items = Array.isArray(order.items) ? order.items : []
-  const mode = order.mode || '堂食'
-  const tableName = order.tableName || (order.tableNo ? `${order.tableNo}号桌` : '未指定')
-  const lines = [
-    '<CB>破壳派酒吧</CB>',
-    '<BR>',
-    `<C>${escapeReceipt(store.shortName || store.name || order.storeName || '')}</C>`,
-    '<BR>',
-    '------------------------------',
-    '<BR>',
-    `订单号：${escapeReceipt(order.id)}`,
-    '<BR>',
-    `门店：${escapeReceipt(order.storeName || store.shortName || store.name || '')}`,
-    '<BR>',
-    `时间：${escapeReceipt(order.createdAt || now())}`,
-    '<BR>',
-    `类型：${escapeReceipt(mode)}`,
-    '<BR>',
-    `桌号：${escapeReceipt(tableName)}`,
-    '<BR>',
-    '------------------------------',
-    '<BR>',
-    '<B>商品明细</B>',
-    '<BR>'
-  ]
-  items.forEach((item) => {
-    const count = Number(item.count || 0)
-    const price = Number(item.price || 0)
-    const subtotal = price * count
-    lines.push(`${escapeReceipt(item.name || '')}`)
-    lines.push('<BR>')
-    lines.push(`  ${money(price)} x ${count}    ${money(subtotal)}`)
-    lines.push('<BR>')
-  })
-  lines.push('------------------------------')
-  lines.push('<BR>')
-  lines.push(`<RIGHT>合计：${money(order.total)}</RIGHT>`)
-  lines.push('<BR>')
-  lines.push(`状态：${escapeReceipt(order.status || '')}`)
-  lines.push('<BR>')
-  lines.push('<BR>')
-  lines.push('<C>谢谢惠顾，欢迎再来</C>')
-  lines.push('<BR><BR>')
-  return lines.join('')
-}
-
-escapeReceipt = function escapeReceipt(value) {
   return String(value === undefined || value === null ? '' : value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '《')
     .replace(/>/g, '》')
 }
 
-money = function money(value) {
+function money(value) {
   return `¥${Number(value || 0).toFixed(2)}`
 }
 
@@ -1644,7 +1626,7 @@ function defaultGlobalSettings() {
   return {
     videoTitle: '门店视频专区',
     videoUrl: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-    printTemplate: '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}',
+    printTemplate: defaultPrintTemplate(),
     leaderboardRule: '按积分从高到低排序，商家可手动微调排名。',
     newOrderReminder: 'voice,vibrate,modal',
     newOrderReminderText: '\u6536\u5230{count}\u4e2a\u65b0\u8ba2\u5355\uff0c\u8bf7\u53ca\u65f6\u5904\u7406',
@@ -1661,6 +1643,7 @@ function defaultGlobalSettings() {
 function normalizeGlobalSettings(settings) {
   const defaults = defaultGlobalSettings()
   const next = Object.assign({}, defaults, settings || {})
+  next.printTemplate = normalizePrintTemplate(next.printTemplate)
   if (!String(next.newOrderReminderText || '').trim() || String(next.newOrderReminderText).indexOf('??') > -1) {
     next.newOrderReminderText = defaults.newOrderReminderText
   }

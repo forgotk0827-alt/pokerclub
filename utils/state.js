@@ -114,11 +114,42 @@ function defaultRechargeSettings() {
   }
 }
 
+function defaultPrintTemplate() {
+  return [
+    '<CB>破壳派酒吧</CB>',
+    '<C>{{storeName}}</C>',
+    '------------------------------',
+    '订单号：{{orderId}}',
+    '门店：{{storeName}}',
+    '时间：{{createdAt}}',
+    '类型：{{mode}}',
+    '桌号：{{tableName}}',
+    '------------------------------',
+    '<B>商品明细</B>',
+    '{{items}}',
+    '------------------------------',
+    '<RIGHT>合计：{{total}}</RIGHT>',
+    '状态：{{status}}',
+    '',
+    '<C>谢谢惠顾，欢迎再来</C>'
+  ].join('\n')
+}
+
+function legacyPrintTemplate() {
+  return '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
+}
+
+function normalizePrintTemplate(template) {
+  const value = String(template || '').trim()
+  if (!value || value === legacyPrintTemplate()) return defaultPrintTemplate()
+  return value
+}
+
 function defaultGlobalSettings() {
   return {
     videoTitle: '门店视频专区',
     videoUrl: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-    printTemplate: '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}',
+    printTemplate: defaultPrintTemplate(),
     leaderboardRule: '按积分从高到低排序，商家可手动微调排名。',
     newOrderReminder: 'voice,vibrate,modal',
     newOrderReminderText: '\u6536\u5230{count}\u4e2a\u65b0\u8ba2\u5355\uff0c\u8bf7\u53ca\u65f6\u5904\u7406',
@@ -135,6 +166,7 @@ function defaultGlobalSettings() {
 function normalizeGlobalSettings(settings) {
   const defaults = defaultGlobalSettings()
   const next = Object.assign({}, defaults, settings || {})
+  next.printTemplate = normalizePrintTemplate(next.printTemplate)
   if (!String(next.newOrderReminderText || '').trim() || String(next.newOrderReminderText).indexOf('??') > -1) {
     next.newOrderReminderText = defaults.newOrderReminderText
   }

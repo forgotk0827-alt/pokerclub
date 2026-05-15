@@ -400,6 +400,10 @@ input {
   line-height: 36rpx;
 }
 
+.receipt-template-input {
+  min-height: 360rpx;
+}
+
 .media-row {
   margin-top: 12rpx;
   display: grid;

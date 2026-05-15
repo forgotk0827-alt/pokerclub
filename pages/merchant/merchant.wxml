@@ -333,7 +333,8 @@
         <view class="ghost-action" bindtap="chooseGlobalVideo">上传门店视频</view>
         <video wx:if="{{globalSettings.videoUrl}}" class="video-preview" src="{{globalSettings.videoUrl}}" controls></video>
       </view>
-      <input class="desc-input" value="{{globalSettings.printTemplate}}" placeholder="小票模板" data-field="printTemplate" bindinput="inputGlobalSetting" />
+      <textarea class="desc-input textarea-input receipt-template-input" value="{{globalSettings.printTemplate}}" placeholder="小票模板" data-field="printTemplate" bindinput="inputGlobalSetting"></textarea>
+      <view class="muted-line">可用占位符：&#123;&#123;orderId&#125;&#125; 订单号、&#123;&#123;storeName&#125;&#125; 门店、&#123;&#123;createdAt&#125;&#125; 时间、&#123;&#123;mode&#125;&#125; 类型、&#123;&#123;tableName&#125;&#125; 桌号、&#123;&#123;items&#125;&#125; 商品明细、&#123;&#123;total&#125;&#125; 合计、&#123;&#123;status&#125;&#125; 状态</view>
       <input class="desc-input" value="{{globalSettings.leaderboardRule}}" placeholder="排行榜规则" data-field="leaderboardRule" bindinput="inputGlobalSetting" />
       <view class="form-grid">
         <input value="{{globalSettings.newOrderReminder}}" placeholder="新订单提醒规则" data-field="newOrderReminder" bindinput="inputGlobalSetting" />
