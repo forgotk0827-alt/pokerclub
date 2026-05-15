@@ -1,10 +1,12 @@
 const state = require('./utils/state')
 
 App({
-  onLaunch() {
+  onLaunch(options) {
+    state.resetUserSession()
     state.ensureSeed()
+    if (options && options.query) state.applyTablePayload(options.query, { toast: false })
   },
   globalData: {
-    brand: '德友酒吧'
+    brand: '破壳派酒吧'
   }
 })

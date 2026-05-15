@@ -1,0 +1,50 @@
+<topbar title="存酒" showBack="{{true}}" />
+<scroll-view scroll-y class="cellar-page">
+  <view class="form-card">
+    <view class="card-title">存酒申请</view>
+    <view class="form-row">
+      <text class="form-label">选择门店</text>
+      <picker class="form-control picker-control" mode="selector" range="{{stores}}" range-key="shortName" value="{{storeIndex}}" bindchange="selectStore">
+        <view>{{stores[storeIndex].shortName}}</view>
+      </picker>
+    </view>
+    <view class="form-row">
+      <text class="form-label">酒品名称</text>
+      <input class="form-control" value="{{wineName}}" placeholder="请输入酒品名称" bindinput="inputWine" />
+    </view>
+    <view class="form-row grid-row">
+      <view>
+        <text class="form-label">数量</text>
+        <input class="form-control" type="number" value="{{quantity}}" bindinput="inputQuantity" />
+      </view>
+      <view>
+        <text class="form-label">存放月数</text>
+        <input class="form-control" type="number" value="{{months}}" bindinput="inputMonths" />
+      </view>
+    </view>
+    <view class="submit-btn" bindtap="submit">提交存酒申请</view>
+  </view>
+
+  <view class="section-head">
+    <view class="section-title">存酒记录</view>
+    <view class="section-count">{{records.length}} 条</view>
+  </view>
+
+  <view wx:if="{{!records.length}}" class="empty">暂无存酒记录</view>
+
+  <view class="record-card" wx:for="{{records}}" wx:key="id">
+    <view class="record-top">
+      <view class="record-name">{{item.wineName}}</view>
+      <view class="status {{item.status === '已提取' ? 'status-done' : ''}}">{{item.status}}</view>
+    </view>
+    <view class="record-meta">门店：{{item.storeName}}</view>
+    <view class="record-meta">数量：{{item.quantity}}　存放：{{item.months}}个月</view>
+    <view class="record-meta">申请时间：{{item.createdAt}}</view>
+    <view class="record-expire">到期时间：{{item.expireAt}}</view>
+    <view wx:if="{{item.reminderText}}" class="reminder">{{item.reminderText}}</view>
+    <view wx:if="{{item.status !== '已提取'}}" class="record-actions">
+      <view class="outline-btn" data-id="{{item.id}}" bindtap="extract">提取</view>
+      <view class="solid-btn" data-id="{{item.id}}" bindtap="renew">续存3个月</view>
+    </view>
+  </view>
+</scroll-view>

@@ -3,8 +3,25 @@
     "pages/home/home",
     "pages/menu/menu",
     "pages/activity/activity",
+    "pages/activity-detail/activity-detail",
     "pages/cart/cart",
-    "pages/profile/profile"
+    "pages/store-select/store-select",
+    "pages/profile/profile",
+    "pages/profile-signups/profile-signups",
+    "pages/profile-points/profile-points",
+    "pages/profile-orders/profile-orders",
+    "pages/profile-favorites/profile-favorites",
+    "pages/profile-info/profile-info",
+    "pages/profile-faq/profile-faq",
+    "pages/profile-about/profile-about",
+    "pages/recharge/recharge",
+    "pages/vip-upgrade/vip-upgrade",
+    "pages/cellar/cellar",
+    "pages/videos/videos",
+    "pages/join-us/join-us",
+    "pages/leaderboard/leaderboard",
+    "pages/merchant-login/merchant-login",
+    "pages/merchant/merchant"
   ],
   "window": {
     "navigationStyle": "custom",
@@ -13,7 +30,20 @@
   },
   "usingComponents": {
     "topbar": "/components/topbar/topbar",
-    "main-tabbar": "/components/tabbar/tabbar"
+    "main-tabbar": "/components/tabbar/tabbar",
+    "cart-summary-bar": "/components/cartbar/cartbar"
+  },
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  },
+  "requiredPrivateInfos": ["chooseLocation"],
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于选择门店位置和打开地图导航"
+    }
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"

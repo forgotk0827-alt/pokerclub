@@ -1,24 +1,31 @@
 <topbar title="我的信息" />
 <scroll-view scroll-y class="page profile-page">
   <view class="profile-hero">
-    <view class="avatar">{{member.avatarText}}</view>
+    <image wx:if="{{member.avatarUrl}}" class="avatar avatar-img" src="{{member.avatarUrl}}" mode="aspectFill" />
+    <view wx:else class="avatar">{{member.avatarText}}</view>
     <view class="profile-main">
       <view class="nickname">{{member.nickname}}</view>
       <view class="badge">{{member.level}}</view>
+      <button wx:if="{{!isLoggedIn}}" class="login-btn" bindtap="login">微信一键注册登录</button>
+      <button wx:else class="edit-name-btn" bindtap="editNickname">修改昵称</button>
     </view>
-    <view class="qr-box">
-      <view class="qr-code"></view>
+    <view class="qr-box" bindtap="showMemberQr">
+      <view class="real-qr small-qr">
+        <view wx:for="{{memberQr}}" wx:for-item="row" wx:for-index="rowIndex" wx:key="rowIndex" class="qr-row">
+          <view wx:for="{{row}}" wx:for-item="cell" wx:for-index="cellIndex" wx:key="cellIndex" class="qr-cell {{cell ? 'qr-dark' : ''}}"></view>
+        </view>
+      </view>
       <text class="qr-label">会员二维码</text>
     </view>
   </view>
 
-  <view class="vip-banner card">
+  <view class="vip-banner">
     <view class="vip-text">开通会员享专属特权</view>
     <button class="vip-btn" bindtap="openVip">立即开通</button>
   </view>
 
-  <view class="stats card">
-    <view class="stat">
+  <view class="stats">
+    <view class="stat" bindtap="goRecharge">
       <text class="stat-num">{{member.balance}}</text>
       <text class="stat-label">储值卡余额</text>
     </view>
@@ -27,67 +34,88 @@
       <text class="stat-num">{{member.points}}</text>
       <text class="stat-label">我的积分</text>
     </view>
-  </view>
-
-  <view class="grid-row">
-    <view class="mini-card gem-card">
-      <view class="mini-title">我的宝石</view>
-      <view class="mini-num">{{member.gems}}</view>
-    </view>
-    <view class="mini-card invite-card">
-      <view class="mini-title">中扑院赛事邀请函碎片</view>
-      <view class="mini-num">{{member.invitePieces}}</view>
+    <view class="split"></view>
+    <view class="stat">
+      <text class="stat-num">{{member.gems}}</text>
+      <text class="stat-label">我的碎片</text>
     </view>
   </view>
 
-  <view class="assistant card">
-    <view>
+  <view class="assistant">
+    <image class="assistant-avatar" src="/assets/hero-bar.svg" mode="aspectFill" />
+    <view class="assistant-main">
       <view class="assistant-title">{{member.consultant}}</view>
       <view class="assistant-desc">有任何问题随时联系我哦！</view>
     </view>
-    <button class="ghost-btn mini-action" bindtap="contact">联系顾问</button>
+    <view class="qr-code advisor-qr"></view>
   </view>
 
-  <view class="menu card">
+  <view class="menu-panel">
     <view class="menu-title">我的</view>
+    <view class="menu-line"></view>
     <view class="menu-grid">
-      <button class="menu-item" bindtap="goSignups">
-        <text class="menu-icon">◫</text>
+      <view class="menu-item" bindtap="goSignups">
+        <view class="menu-symbol signup-symbol"></view>
         <text>我的报名</text>
-      </button>
-      <button class="menu-item" bindtap="goPoints">
-        <text class="menu-icon">◍</text>
+      </view>
+      <view class="menu-item" bindtap="goPoints">
+        <view class="menu-symbol points-symbol"></view>
         <text>我的积分</text>
-      </button>
-      <button class="menu-item" bindtap="goOrders">
-        <text class="menu-icon">▣</text>
+      </view>
+      <view class="menu-item" bindtap="goOrders">
+        <view class="menu-symbol order-symbol"></view>
         <text>我的订单</text>
-      </button>
-      <button class="menu-item" bindtap="goFavorites">
-        <text class="menu-icon">⚑</text>
+      </view>
+      <view class="menu-item" bindtap="goFavorites">
+        <view class="menu-symbol flag-symbol"></view>
         <text>我的收藏</text>
-      </button>
+      </view>
+      <view class="menu-item" bindtap="goCellar">
+        <view class="menu-symbol cellar-symbol"></view>
+        <text>我的存酒</text>
+      </view>
+      <view class="menu-item" bindtap="goMerchant">
+        <view class="menu-symbol merchant-symbol"></view>
+        <text>商家端</text>
+      </view>
+      <view class="menu-item" bindtap="goInfo">
+        <view class="menu-symbol profile-symbol"></view>
+        <text>个人资料</text>
+      </view>
+      <view class="menu-item" bindtap="goFaq">
+        <view class="menu-symbol faq-symbol">?</view>
+        <text>常见问题</text>
+      </view>
+      <view class="menu-item" bindtap="goAbout">
+        <view class="menu-symbol about-symbol"></view>
+        <text>关于</text>
+      </view>
     </view>
   </view>
 
-  <view class="records-title">最近记录</view>
-  <view class="record card" wx:for="{{signups}}" wx:key="id">
-    <view>
-      <view class="record-name">{{item.title}}</view>
-      <view class="record-sub">{{item.date}}</view>
+  <view class="group-section">
+    <view class="qr-code group-qr">
+      <view class="qr-logo">破壳派</view>
     </view>
-    <view class="record-status">{{item.status}}</view>
+    <view class="group-tip">点击打开二维码后长按识别加入店铺群</view>
   </view>
-  <view wx:if="{{!signups.length}}" class="empty-tip">暂无报名记录</view>
 
-  <view class="records-title">订单概览</view>
-  <view class="record card" wx:for="{{orders}}" wx:key="id">
-    <view>
-      <view class="record-name">{{item.id}}</view>
-      <view class="record-sub">{{item.storeName}} · {{item.createdAt}}</view>
+  <view wx:if="{{qrVisible}}" class="member-qr-mask" bindtap="closeMemberQr">
+    <view class="member-qr-dialog" catchtap="noop">
+      <view class="member-qr-head">
+        <text>{{qrTime}}</text>
+        <view class="member-qr-close" bindtap="closeMemberQr">×</view>
+      </view>
+      <view class="member-qr-body">
+        <view class="member-qr-title">会员二维码</view>
+        <view class="real-qr member-qr-large">
+          <view wx:for="{{memberQr}}" wx:for-item="row" wx:for-index="rowIndex" wx:key="rowIndex" class="qr-row">
+            <view wx:for="{{row}}" wx:for-item="cell" wx:for-index="cellIndex" wx:key="cellIndex" class="qr-cell {{cell ? 'qr-dark' : ''}}"></view>
+          </view>
+        </view>
+        <view class="member-qr-tip">出示二维码给店员扫码</view>
+      </view>
     </view>
-    <view class="record-status">{{item.status}}</view>
   </view>
-  <view wx:if="{{!orders.length}}" class="empty-tip">暂无订单记录</view>
 </scroll-view>
 <main-tabbar active="profile" />

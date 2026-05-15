@@ -1,0 +1,11 @@
+.favorites-page {
+  min-height: 100vh;
+  background: #050807;
+}
+
+.empty {
+  padding-top: 42rpx;
+  color: #8b919a;
+  text-align: center;
+  font-size: 26rpx;
+}

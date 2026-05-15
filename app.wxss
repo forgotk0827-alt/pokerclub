@@ -1,6 +1,6 @@
 page {
   min-height: 100%;
-  background: #050807;
+  background: #0b0f10;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 28rpx;
@@ -32,34 +32,38 @@ button::after {
 .page {
   min-height: 100vh;
   padding-bottom: 150rpx;
-  background: #050807;
+  background:
+    linear-gradient(180deg, rgba(25, 33, 34, 0.96) 0%, #0b0f10 280rpx),
+    #0b0f10;
 }
 
 .section-title {
-  padding: 30rpx 22rpx 20rpx;
-  color: #fff;
-  font-size: 30rpx;
+  padding: 34rpx 28rpx 20rpx;
+  color: #f7f0df;
+  font-size: 32rpx;
   font-weight: 800;
+  letter-spacing: 0;
 }
 
 .card {
-  margin: 0 22rpx 24rpx;
+  margin: 0 28rpx 24rpx;
   border-radius: 8rpx;
-  background: #242526;
+  background: #1b2022;
+  box-shadow: 0 14rpx 34rpx rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 
 .muted {
-  color: #a6a6a6;
+  color: #aab3b6;
 }
 
 .price {
-  color: #ef5b58;
+  color: #f0c15a;
   font-weight: 900;
 }
 
 .accent {
-  color: #ef5b58;
+  color: #f0c15a;
 }
 
 .primary-btn {
@@ -69,7 +73,7 @@ button::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e45855;
+  background: #d74f45;
   color: #fff;
   font-size: 30rpx;
   font-weight: 800;
@@ -86,8 +90,45 @@ button::after {
   color: #fff;
 }
 
+image {
+  will-change: transform;
+}
+
 .line-clamp {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+page {
+  background: #120a1f;
+  color: #f4ecff;
+}
+
+.page {
+  background:
+    linear-gradient(180deg, rgba(39, 23, 62, 0.96) 0%, #120a1f 300rpx),
+    #120a1f;
+}
+
+.section-title {
+  color: #f4ecff;
+}
+
+.card {
+  background: #241633;
+  box-shadow: 0 14rpx 34rpx rgba(24, 11, 39, 0.36);
+}
+
+.muted {
+  color: #c6b8dc;
+}
+
+.price,
+.accent {
+  color: #d8b4fe;
+}
+
+.primary-btn {
+  background: #8b5cf6;
 }

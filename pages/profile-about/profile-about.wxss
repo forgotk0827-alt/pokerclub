@@ -1,0 +1,26 @@
+.about-page {
+  min-height: 100vh;
+  padding: 64rpx 40rpx;
+  background: #f6f6f6;
+  color: #111827;
+  text-align: center;
+}
+
+.about-title {
+  font-size: 38rpx;
+  font-weight: 900;
+}
+
+.about-desc {
+  margin-top: 28rpx;
+  color: #555;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  text-align: left;
+}
+
+.about-foot {
+  margin-top: 80rpx;
+  color: #8b919a;
+  font-size: 24rpx;
+}

@@ -1,3 +1,5 @@
+const state = require('../../utils/state')
+
 Component({
   properties: {
     active: {
@@ -19,6 +21,12 @@ Component({
       const url = event.currentTarget.dataset.url
       const current = `/${getCurrentPages().slice(-1)[0].route}`
       if (url === current) {
+        return
+      }
+      if (url === '/pages/cart/cart') {
+        state.requireLogin('查看购物车', () => {
+          wx.reLaunch({ url })
+        })
         return
       }
       wx.reLaunch({ url })

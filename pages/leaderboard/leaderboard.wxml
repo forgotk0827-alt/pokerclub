@@ -1,0 +1,27 @@
+<topbar title="排行榜" showBack="{{true}}" />
+<scroll-view scroll-y class="rank-page">
+  <view class="rank-hero">
+    <view class="hero-title">会员积分排行榜</view>
+    <view class="hero-sub">查看周榜、月榜和年度榜</view>
+    <view class="rank-tabs">
+      <view
+        class="rank-tab {{activeType === item.key ? 'active' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="key"
+        data-type="{{item.key}}"
+        bindtap="selectType"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="rank-list">
+    <view class="rank-row {{index == 0 ? 'top-row top-one' : ''}} {{index == 1 ? 'top-row top-two' : ''}} {{index == 2 ? 'top-row top-three' : ''}}" wx:for="{{list}}" wx:key="id">
+      <view class="rank-num">{{item.rank}}</view>
+      <view class="rank-main">
+        <view class="rank-name">{{item.username}}</view>
+        <view class="rank-score">{{item.score}} 分</view>
+      </view>
+      <view wx:if="{{index < 3}}" class="rank-medal">{{index == 0 ? '冠军' : index == 1 ? '亚军' : '季军'}}</view>
+    </view>
+  </view>
+</scroll-view>

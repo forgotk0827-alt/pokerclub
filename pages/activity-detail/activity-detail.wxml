@@ -1,0 +1,49 @@
+<topbar title="{{activity.title || '活动详情'}}" showBack="{{true}}" />
+<view wx:if="{{activity}}" class="activity-detail-page">
+  <scroll-view scroll-y class="detail-scroll">
+    <image class="hero-image" src="{{activity.image}}" mode="aspectFill" />
+
+    <view class="info-panel">
+      <view class="activity-title">{{activity.title}}</view>
+
+      <view class="meta-row">
+        <view class="meta-dot">◷</view>
+        <view class="meta-text">{{activity.date}}</view>
+      </view>
+
+      <view class="meta-row">
+        <view class="meta-dot">⌖</view>
+        <view class="meta-text address-text">{{activity.location}} <text class="nav-link" bindtap="openLocation">[点击导航]</text></view>
+      </view>
+
+      <view class="meta-row">
+        <view class="meta-dot">¥</view>
+        <view class="meta-text price-text">¥{{activity.price}}.00<text wx:if="{{activity.pointsPrice}}"> 或 {{activity.pointsPrice}}积分</text></view>
+      </view>
+
+      <view class="meta-row no-border">
+        <view class="meta-dot">♟</view>
+        <view class="meta-text">已报名{{activity.joined}}人,剩余{{activity.remaining}}个名额</view>
+      </view>
+
+      <view class="avatar-row">
+        <view wx:for="{{avatars}}" wx:key="*this" class="avatar-item">
+          <image class="avatar-img" src="/assets/hero-bar.svg" mode="aspectFill" />
+          <view class="avatar-name">{{item}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="tab-row">
+      <view wx:for="{{tabs}}" wx:key="key" class="detail-tab {{activeTab === item.key ? 'detail-tab-active' : ''}}" data-key="{{item.key}}" bindtap="switchTab">{{item.name}}</view>
+    </view>
+
+    <view class="image-section">
+      <image wx:if="{{activeTab === 'detail'}}" class="content-image" src="{{activity.detailImage}}" mode="widthFix" />
+      <image wx:elif="{{activeTab === 'environment'}}" class="content-image" src="{{activity.environmentImage}}" mode="widthFix" />
+      <image wx:else class="content-image" src="{{activity.resultImage}}" mode="widthFix" />
+    </view>
+  </scroll-view>
+
+  <view class="signup-bar" bindtap="signup">立即抢报</view>
+</view>

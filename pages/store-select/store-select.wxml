@@ -1,0 +1,34 @@
+<topbar title="选择门店" showBack="{{true}}" />
+<view class="store-select-page">
+  <view class="store-tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="*this"
+      class="store-tab {{activeTab === item ? 'store-tab-active' : ''}}"
+      data-tab="{{item}}"
+      bindtap="switchTab"
+    >
+      {{item}}
+    </view>
+  </view>
+
+  <view class="store-list">
+    <view wx:for="{{visibleStores}}" wx:key="id" class="store-card">
+      <image class="store-cover" src="{{item.cover || '/assets/hero-bar.svg'}}" mode="aspectFill" />
+      <view class="store-card-body">
+        <view class="store-card-title">{{item.name}}</view>
+        <view class="store-card-sub">{{item.shortName}}</view>
+        <view class="store-card-line">营业时间：{{item.businessHours || '14:00 - 05:00'}}</view>
+        <view class="store-card-line">联系方式：{{item.phone}}</view>
+        <view class="store-card-line">所在地址：{{item.address}}</view>
+        <view class="store-card-footer">
+          <view class="store-status-tag">{{item.status}}</view>
+          <view class="store-actions">
+            <view class="store-map-btn" data-id="{{item.id}}" bindtap="openMap">地图</view>
+            <view class="store-enter-btn" data-id="{{item.id}}" bindtap="enterStore">进入店铺</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

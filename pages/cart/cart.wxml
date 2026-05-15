@@ -4,6 +4,10 @@
     <text class="cart-count">已点{{summary.count}}份</text>
     <button class="clear-btn" bindtap="clearCart">清空</button>
   </view>
+  <view class="table-info" wx:if="{{tableContext}}">
+    <text>{{store.shortName || store.name}}</text>
+    <text>{{tableContext.tableName}}</text>
+  </view>
 
   <scroll-view scroll-y class="cart-list">
     <view wx:if="{{cart.length}}">
@@ -18,9 +22,9 @@
           </view>
         </view>
         <view class="stepper">
-          <button class="step-btn" data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">-</button>
+          <view class="step-btn" data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">-</view>
           <text class="step-num">{{item.count}}</text>
-          <button class="step-btn" data-id="{{item.id}}" data-delta="1" bindtap="changeCount">+</button>
+          <view class="step-btn" data-id="{{item.id}}" data-delta="1" bindtap="changeCount">+</view>
         </view>
       </view>
     </view>

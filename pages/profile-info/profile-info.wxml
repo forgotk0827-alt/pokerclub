@@ -1,0 +1,24 @@
+<topbar title="个人资料" showBack="{{true}}" />
+<view class="info-page">
+  <view class="info-row">
+    <text>头像</text>
+    <view class="avatar">{{member.avatarText}}</view>
+    <text class="arrow">›</text>
+  </view>
+  <view class="info-row" bindtap="editName">
+    <text>姓名</text>
+    <text class="info-value">{{member.nickname}}</text>
+    <text class="arrow">›</text>
+  </view>
+  <view class="info-row" bindtap="editGender">
+    <text>性别</text>
+    <text class="info-value">{{member.gender || '未设置'}}</text>
+    <text class="arrow">›</text>
+  </view>
+  <view class="gap"></view>
+  <view class="info-row" bindtap="editPhone">
+    <text>手机号</text>
+    <text class="info-value">{{member.phone || ''}}</text>
+    <text class="arrow">›</text>
+  </view>
+</view>

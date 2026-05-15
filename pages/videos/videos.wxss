@@ -1,0 +1,66 @@
+.video-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 56rpx;
+  background: #050807;
+  color: #fff;
+}
+
+.video-card {
+  margin-bottom: 24rpx;
+  overflow: hidden;
+  border-radius: 8rpx;
+  background: #242526;
+}
+
+.showcase-copy {
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: #242526;
+  color: #d8dde4;
+  font-size: 27rpx;
+  line-height: 42rpx;
+}
+
+.video-wrap {
+  width: 100%;
+  height: 390rpx;
+  background: #111;
+}
+
+.video-wrap video {
+  width: 100%;
+  height: 100%;
+}
+
+.video-info {
+  padding: 22rpx 24rpx 26rpx;
+}
+
+.video-type {
+  display: inline-flex;
+  min-width: 120rpx;
+  height: 42rpx;
+  padding: 0 18rpx;
+  border-radius: 22rpx;
+  align-items: center;
+  justify-content: center;
+  background: rgba(226, 87, 84, 0.16);
+  color: #ff8d8a;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.video-title {
+  margin-top: 18rpx;
+  font-size: 32rpx;
+  line-height: 42rpx;
+  font-weight: 900;
+}
+
+.video-desc {
+  margin-top: 10rpx;
+  color: #b7bec8;
+  font-size: 25rpx;
+  line-height: 36rpx;
+}

@@ -1,0 +1,33 @@
+.join-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 60rpx;
+  background: #050807;
+  color: #fff;
+}
+
+.join-image {
+  width: 100%;
+  border-radius: 8rpx;
+  background: #141414;
+}
+
+.join-content {
+  margin-top: 24rpx;
+  padding: 28rpx 24rpx;
+  border-radius: 8rpx;
+  background: #242526;
+}
+
+.join-title {
+  font-size: 38rpx;
+  line-height: 48rpx;
+  font-weight: 900;
+}
+
+.join-text {
+  margin-top: 18rpx;
+  color: #d8dde4;
+  font-size: 28rpx;
+  line-height: 44rpx;
+  white-space: pre-wrap;
+}

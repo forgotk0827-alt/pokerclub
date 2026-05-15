@@ -3,60 +3,75 @@ const state = require('../../utils/state')
 Page({
   data: {
     cart: [],
+    store: null,
+    tableContext: null,
     summary: { count: 0, total: 0 }
   },
   onShow() {
+    if (!state.requireLogin('查看购物车', () => this.refresh())) {
+      this.setData({
+        cart: [],
+        store: state.getStore(),
+        tableContext: state.getTableContext(),
+        summary: { count: 0, total: 0 }
+      })
+      return
+    }
     this.refresh()
   },
   refresh() {
     const cart = state.getCart()
     this.setData({
       cart,
+      store: state.getStore(),
+      tableContext: state.getTableContext(),
       summary: state.getCartSummary(cart)
     })
   },
   changeCount(event) {
     const { id, delta } = event.currentTarget.dataset
-    const cart = state.updateCartItem(id, Number(delta))
-    this.setData({
-      cart,
-      summary: state.getCartSummary(cart)
+    state.requireLogin('修改购物车', () => {
+      const cart = state.updateCartItem(id, Number(delta))
+      this.setData({
+        cart,
+        summary: state.getCartSummary(cart)
+      })
     })
   },
   clearCart() {
-    if (!this.data.cart.length) {
-      return
-    }
-    wx.showModal({
-      title: '清空购物车',
-      content: '确认要清空当前购物车吗？',
-      success: (res) => {
-        if (res.confirm) {
-          state.clearCart()
-          this.refresh()
-        }
+    state.requireLogin('清空购物车', () => {
+      if (!this.data.cart.length) {
+        wx.showToast({ title: '购物车为空', icon: 'none' })
+        return
       }
+      state.clearCart()
+      this.setData({
+        cart: [],
+        summary: { count: 0, total: 0 }
+      })
+      wx.showToast({ title: '已清空', icon: 'success' })
     })
   },
   checkout() {
-    if (!this.data.cart.length) {
-      wx.showToast({ title: '购物车为空', icon: 'none' })
-      return
-    }
-    const order = state.createOrder({ mode: '堂食' })
-    if (!order) {
-      wx.showToast({ title: '下单失败', icon: 'none' })
-      return
-    }
-    wx.showModal({
-      title: '订单已创建',
-      content: `订单号 ${order.id} 已生成，当前为待支付状态。`,
-      confirmText: '去我的',
-      success(res) {
-        if (res.confirm) {
-          wx.reLaunch({ url: '/pages/profile/profile' })
-        }
+    state.requireLogin('提交订单', () => {
+      if (!this.data.cart.length) {
+        wx.showToast({ title: '购物车为空', icon: 'none' })
+        return
       }
+      state.createOrderWithWechatPay({ mode: '堂食' }, (order) => {
+        if (!order) return
+        this.refresh()
+        wx.showModal({
+          title: '订单已支付',
+          content: `订单号 ${order.id} 已生成，支付结果以微信支付通知为准。`,
+          confirmText: '去我的',
+          success(res) {
+            if (res.confirm) {
+              wx.reLaunch({ url: '/pages/profile/profile' })
+            }
+          }
+        })
+      })
     })
   }
 })

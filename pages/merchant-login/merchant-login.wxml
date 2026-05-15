@@ -1,0 +1,16 @@
+<topbar title="商家登录" showBack="{{true}}" />
+<view class="login-page">
+  <view class="login-card">
+    <view class="login-title">商家端</view>
+    <view class="login-sub">登录后管理门店订单、积分、存酒、报名、库存和排行榜</view>
+    <view class="field">
+      <text>账号</text>
+      <input value="{{username}}" placeholder="请输入商家账号" bindinput="inputUsername" />
+    </view>
+    <view class="field">
+      <text>密码</text>
+      <input value="{{password}}" password placeholder="请输入商家密码" bindinput="inputPassword" />
+    </view>
+    <view class="login-btn" bindtap="login">登录商家端</view>
+  </view>
+</view>

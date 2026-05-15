@@ -1,0 +1,13 @@
+<topbar title="订单列表" showBack="{{true}}" />
+<view class="sub-page dark-page">
+  <view class="tabs">
+    <view wx:for="{{tabs}}" wx:key="key" class="tab {{active === item.key ? 'tab-active' : ''}}" data-key="{{item.key}}" bindtap="selectTab">{{item.name}}</view>
+  </view>
+  <view class="empty" wx:if="{{!list.length}}">暂无订单</view>
+  <view class="order-card" wx:for="{{list}}" wx:key="id">
+    <view class="order-title">{{item.id}}</view>
+    <view class="order-sub">{{item.storeName}} · {{item.tableName || '未指定桌号'}} · {{item.createdAt}}</view>
+    <view class="order-total">¥{{item.total}}</view>
+    <view class="order-status">{{item.status}}</view>
+  </view>
+</view>

@@ -1,0 +1,49 @@
+<view wx:if="{{summary.count > 0 && !visible}}" class="cart-float">
+  <view class="cart-icon-wrap" bindtap="openSheet">
+    <view class="cart-icon">
+      <view class="cart-basket"></view>
+      <view class="cart-wheel left"></view>
+      <view class="cart-wheel right"></view>
+    </view>
+    <text class="cart-badge">{{summary.count}}</text>
+  </view>
+  <view class="cart-total">¥{{summary.total}}.00</view>
+  <view class="checkout-pill" bindtap="goCheckout">去结算</view>
+</view>
+
+<view wx:if="{{visible}}" class="cart-mask" bindtap="closeSheet">
+  <view class="cart-sheet" catchtap="noop">
+    <view class="sheet-head">
+      <text>已点{{sheetSummary.count}}件</text>
+      <text class="sheet-clear" bindtap="clearCart">清空购物车</text>
+    </view>
+
+    <scroll-view scroll-y class="sheet-list">
+      <view class="sheet-item" wx:for="{{cart}}" wx:key="id">
+        <image class="sheet-img" src="{{item.image}}" mode="aspectFill" />
+        <view class="sheet-info">
+          <view class="sheet-name">{{item.name}}</view>
+          <view class="sheet-price">¥{{item.price}}.00</view>
+        </view>
+        <view class="sheet-stepper">
+          <view class="sheet-step" data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">-</view>
+          <text class="sheet-num">{{item.count}}</text>
+          <view class="sheet-step" data-id="{{item.id}}" data-delta="1" bindtap="changeCount">+</view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="sheet-checkout">
+      <view class="cart-icon-wrap">
+        <view class="cart-icon">
+          <view class="cart-basket"></view>
+          <view class="cart-wheel left"></view>
+          <view class="cart-wheel right"></view>
+        </view>
+        <text class="cart-badge">{{sheetSummary.count}}</text>
+      </view>
+      <view class="cart-total">¥{{sheetSummary.total}}.00</view>
+      <view class="checkout-pill" bindtap="goCheckout">去结算</view>
+    </view>
+  </view>
+</view>

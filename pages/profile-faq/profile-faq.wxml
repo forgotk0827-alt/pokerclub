@@ -1,0 +1,11 @@
+<topbar title="常见问题" showBack="{{true}}" />
+<view class="text-page">
+  <view class="qa-card">
+    <view class="question">如何获得积分？</view>
+    <view class="answer">参与每日比赛，优胜者可获得奖励积分</view>
+  </view>
+  <view class="qa-card">
+    <view class="question">活动报名如何核销？</view>
+    <view class="answer">报名成功并完成支付后，可到店出示报名记录核销。</view>
+  </view>
+</view>

@@ -1,0 +1,26 @@
+<topbar title="精彩呈现" showBack="{{true}}" />
+<scroll-view scroll-y class="video-page">
+  <view class="showcase-copy" wx:if="{{globalSettings.showcaseText}}">{{globalSettings.showcaseText}}</view>
+  <view class="video-card" wx:for="{{videos}}" wx:key="id">
+    <view class="video-wrap">
+      <video
+        id="video-{{item.id}}"
+        src="{{item.src}}"
+        poster="{{item.poster}}"
+        controls
+        show-fullscreen-btn
+        show-play-btn
+        enable-progress-gesture
+        object-fit="cover"
+        data-id="{{item.id}}"
+        bindplay="play"
+        bindpause="pause"
+      ></video>
+    </view>
+    <view class="video-info">
+      <view class="video-type">{{item.type}}</view>
+      <view class="video-title">{{item.title}}</view>
+      <view class="video-desc">{{item.desc}}</view>
+    </view>
+  </view>
+</scroll-view>

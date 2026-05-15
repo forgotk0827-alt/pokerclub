@@ -5,42 +5,58 @@
       <text class="line-clamp">{{store.name}}</text>
       <text class="arrow">›</text>
     </button>
-    <view class="search-box">
-      <text class="search-icon">⌕</text>
+    <view class="table-badge" wx:if="{{tableContext}}">{{tableContext.tableName}}</view>
+    <view class="search-box" aria-label="搜索商品">
+      <text class="search-lens"></text>
       <input value="{{keyword}}" placeholder="搜索" bindinput="onSearch" confirm-type="search" />
     </view>
   </view>
 
-    <view class="filter-row">
-      <text class="total-label">共有{{filteredCount}}件商品</text>
-      <label class="sale-toggle">
-        <checkbox checked="{{onlySale}}" bindchange="toggleSale" color="#ef5b58" />
-        <text>只看当前在售</text>
-      </label>
-    </view>
-
-  <view class="menu-layout">
+  <view class="menu-shell">
     <scroll-view scroll-y class="category-side">
-      <button wx:for="{{categories}}" wx:key="id" class="cat {{activeCategory === item.id ? 'cat-active' : ''}}" data-id="{{item.id}}" bindtap="selectCategory">{{item.name}}</button>
+      <view wx:for="{{categories}}" wx:key="id" class="cat {{activeCategory === item.id ? 'cat-active' : ''}}" data-id="{{item.id}}" bindtap="selectCategory">
+        <text>{{item.name}}</text>
+      </view>
     </scroll-view>
 
-    <scroll-view scroll-y class="product-pane">
-      <block wx:for="{{groupedProducts}}" wx:key="categoryId">
-        <view class="group-title">{{item.categoryName}}</view>
-        <view class="menu-card" wx:for="{{item.items}}" wx:for-item="product" wx:key="id">
-          <image class="menu-img" src="{{product.image}}" mode="aspectFill" />
-          <view class="menu-info">
-            <view class="menu-name">{{product.name}}</view>
-            <view class="menu-desc">{{product.desc}}</view>
-            <view wx:if="{{product.points}}" class="points">{{product.points}} 积分兑换</view>
-            <view class="menu-price">¥{{product.price}}.00/<text>{{product.unit}}</text></view>
+    <view class="content-side">
+      <view class="filter-row">
+        <text class="total-label">共有{{filteredCount}}件商品</text>
+        <label class="sale-toggle">
+          <checkbox class="sale-checkbox" checked="{{onlySale}}" bindchange="toggleSale" color="#ef5b58" />
+          <text>只看当前在售</text>
+        </label>
+      </view>
+
+      <scroll-view scroll-y class="product-pane" scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+        <block wx:for="{{groupedProducts}}" wx:key="categoryId">
+          <view id="group-{{item.categoryId}}" class="product-group">
+            <view class="group-title">{{item.categoryName}}</view>
+            <view class="group-card">
+              <view class="menu-card" wx:for="{{item.items}}" wx:for-item="product" wx:key="id">
+                <image class="menu-img" src="{{product.image}}" mode="aspectFill" />
+                <view class="menu-info">
+                  <view class="menu-topline">
+                    <view class="menu-name">{{product.name}}</view>
+                    <view class="tag category-tag" wx:if="{{product.categoryId === 'dishes'}}">点菜</view>
+                    <view class="tag" wx:elif="{{!product.sale}}">售罄</view>
+                  </view>
+                  <view class="menu-desc" wx:if="{{product.desc && product.categoryId !== 'dishes'}}">{{product.desc}}</view>
+                  <view wx:if="{{product.points}}" class="points"><text>{{product.points}}</text> 积分兑换</view>
+                  <view class="menu-price">¥{{product.price}}.00/<text>{{product.unit}}</text></view>
+                </view>
+                <view class="menu-add {{!product.sale ? 'disabled' : ''}}" data-id="{{product.id}}" bindtap="addCart" aria-label="加入购物车">
+                  <view class="plus-line plus-h"></view>
+                  <view class="plus-line plus-v"></view>
+                </view>
+              </view>
+            </view>
           </view>
-          <view class="tag" wx:if="{{!product.sale}}">售罄</view>
-          <button class="menu-add {{!product.sale ? 'disabled' : ''}}" data-id="{{product.id}}" bindtap="addCart">+</button>
-        </view>
-      </block>
-      <view wx:if="{{!groupedProducts.length}}" class="empty">暂无匹配商品</view>
-    </scroll-view>
+        </block>
+        <view wx:if="{{!groupedProducts.length}}" class="empty">暂无匹配商品</view>
+      </scroll-view>
+    </view>
   </view>
 </view>
+<cart-summary-bar summary="{{cartSummary}}" bind:cartchange="handleCartChange" />
 <main-tabbar active="menu" />

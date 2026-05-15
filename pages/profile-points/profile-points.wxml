@@ -1,0 +1,7 @@
+<topbar title="我的积分" showBack="{{true}}" />
+<view class="points-page">
+  <view class="points-card">
+    <view class="points-num">{{member.points}}</view>
+    <view class="points-label">积分余额</view>
+  </view>
+</view>

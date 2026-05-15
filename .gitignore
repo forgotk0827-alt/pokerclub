@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Runtime data and logs
+*.log
+*.pid
+backend/data.json
+backend/server.pid
+backend/test-uploads/
+backend/test-uploads2/
+backend/uploads/
+backend/*-test.*.log
+backend/server.*.log
+backend/tiny.*
+
+# Secrets and certificates
+.env
+*.env
+backend/.env
+cert/
+*.pem
+*.p12
+*.key
+*.crt
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

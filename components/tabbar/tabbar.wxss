@@ -8,8 +8,9 @@
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   align-items: center;
-  background: #242526;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.05);
+  background: rgba(18, 23, 25, 0.98);
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -10rpx 32rpx rgba(0, 0, 0, 0.32);
 }
 
 .tab-item {
@@ -19,7 +20,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #f0f0f0;
+  color: #b7c0c3;
 }
 
 .tab-icon {
@@ -36,5 +37,18 @@
 }
 
 .active {
-  color: #ef5b58;
+  color: #f0c15a;
+}
+
+.tabbar {
+  background: rgba(27, 16, 43, 0.98);
+  border-top-color: rgba(216, 180, 254, 0.14);
+}
+
+.tab-item {
+  color: #c6b8dc;
+}
+
+.active {
+  color: #d8b4fe;
 }

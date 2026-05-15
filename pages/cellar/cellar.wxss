@@ -1,0 +1,186 @@
+.cellar-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 56rpx;
+  background: #f5f6f8;
+  color: #111827;
+}
+
+.form-card,
+.record-card {
+  border-radius: 8rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(17, 24, 39, 0.06);
+}
+
+.form-card {
+  padding: 28rpx 24rpx;
+}
+
+.card-title {
+  margin-bottom: 22rpx;
+  font-size: 32rpx;
+  line-height: 42rpx;
+  font-weight: 900;
+}
+
+.form-row {
+  margin-top: 18rpx;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 10rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.form-control {
+  width: 100%;
+  height: 76rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #e5e7eb;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  background: #fafafa;
+  color: #111827;
+  font-size: 27rpx;
+}
+
+.picker-control {
+  justify-content: space-between;
+}
+
+.submit-btn {
+  height: 82rpx;
+  margin-top: 28rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e25754;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.section-head {
+  margin: 34rpx 4rpx 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.section-count {
+  color: #9ca3af;
+  font-size: 24rpx;
+}
+
+.empty {
+  padding: 80rpx 0;
+  border-radius: 8rpx;
+  background: #fff;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.record-card {
+  margin-top: 18rpx;
+  padding: 24rpx;
+}
+
+.record-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx;
+}
+
+.record-name {
+  flex: 1;
+  min-width: 0;
+  color: #111827;
+  font-size: 30rpx;
+  line-height: 40rpx;
+  font-weight: 900;
+}
+
+.status {
+  min-width: 108rpx;
+  height: 42rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff1f1;
+  color: #e25754;
+  font-size: 23rpx;
+  font-weight: 800;
+}
+
+.status-done {
+  background: #eef2f7;
+  color: #6b7280;
+}
+
+.record-meta,
+.record-expire {
+  margin-top: 12rpx;
+  color: #6b7280;
+  font-size: 25rpx;
+  line-height: 34rpx;
+}
+
+.record-expire {
+  color: #111827;
+  font-weight: 800;
+}
+
+.reminder {
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 24rpx;
+}
+
+.record-actions {
+  margin-top: 22rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.outline-btn,
+.solid-btn {
+  height: 66rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.outline-btn {
+  border: 1rpx solid #e25754;
+  color: #e25754;
+}
+
+.solid-btn {
+  background: #e25754;
+  color: #fff;
+}

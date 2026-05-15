@@ -1,0 +1,5 @@
+<topbar title="关于" showBack="{{true}}" />
+<view class="about-page">
+  <view class="about-title">破壳派酒吧</view>
+  <view class="about-desc">南京专业扑克主题酒吧会员小程序，提供点餐、活动报名、会员积分与订单管理服务。</view>
+</view>

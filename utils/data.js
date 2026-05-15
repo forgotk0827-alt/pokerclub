@@ -1,7 +1,7 @@
 const stores = [
   {
     id: 'jiangning',
-    name: '《德友酒吧》江宁上元大街(皇家酒吧Royal Cask Bar)',
+    name: '《破壳派酒吧》江宁上元大街(皇家酒吧Royal Cask Bar)',
     shortName: '江宁上元大街店',
     address: '江宁区东山街道上元大街江宁供销商厦1层',
     status: '营业中',
@@ -9,7 +9,7 @@ const stores = [
   },
   {
     id: 'xinjiekou',
-    name: '《德友酒吧》新街口扑克主题店',
+    name: '《破壳派酒吧》新街口扑克主题店',
     shortName: '新街口店',
     address: '秦淮区中山南路扑克主题街区B1层',
     status: '营业中',
@@ -46,7 +46,7 @@ const products = [
     price: 198,
     points: 3000,
     unit: '份',
-    image: '/assets/product-pack.svg',
+    image: '/assets/product-drink.svg',
     sale: true
   },
   {
@@ -57,7 +57,7 @@ const products = [
     price: 328,
     points: 5000,
     unit: '份',
-    image: '/assets/product-pack.svg',
+    image: '/assets/product-special.svg',
     sale: true
   },
   {
@@ -108,7 +108,7 @@ const products = [
     id: 'special-royal',
     categoryId: 'special',
     name: '皇家筹码',
-    desc: '德友定制特调，柑橘、威士忌、香草尾韵',
+    desc: '破壳派定制特调，柑橘、威士忌、香草尾韵',
     price: 98,
     points: 12000,
     unit: '杯',
@@ -187,7 +187,7 @@ const activities = [
   },
   {
     id: 'act-eggs',
-    title: '德友酒馆掼蛋友谊局',
+    title: '破壳派酒吧掼蛋友谊局',
     type: '掼蛋',
     date: '05月13日 (周三)19:30',
     dayLabel: '后天',
@@ -214,10 +214,46 @@ const member = {
   consultant: '专属顾问-程经理'
 }
 
+const videos = [
+  {
+    id: 'bar-intro',
+    type: '酒吧介绍',
+    title: '破壳派酒吧环境介绍',
+    desc: '门店环境、桌游区与扑克主题酒吧介绍',
+    poster: '/assets/hero-bar.svg',
+    src: 'https://media.w3.org/2010/05/sintel/trailer.mp4'
+  },
+  {
+    id: 'activity-mtt',
+    type: '活动视频',
+    title: 'MTT邀请赛活动回顾',
+    desc: '活动现场、赛制与会员互动片段',
+    poster: '/assets/activity-card.svg',
+    src: 'https://media.w3.org/2010/05/bunny/trailer.mp4'
+  }
+]
+
+const leaderboard = [
+  { id: 'rank-1', username: '260509069792', score: 18800 },
+  { id: 'rank-2', username: '破壳派玩家南京上元大街店001', score: 15600 },
+  { id: 'rank-3', username: 'Royal Cask Bar Poker Master', score: 13200 },
+  { id: 'rank-4', username: '中扑院MTT常客', score: 9800 }
+]
+
+const merchantAccount = {
+  username: 'dev_store_admin',
+  password: 'change-this-store-password',
+  storeId: 'jiangning',
+  name: '江宁店商家端'
+}
+
 module.exports = {
   stores,
   categories,
   products,
   activities,
-  member
+  member,
+  videos,
+  leaderboard,
+  merchantAccount
 }

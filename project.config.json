@@ -1,8 +1,8 @@
 {
   "miniprogramRoot": "./",
-  "projectname": "deyou-bar-miniprogram",
-  "description": "德友酒馆用户端微信小程序",
-  "appid": "wx17906402da320eab",
+  "projectname": "pokerpai-miniprogram",
+  "description": "破壳派酒吧用户端微信小程序",
+  "appid": "wx60cc68ed0550e14a",
   "setting": {
     "urlCheck": false,
     "es6": true,
@@ -29,7 +29,7 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "latest",
+  "libVersion": "3.15.1",
   "condition": {},
   "simulatorPluginLibVersion": {},
   "packOptions": {

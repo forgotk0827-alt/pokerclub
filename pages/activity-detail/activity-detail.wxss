@@ -1,0 +1,163 @@
+.activity-detail-page {
+  min-height: 100vh;
+  padding-bottom: calc(96rpx + env(safe-area-inset-bottom));
+  background: #f4f4f4;
+  color: #171717;
+}
+
+.detail-scroll {
+  height: calc(100vh - 96rpx - env(safe-area-inset-bottom));
+}
+
+.hero-image {
+  width: 100%;
+  height: 500rpx;
+  display: block;
+  background: #eee;
+}
+
+.info-panel {
+  padding: 28rpx 22rpx 24rpx;
+  background: #fff;
+}
+
+.activity-title {
+  padding-bottom: 22rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  font-size: 32rpx;
+  line-height: 44rpx;
+  font-weight: 900;
+}
+
+.meta-row {
+  min-height: 84rpx;
+  display: grid;
+  grid-template-columns: 60rpx minmax(0, 1fr);
+  align-items: center;
+  border-bottom: 1rpx solid #f3f3f3;
+}
+
+.meta-row.no-border {
+  border-bottom: 0;
+}
+
+.meta-dot {
+  width: 38rpx;
+  height: 38rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef3b79;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.meta-text {
+  min-width: 0;
+  color: #555c68;
+  font-size: 29rpx;
+  line-height: 42rpx;
+}
+
+.address-text {
+  word-break: break-all;
+}
+
+.nav-link {
+  color: #3268ff;
+}
+
+.price-text {
+  color: #f1301f;
+}
+
+.avatar-row {
+  display: flex;
+  gap: 22rpx;
+  padding-top: 10rpx;
+}
+
+.avatar-item {
+  width: 48rpx;
+  text-align: center;
+}
+
+.avatar-img {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #ddd;
+}
+
+.avatar-name {
+  margin-top: 8rpx;
+  color: #8b6f54;
+  font-size: 20rpx;
+  line-height: 24rpx;
+  white-space: nowrap;
+}
+
+.tab-row {
+  height: 126rpx;
+  margin-top: 18rpx;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  background: #fff;
+}
+
+.detail-tab {
+  position: relative;
+  height: 126rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #59616f;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.detail-tab-active {
+  color: #d84d52;
+}
+
+.detail-tab-active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 24rpx;
+  width: 58rpx;
+  height: 4rpx;
+  border-radius: 4rpx;
+  background: #d84d52;
+  transform: translateX(-50%);
+}
+
+.image-section {
+  min-height: 220rpx;
+  padding: 18rpx 0 36rpx;
+  background: #fff;
+}
+
+.content-image {
+  width: 100%;
+  display: block;
+}
+
+.signup-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(96rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef3b79;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 900;
+}

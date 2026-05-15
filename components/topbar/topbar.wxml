@@ -1,12 +1,4 @@
-<view class="topbar">
+<view class="topbar" style="padding-top: {{statusBarHeight}}px; height: {{topbarHeight}}px;">
+  <view wx:if="{{showBack}}" class="topbar-back" bindtap="goBack"></view>
   <view class="topbar-title">{{title}}</view>
-  <view class="capsule" aria-label="微信胶囊">
-    <text class="dot"></text>
-    <text class="dot"></text>
-    <text class="dot"></text>
-    <text class="divider"></text>
-    <text class="minus"></text>
-    <text class="divider"></text>
-    <text class="ring"></text>
-  </view>
 </view>

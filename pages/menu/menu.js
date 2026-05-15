@@ -4,42 +4,73 @@ const state = require('../../utils/state')
 Page({
   data: {
     store: data.stores[0],
-    categories: data.categories,
-    products: data.products,
-    activeCategory: 'packages',
+    categories: [],
+    products: [],
+    activeCategory: '',
     onlySale: false,
     keyword: '',
+    scrollIntoView: '',
     groupedProducts: [],
-    filteredCount: 0
+    filteredCount: 0,
+    tableContext: null,
+    cartSummary: { count: 0, total: 0 }
+  },
+  onLoad(options) {
+    state.applyTablePayload(options, { toast: false })
   },
   onShow() {
-    this.setData({ store: state.getStore() })
+    this.refreshProducts()
+    state.fetchProducts(() => this.refreshProducts())
+  },
+  refreshProducts() {
+    const store = state.getStore()
+    const products = state.getProducts()
+    const visibleProducts = products.filter((item) => state.isProductVisibleInStore(item, store.id))
+    this.setData({
+      store,
+      tableContext: state.getTableContext(),
+      products: visibleProducts,
+      categories: state.getProductCategories(visibleProducts, { includeEmpty: false }),
+      cartSummary: state.getCartSummary()
+    })
     this.buildList()
   },
   buildList() {
     const keyword = this.data.keyword.trim().toLowerCase()
-    const matched = this.data.products.filter((item) => {
-      const inCategory = item.categoryId === this.data.activeCategory
-      const inSale = !this.data.onlySale || item.sale
-      const inKeyword = !keyword || item.name.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword)
-      return inCategory && inSale && inKeyword
+    const saleProducts = this.data.products.filter((item) => !this.data.onlySale || item.sale)
+    const visibleProducts = saleProducts.filter((item) => {
+      const name = String(item.name || '').toLowerCase()
+      const desc = String(item.desc || '').toLowerCase()
+      const inKeyword = !keyword || name.includes(keyword) || desc.includes(keyword)
+      return inKeyword
     })
-    const category = data.categories.find((item) => item.id === this.data.activeCategory)
+    const categories = state.getProductCategories(visibleProducts, { includeEmpty: false })
+    const activeCategory = categories.some((category) => category.id === this.data.activeCategory)
+      ? this.data.activeCategory
+      : (categories[0] && categories[0].id) || ''
+    const activeCategoryName = (categories.find((category) => category.id === activeCategory) || {}).name || activeCategory
+    const activeItems = activeCategory ? visibleProducts.filter((item) => item.categoryId === activeCategory) : []
+    const groupedProducts = activeCategory
+      ? [
+          {
+            categoryId: activeCategory,
+            categoryName: activeCategoryName,
+            items: activeItems
+          }
+        ]
+      : []
+
     this.setData({
-      filteredCount: data.products.filter((item) => (!this.data.onlySale || item.sale)).length,
-      groupedProducts: matched.length
-        ? [
-            {
-              categoryId: category.id,
-              categoryName: category.name,
-              items: matched
-            }
-          ]
-        : []
+      categories,
+      filteredCount: activeItems.length,
+      groupedProducts,
+      activeCategory,
+      scrollIntoView: ''
     })
   },
   selectCategory(event) {
-    this.setData({ activeCategory: event.currentTarget.dataset.id }, () => this.buildList())
+    const activeCategory = event.currentTarget.dataset.id
+    this.setData({ activeCategory }, () => this.buildList())
   },
   toggleSale() {
     this.setData({ onlySale: !this.data.onlySale }, () => this.buildList())
@@ -48,22 +79,32 @@ Page({
     this.setData({ keyword: event.detail.value }, () => this.buildList())
   },
   switchStore() {
+    const stores = state.getStores()
     wx.showActionSheet({
-      itemList: data.stores.map((item) => item.shortName),
+      itemList: stores.map((item) => item.shortName),
       success: (res) => {
-        const store = data.stores[res.tapIndex]
+        const store = stores[res.tapIndex]
+        state.clearTableContext()
         state.setStore(store.id)
-        this.setData({ store })
+        this.refreshProducts()
       }
     })
   },
   addCart(event) {
-    const product = data.products.find((item) => item.id === event.currentTarget.dataset.id)
+    const product = this.data.products.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!product) {
+      return
+    }
     if (!product.sale) {
       wx.showToast({ title: '当前不可售', icon: 'none' })
       return
     }
-    state.addToCart(product)
-    wx.showToast({ title: '已加入购物车' })
+    state.requireLogin('加入购物车', () => {
+      const cart = state.addToCart(product)
+      this.setData({ cartSummary: state.getCartSummary(cart) })
+    })
+  },
+  handleCartChange(event) {
+    this.setData({ cartSummary: event.detail.summary })
   }
 })

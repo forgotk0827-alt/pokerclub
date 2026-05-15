@@ -1,0 +1,12 @@
+<topbar title="报名订单列表" showBack="{{true}}" />
+<view class="sub-page light-page">
+  <view class="tabs">
+    <view wx:for="{{tabs}}" wx:key="key" class="tab {{active === item.key ? 'tab-active' : ''}}" data-key="{{item.key}}" bindtap="selectTab">{{item.name}}</view>
+  </view>
+  <view class="empty" wx:if="{{!list.length}}">暂无订单</view>
+  <view class="list-card" wx:for="{{list}}" wx:key="id">
+    <view class="item-title">{{item.title}}</view>
+    <view class="item-sub">{{item.date}}</view>
+    <view class="item-status">{{item.status}}</view>
+  </view>
+</view>

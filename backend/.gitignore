@@ -1,0 +1,5 @@
+data.json
+.env
+node_modules/
+*.log
+server.pid

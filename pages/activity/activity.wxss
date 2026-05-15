@@ -4,40 +4,68 @@
 
 .date-band {
   height: 168rpx;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
   align-items: center;
   background: linear-gradient(90deg, #f03a8c, #ff0068);
 }
 
 .date-item {
+  flex: 1;
+  min-width: 0;
   height: 144rpx;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.date-pill {
+  width: 118rpx;
+  height: 122rpx;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-size: 25rpx;
+  font-size: 18rpx;
+  line-height: 22rpx;
   font-weight: 900;
+  text-align: center;
+}
+
+.date-pill-all {
+  width: 96rpx;
+  height: 96rpx;
+}
+
+.date-text {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.date-weekday {
+  display: block;
+  width: 100%;
+  margin-top: 2rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .date-big {
-  margin-top: 14rpx;
-  font-size: 36rpx;
-  line-height: 42rpx;
+  margin-top: 6rpx;
+  font-size: 30rpx;
+  line-height: 34rpx;
 }
 
 .date-active {
-  width: 108rpx;
-  height: 108rpx;
-  justify-self: center;
-  border-radius: 50%;
+  border-radius: 62rpx;
   background: #fff;
   color: #ff0068;
-}
-
-.date-active text:first-child {
-  display: none;
 }
 
 .chips {
@@ -69,43 +97,15 @@
   color: #fff;
 }
 
-.activity-tools {
-  height: 112rpx;
-  padding: 16rpx 22rpx;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18rpx;
-  background: #050807;
-}
-
-.tool-card {
-  height: 80rpx;
-  border-radius: 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14rpx;
-  background: #242526;
-  color: #fff;
-  font-size: 27rpx;
-  font-weight: 800;
-}
-
-.tool-icon {
-  color: #ef5b58;
-  font-size: 42rpx;
-  line-height: 42rpx;
-}
-
 .activity-list {
-  height: calc(100vh - 626rpx);
+  height: calc(100vh - 514rpx);
   background: #050807;
 }
 
 .activity-card {
   position: relative;
   margin: 22rpx;
-  padding: 28rpx 22rpx 84rpx;
+  padding: 28rpx 22rpx 28rpx;
   border-radius: 18rpx;
   background: #242526;
   overflow: hidden;
@@ -237,26 +237,6 @@
   font-weight: 900;
 }
 
-.join-btn {
-  position: absolute;
-  left: 22rpx;
-  right: 22rpx;
-  bottom: 18rpx;
-  height: 54rpx;
-  border-radius: 28rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ef5b58;
-  color: #fff;
-  font-weight: 900;
-}
-
-.join-disabled {
-  background: #555;
-  color: #bdbdbd;
-}
-
 .empty {
   padding-top: 160rpx;
   color: #fff;
@@ -318,4 +298,115 @@
   display: grid;
   grid-template-columns: 1fr 1.4fr;
   gap: 20rpx;
+}
+
+.activity-page,
+.activity-list {
+  background: #0b0f10;
+}
+
+.date-band {
+  background: linear-gradient(90deg, #1d3838, #d74f45);
+}
+
+.date-active {
+  background: #f8f3e7;
+  color: #1d3838;
+}
+
+.chips {
+  background: #111719;
+}
+
+.chip {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #1b2022;
+  color: #b7c0c3;
+}
+
+.chip-active {
+  border-color: rgba(240, 193, 90, 0.55);
+  background: #f0c15a;
+  color: #17191c;
+}
+
+.activity-card {
+  border-radius: 8rpx;
+  background: #1b2022;
+  border: 1rpx solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 14rpx 34rpx rgba(0, 0, 0, 0.24);
+}
+
+.activity-img {
+  border-radius: 8rpx;
+  background: #101415;
+}
+
+.activity-status,
+.activity-price,
+.quota text {
+  color: #f0c15a;
+}
+
+.meta-icon {
+  border-radius: 8rpx;
+  background: #f8f3e7;
+  color: #1b2022;
+}
+
+.signup-panel {
+  background: #1b2022;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.activity-page,
+.activity-list {
+  background: #120a1f;
+}
+
+.date-band {
+  background: linear-gradient(90deg, #3b1b5f, #8b5cf6);
+}
+
+.date-active {
+  background: #efe7ff;
+  color: #4c1d95;
+}
+
+.chips {
+  background: #1b102b;
+}
+
+.chip {
+  border-color: rgba(216, 180, 254, 0.14);
+  background: #241633;
+  color: #c6b8dc;
+}
+
+.chip-active {
+  border-color: rgba(216, 180, 254, 0.6);
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.activity-card,
+.signup-panel {
+  background: #241633;
+  border-color: rgba(216, 180, 254, 0.13);
+  box-shadow: 0 14rpx 34rpx rgba(24, 11, 39, 0.32);
+}
+
+.activity-img {
+  background: #180f27;
+}
+
+.activity-status,
+.activity-price,
+.quota text {
+  color: #d8b4fe;
+}
+
+.meta-icon {
+  background: #efe7ff;
+  color: #4c1d95;
 }

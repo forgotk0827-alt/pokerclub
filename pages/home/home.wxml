@@ -1,12 +1,9 @@
 <topbar title="首页" />
 <scroll-view scroll-y class="page home-page">
-  <view class="notice">《德友酒吧》欢迎您！ 每晚7:30单桌SNG快速赛开赛。</view>
-
   <view class="hero">
-    <image class="hero-img" src="/assets/hero-bar.svg" mode="aspectFill" />
-    <view class="hero-copy">
-      <view class="hero-title">德友酒吧</view>
-      <view class="hero-subtitle">南京专业扑克主题酒吧</view>
+    <image class="hero-img" src="/bac-clean.jpg" mode="aspectFill" />
+    <view class="notice">
+      <view class="notice-track">{{globalSettings.homeNotice}}</view>
     </view>
   </view>
 
@@ -18,10 +15,13 @@
         <text class="store-status">{{store.status}}</text>
       </view>
       <view class="store-bottom">
-        <view class="store-address">{{store.address}} <text class="link" bindtap="copyAddress">[点击导航]</text></view>
+        <view class="store-address">
+          {{store.address}}
+          <text class="link" bindtap="openNavigation">[导航]</text>
+        </view>
         <view class="store-side">
-          <view class="side-label"><text class="side-symbol">⌖</text>位置</view>
-          <view class="side-scan">扫码</view>
+          <view class="side-label"><text class="side-symbol">◎</text>位置</view>
+          <view class="side-scan" bindtap="switchStore">切换</view>
         </view>
       </view>
     </view>
@@ -37,7 +37,7 @@
       </view>
       <text>扫码点餐</text>
     </button>
-    <button class="quick-item" data-url="/pages/activity/activity" bindtap="go">
+    <button class="quick-item" bindtap="goLeaderboard">
       <view class="quick-icon icon-ticket">
         <view class="ticket-pin left"></view>
         <view class="ticket-pin right"></view>
@@ -45,9 +45,9 @@
         <view class="ticket-line short"></view>
         <view class="ticket-line"></view>
       </view>
-      <text>活动报名</text>
+      <text>排行榜</text>
     </button>
-    <button class="quick-item" bindtap="showPartner">
+    <button class="quick-item" bindtap="goVideos">
       <view class="quick-icon icon-partner">
         <view class="partner-head">
           <view class="partner-eye"></view>
@@ -55,7 +55,17 @@
         </view>
         <view class="partner-body"></view>
       </view>
-      <text>共享合伙人</text>
+      <text>精彩呈现</text>
+    </button>
+    <button class="quick-item" bindtap="goJoinUs">
+      <view class="quick-icon icon-partner">
+        <view class="partner-head">
+          <view class="partner-eye"></view>
+          <view class="partner-eye"></view>
+        </view>
+        <view class="partner-body"></view>
+      </view>
+      <text>加入我们</text>
     </button>
     <button class="quick-item" bindtap="showCoupon">
       <view class="quick-icon icon-ticket">
@@ -84,5 +94,43 @@
       </view>
     </view>
   </view>
+
+  <view class="section-head">
+    <view class="section-name">活动报名</view>
+    <view class="section-more" bindtap="goActivity">更多</view>
+  </view>
+  <view class="home-activity-list">
+    <view class="home-activity-card" wx:for="{{latestActivities}}" wx:key="id" bindtap="goActivity">
+      <view class="home-activity-top">
+        <view class="home-activity-title">{{item.title}}</view>
+        <view class="home-activity-link">查看详情</view>
+      </view>
+      <view class="home-activity-body">
+        <image class="home-activity-img" src="{{item.image}}" mode="aspectFill" />
+        <view class="home-activity-main">
+          <view class="home-meta-line">
+            <text class="home-meta-icon">•</text>
+            <text class="line-clamp">{{item.date}}</text>
+          </view>
+          <view class="home-meta-line">
+            <text class="home-meta-icon">◎</text>
+            <text class="line-clamp">{{item.location}}</text>
+          </view>
+          <view class="home-meta-line muted">
+            <text class="home-meta-icon">•</text>
+            <text class="line-clamp">{{item.deadline}}</text>
+          </view>
+        </view>
+        <view class="home-activity-price">¥{{item.price}}.00</view>
+      </view>
+      <view class="home-join-row">
+        <view class="home-avatars">
+          <view wx:for="{{avatarList}}" wx:key="*this" class="home-avatar">{{item}}</view>
+        </view>
+        <view class="home-quota"><text>{{item.joined}}</text>/{{item.quota}}</view>
+      </view>
+    </view>
+  </view>
 </scroll-view>
+<cart-summary-bar summary="{{cartSummary}}" bind:cartchange="handleCartChange" />
 <main-tabbar active="home" />

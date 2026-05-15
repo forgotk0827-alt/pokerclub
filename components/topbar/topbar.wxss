@@ -1,58 +1,39 @@
 .topbar {
   position: relative;
-  height: 128rpx;
-  padding-top: 48rpx;
-  background: #fff;
-  color: #111;
+  min-height: 76px;
+  padding-top: 28px;
+  background: #111719;
+  color: #f7f0df;
+  box-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.06);
 }
 
 .topbar-title {
   width: 100%;
-  height: 56rpx;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30rpx;
-  font-weight: 700;
+  font-size: 32rpx;
+  font-weight: 800;
 }
 
-.capsule {
+.topbar-back {
   position: absolute;
-  right: 12rpx;
-  top: 52rpx;
-  width: 216rpx;
-  height: 58rpx;
-  border: 1rpx solid #e3e3e3;
-  border-radius: 32rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  background: #fff;
+  left: 28rpx;
+  bottom: 15px;
+  width: 28rpx;
+  height: 28rpx;
+  border-left: 4rpx solid #f7f0df;
+  border-bottom: 4rpx solid #f7f0df;
+  transform: rotate(45deg);
 }
 
-.dot {
-  width: 11rpx;
-  height: 11rpx;
-  border-radius: 50%;
-  background: #161616;
+.topbar {
+  background: #1b102b;
+  color: #f4ecff;
 }
 
-.divider {
-  width: 1rpx;
-  height: 30rpx;
-  background: #d9d9d9;
-}
-
-.minus {
-  width: 30rpx;
-  height: 6rpx;
-  border-radius: 6rpx;
-  background: #161616;
-}
-
-.ring {
-  width: 30rpx;
-  height: 30rpx;
-  border: 7rpx solid #161616;
-  border-radius: 50%;
+.topbar-back {
+  border-left-color: #f4ecff;
+  border-bottom-color: #f4ecff;
 }

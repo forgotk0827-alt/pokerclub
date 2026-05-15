@@ -1,0 +1,4 @@
+<topbar title="我的收藏" showBack="{{true}}" />
+<view class="favorites-page">
+  <view class="empty">暂无记录，快去收藏吧</view>
+</view>

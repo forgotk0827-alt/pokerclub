@@ -1,0 +1,62 @@
+<topbar title="储值账户" showBack="{{true}}" />
+<view class="page recharge-page">
+  <view class="balance-card">
+    <view class="balance-label">可用余额</view>
+    <view class="balance-num">{{member.balance}}</view>
+    <view class="balance-tip">{{settings.note}}</view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">选择套餐</view>
+      <view class="section-sub">{{settings.title}}</view>
+    </view>
+    <scroll-view scroll-x class="package-row" enable-flex>
+      <view
+        wx:for="{{settings.packages}}"
+        wx:key="id"
+        class="package-card {{selectedIndex === index ? 'package-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="selectPackage"
+      >
+        <view wx:if="{{item.tip}}" class="package-tip">{{item.tip}}</view>
+        <view class="package-pay">{{item.label}}</view>
+        <view class="package-credit">{{item.subLabel}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title">支付方式</view>
+    </view>
+    <view class="pay-row">
+      <view class="pay-item pay-active">
+        <view class="pay-icon">微</view>
+        <view class="pay-name">{{settings.paymentLabel}}</view>
+        <view class="pay-check">✓</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="history section">
+    <view class="section-head">
+      <view class="section-title">充值记录</view>
+      <view class="section-sub">最近{{records.length}}条</view>
+    </view>
+    <view wx:if="{{!records.length}}" class="empty">暂无充值记录</view>
+    <view wx:for="{{records}}" wx:key="id" class="record-row">
+      <view class="record-main">
+        <view class="record-name">{{item.packageLabel || item.note || item.type}}</view>
+        <view class="record-sub">{{item.createdAt}} · {{item.operator}}</view>
+      </view>
+      <view class="record-amount">+{{item.creditAmount}}</view>
+    </view>
+  </view>
+
+  <view class="recharge-bar">
+    <view class="recharge-price">¥{{settings.packages[selectedIndex].payAmount}}</view>
+    <view class="recharge-after">充值后余额 {{balanceAfter}}</view>
+    <button class="recharge-btn" bindtap="rechargeNow">立即充值</button>
+  </view>
+</view>

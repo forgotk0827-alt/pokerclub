@@ -1,0 +1,8 @@
+<topbar title="加入我们" showBack="{{true}}" />
+<scroll-view scroll-y class="join-page">
+  <image class="join-image" src="{{globalSettings.joinUsImage}}" mode="widthFix" />
+  <view class="join-content">
+    <view class="join-title">{{globalSettings.joinUsTitle}}</view>
+    <view class="join-text">{{globalSettings.joinUsText}}</view>
+  </view>
+</scroll-view>

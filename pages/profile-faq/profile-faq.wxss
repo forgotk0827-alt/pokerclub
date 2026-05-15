@@ -1,0 +1,25 @@
+.text-page {
+  min-height: 100vh;
+  padding: 24rpx;
+  background: #f6f6f6;
+}
+
+.qa-card {
+  margin-bottom: 20rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: #fff;
+}
+
+.question {
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.answer {
+  margin-top: 12rpx;
+  color: #666;
+  font-size: 25rpx;
+  line-height: 36rpx;
+}
