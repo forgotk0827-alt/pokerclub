@@ -7,14 +7,6 @@ const stores = [
     status: '营业中',
     phone: '025-8888-0520'
   },
-  {
-    id: 'xinjiekou',
-    name: '《破壳派酒吧》新街口扑克主题店',
-    shortName: '新街口店',
-    address: '秦淮区中山南路扑克主题街区B1层',
-    status: '营业中',
-    phone: '025-8899-0520'
-  }
 ]
 
 const categories = [
@@ -22,8 +14,8 @@ const categories = [
   { id: 'dishes', name: '点菜' },
   { id: 'classic', name: '经典鸡尾酒' },
   { id: 'special', name: '特调鸡尾酒' },
-  { id: 'drinks', name: '饮料' },
-  { id: 'ktv', name: 'KTV' }
+  { id: 'craft-beer', name: '精酿啤酒' },
+  { id: 'drinks', name: '饮料' }
 ]
 
 const products = [
@@ -127,15 +119,37 @@ const products = [
     sale: true
   },
   {
-    id: 'ktv-room',
-    categoryId: 'ktv',
-    name: 'KTV包厢小时卡',
-    desc: '适用于当前门店，当日营业时间内使用',
-    price: 168,
-    points: 0,
-    unit: '小时',
-    image: '/assets/product-special.svg',
-    sale: false
+    id: 'craft-beer-lager',
+    categoryId: 'craft-beer',
+    name: '破壳派德式拉格',
+    desc: '清爽麦香，适合桌游与轻食搭配',
+    price: 58,
+    points: 6800,
+    unit: '杯',
+    image: '/assets/product-drink.svg',
+    sale: true
+  },
+  {
+    id: 'craft-beer-ipa',
+    categoryId: 'craft-beer',
+    name: '柑橘社交IPA',
+    desc: '柑橘与松针香气，苦度明亮',
+    price: 68,
+    points: 7800,
+    unit: '杯',
+    image: '/assets/product-drink.svg',
+    sale: true
+  },
+  {
+    id: 'craft-beer-wheat',
+    categoryId: 'craft-beer',
+    name: '小麦白啤',
+    desc: '柔和麦芽、淡淡丁香与香蕉香气',
+    price: 62,
+    points: 7200,
+    unit: '杯',
+    image: '/assets/product-drink.svg',
+    sale: true
   }
 ]
 

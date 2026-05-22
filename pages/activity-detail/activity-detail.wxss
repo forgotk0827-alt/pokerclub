@@ -161,3 +161,7 @@
   font-size: 32rpx;
   font-weight: 900;
 }
+
+.signup-disabled {
+  background: #9ca3af;
+}

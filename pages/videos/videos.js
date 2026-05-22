@@ -1,18 +1,16 @@
-const data = require('../../utils/data')
 const state = require('../../utils/state')
 
 Page({
   data: {
-    globalSettings: state.getGlobalSettings(),
-    videos: data.videos,
+    globalSettings: null,
+    videos: [],
     activeId: ''
   },
   onShow() {
-    this.refresh()
     state.fetchGlobalSettings((globalSettings) => {
       this.setData({
         globalSettings,
-        videos: this.buildVideos(globalSettings)
+        videos: globalSettings ? this.buildVideos(globalSettings) : []
       })
     })
   },
@@ -37,7 +35,7 @@ Page({
           }
         ]
       : []
-    return current.concat(data.videos || [])
+    return current
   },
   play(event) {
     this.setData({ activeId: event.currentTarget.dataset.id })

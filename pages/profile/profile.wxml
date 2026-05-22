@@ -6,8 +6,8 @@
     <view class="profile-main">
       <view class="nickname">{{member.nickname}}</view>
       <view class="badge">{{member.level}}</view>
-      <button wx:if="{{!isLoggedIn}}" class="login-btn" bindtap="login">微信一键注册登录</button>
-      <button wx:else class="edit-name-btn" bindtap="editNickname">修改昵称</button>
+      <button wx:if="{{!isLoggedIn}}" class="login-btn" bindtap="oneTapLogin">微信一键登录</button>
+      <button wx:else class="edit-name-btn" bindtap="openProfileEditor">修改昵称和头像</button>
     </view>
     <view class="qr-box" bindtap="showMemberQr">
       <view class="real-qr small-qr">
@@ -30,13 +30,13 @@
       <text class="stat-label">储值卡余额</text>
     </view>
     <view class="split"></view>
-    <view class="stat">
+    <view class="stat" bindtap="goPoints">
       <text class="stat-num">{{member.points}}</text>
       <text class="stat-label">我的积分</text>
     </view>
     <view class="split"></view>
-    <view class="stat">
-      <text class="stat-num">{{member.gems}}</text>
+    <view class="stat" bindtap="goFragments">
+      <text class="stat-num">{{member.gems || member.invitePieces || 0}}</text>
       <text class="stat-label">我的碎片</text>
     </view>
   </view>
@@ -114,6 +114,48 @@
           </view>
         </view>
         <view class="member-qr-tip">出示二维码给店员扫码</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{profileEditorVisible}}" class="profile-editor-mask" bindtap="closeProfileEditor">
+    <view class="profile-editor-dialog" catchtap="noop">
+      <view class="profile-editor-head">
+        <view class="profile-editor-title">{{profileEditorMode === 'login' ? '完善会员资料' : '修改昵称和头像'}}</view>
+        <view class="profile-editor-subtitle">
+          {{profileEditorMode === 'login' ? '先选择头像和昵称，再完成手机号授权' : '编辑后会同步到后端和我的信息页'}}
+        </view>
+      </view>
+      <view class="profile-avatar-block">
+        <button class="avatar-picker" open-type="chooseAvatar" bindchooseavatar="chooseProfileAvatar">
+          <image wx:if="{{profileForm.avatarUrl}}" class="editor-avatar-img" src="{{profileForm.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="editor-avatar-placeholder">
+            <view class="editor-avatar-plus">+</view>
+            <text>头像</text>
+          </view>
+        </button>
+        <view class="avatar-hint">点击更换头像</view>
+      </view>
+      <view class="profile-field-card" bindtap="showNicknameTip">
+        <view class="profile-field">
+          <view class="profile-field-label">昵称</view>
+          <input class="profile-nickname-input" type="nickname" value="{{profileForm.nickname}}" placeholder="请输入昵称" bindinput="inputProfileNickname" bindfocus="showNicknameTip" />
+        </view>
+      </view>
+      <view wx:if="{{profileEditorMode === 'login'}}" class="privacy-accept">
+        <checkbox-group bindchange="togglePrivacyAgreement">
+          <label class="privacy-label">
+            <checkbox value="agree" checked="{{privacyAgreed}}" color="#8b5cf6" />
+            <text>我已阅读并同意</text>
+            <text class="privacy-link" bindtap="openPrivacyPolicy">《隐私协议》</text>
+          </label>
+        </checkbox-group>
+      </view>
+      <view wx:if="{{nicknameTipVisible}}" class="profile-tip-overlay">建议使用微信昵称，方便门店识别和核对</view>
+      <view class="profile-editor-actions">
+        <view class="profile-cancel" bindtap="closeProfileEditor">取消</view>
+        <button wx:if="{{profileEditorMode === 'login'}}" class="profile-save" open-type="getPhoneNumber" bindgetphonenumber="confirmProfileLogin" disabled="{{!privacyAgreed}}">继续登录</button>
+        <view wx:else class="profile-save" bindtap="saveProfileEditor">保存资料</view>
       </view>
     </view>
   </view>

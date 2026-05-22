@@ -2,7 +2,7 @@ const state = require('../../utils/state')
 
 Page({
   data: {
-    member: state.getMember(),
+    member: {},
     selected: 'gold',
     cards: [
       { id: 'gold', name: '黄金会员月卡', points: 2000, price: 500 },
@@ -12,11 +12,16 @@ Page({
     selectedCard: { id: 'gold', name: '黄金会员月卡', points: 2000, price: 500 }
   },
   onShow() {
-    if (!state.requireLogin('开通会员', () => this.setData({ member: state.getMember() }))) {
+    if (!state.requireLogin('开通会员', () => this.refreshMemberFromServer())) {
       this.setData({ member: state.getMember() })
       return
     }
-    this.setData({ member: state.getMember() })
+    this.refreshMemberFromServer()
+  },
+  refreshMemberFromServer() {
+    state.fetchMyProfile((member) => {
+      this.setData({ member: member || {} })
+    })
   },
   selectCard(event) {
     const selected = event.currentTarget.dataset.id
@@ -37,16 +42,16 @@ Page({
       confirmText: '立即开通',
       success: (res) => {
         if (!res.confirm) return
-        const member = state.getMember()
-        const next = state.saveMember(
-          Object.assign({}, member, {
-            level: card.name.replace('月卡', ''),
-            points: (member.points || 0) + card.points,
-            totalSpent: (member.totalSpent || 0) + card.price
-          })
-        )
-        this.setData({ member: next })
-        wx.showToast({ title: '开通成功', icon: 'success' })
+        const member = this.data.member && this.data.member.id ? this.data.member : state.getMember()
+        state.updateMyProfile({
+          level: card.name.replace('月卡', ''),
+          points: Number(member.points || 0) + Number(card.points || 0),
+          totalSpent: Number(member.totalSpent || 0) + Number(card.price || 0)
+        }, (next) => {
+          if (!next) return
+          this.setData({ member: next })
+          wx.showToast({ title: '开通成功', icon: 'success' })
+        })
       }
     })
   }

@@ -18,24 +18,27 @@
     <view class="activity-card" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
       <view class="activity-head">
         <view class="activity-title">{{item.title}}</view>
-        <view class="activity-status">{{item.status === 'open' ? '报名中' : '活动已结束'}}</view>
+        <view class="activity-status">{{item.statusText}}</view>
       </view>
       <view class="activity-body">
         <image wx:if="{{item.image}}" class="activity-img" src="{{item.image}}" mode="aspectFill" />
         <view class="activity-meta">
           <view class="meta-line"><text class="meta-icon">◷</text><text>{{item.date}}</text></view>
           <view class="meta-line"><text class="meta-icon">⌖</text><text class="line-clamp">{{item.location}}</text></view>
-          <view class="meta-line muted"><text class="meta-icon">◷</text><text>{{item.deadline}}</text></view>
+          <view class="meta-line muted"><text class="meta-icon">◷</text><text>{{item.deadlineAt || item.deadline}}</text></view>
         </view>
         <view class="activity-price">¥{{item.price}}.00</view>
       </view>
       <view class="join-row">
         <view class="avatars">
-          <view wx:for="{{avatarList}}" wx:key="*this" class="avatar">{{item}}</view>
+          <block wx:for="{{item.avatars}}" wx:key="avatarText">
+            <image wx:if="{{item.avatarUrl}}" class="avatar avatar-img" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="avatar">{{item.avatarText}}</view>
+          </block>
         </view>
         <view class="quota"><text>{{item.joined}}</text>/{{item.quota}}</view>
       </view>
-      <view wx:if="{{item.status !== 'open'}}" class="ended-mark">已过期</view>
+      <view wx:if="{{item.signupClosed}}" class="ended-mark">已截止</view>
     </view>
     <view wx:if="{{!list.length}}" class="empty">暂无活动</view>
   </scroll-view>

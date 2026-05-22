@@ -11,14 +11,16 @@ Page({
   },
   selectType(event) {
     const type = event.currentTarget.dataset.type || 'weekly'
-    this.setData({ activeType: type, list: state.getLeaderboard(type) })
+    this.setData({ activeType: type, list: [] })
     this.refresh()
   },
   refresh() {
     const type = this.data.activeType
-    this.setData({ list: state.getLeaderboard(type) })
-    state.fetchPublicLeaderboard((list) => {
-      this.setData({ list: list || state.getLeaderboard(type) })
-    }, type)
+    state.fetchStores(() => {
+      const storeId = state.getStore().id
+      state.fetchPublicLeaderboard(() => {
+        this.setData({ list: state.getLeaderboard(type, storeId) })
+      }, type)
+    })
   }
 })

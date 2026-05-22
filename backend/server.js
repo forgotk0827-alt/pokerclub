@@ -17,7 +17,7 @@ const WX_PAY_API = 'https://api.mch.weixin.qq.com'
 const WX_PAY_ENABLED = String(process.env.WX_PAY_ENABLED || '').toLowerCase() === 'true'
 const XPYUN_API = 'https://open.xpyun.net/api/openapi'
 const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, 'uploads')
-const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || 'http://47.103.113.60').replace(/\/+$/, '')
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || 'https://www.pokerpai.cn').replace(/\/+$/, '')
 const LEADERBOARD_TYPES = ['weekly', 'monthly', 'yearly']
 const COLLECTION_KEYS = [
   'stores',
@@ -67,7 +67,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/global-settings') return sendOk(res, db.globalSettings)
     if (req.method === 'GET' && pathname === '/api/leaderboard') return sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
 
-    if (pathname.startsWith('/api/my/') || pathname === '/api/orders' || pathname === '/api/recharge' || pathname === '/api/cellar' || pathname === '/api/signups' || pathname.startsWith('/api/wechat/pay/')) {
+    if (pathname.startsWith('/api/my/') || pathname === '/api/orders' || pathname === '/api/recharge' || pathname === '/api/cellar' || pathname.startsWith('/api/cellar/') || pathname === '/api/signups' || pathname.startsWith('/api/wechat/pay/')) {
       const user = requireUser(req)
       if (req.method === 'GET' && pathname === '/api/my/profile') return sendOk(res, user.member)
       if (req.method === 'PUT' && pathname === '/api/my/profile') return await handleUpdateProfile(req, res, user)
@@ -78,6 +78,8 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && pathname === '/api/orders') return await handleCreateOrder(req, res, user)
       if (req.method === 'POST' && pathname === '/api/recharge') return await handleRecharge(req, res, user)
       if (req.method === 'POST' && pathname === '/api/cellar') return await handleSubmitCellar(req, res, user)
+      if (req.method === 'PATCH' && match(pathname, '/api/cellar/:id/status')) return await handleUserCellarStatus(req, res, pathname, user)
+      if (req.method === 'POST' && match(pathname, '/api/cellar/:id/renew')) return await handleRenewCellar(req, res, pathname, user)
       if (req.method === 'POST' && pathname === '/api/signups') return await handleCreateSignup(req, res, user)
       if (req.method === 'POST' && pathname === '/api/wechat/pay/order') return await handleCreateOrderPayment(req, res, user)
       if (req.method === 'POST' && pathname === '/api/wechat/pay/recharge') return await handleCreateRechargePayment(req, res, user)
@@ -100,9 +102,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/api/merchant/products') return sendOk(res, scopedProducts(merchant))
       if (req.method === 'POST' && pathname === '/api/merchant/products') return await handleSaveProduct(req, res, merchant)
       if (req.method === 'DELETE' && match(pathname, '/api/merchant/products/:id')) return await handleDeleteProduct(req, res, pathname, merchant)
-      if (req.method === 'GET' && pathname === '/api/merchant/categories') return sendOk(res, db.categories)
-      if (req.method === 'POST' && pathname === '/api/merchant/categories') return await handleSaveCategory(req, res)
-      if (req.method === 'DELETE' && match(pathname, '/api/merchant/categories/:id')) return await handleDeleteCategory(req, res, pathname)
+      if (req.method === 'GET' && pathname === '/api/merchant/categories') return sendOk(res, scopedCategories(merchant))
+      if (req.method === 'POST' && pathname === '/api/merchant/categories') return await handleSaveCategory(req, res, merchant)
+      if (req.method === 'DELETE' && match(pathname, '/api/merchant/categories/:id')) return await handleDeleteCategory(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/activities') return sendOk(res, scopedList(db.activities, merchant))
       if (req.method === 'POST' && pathname === '/api/merchant/activities') return await handleSaveActivity(req, res, merchant)
       if (req.method === 'DELETE' && match(pathname, '/api/merchant/activities/:id')) return await handleDeleteActivity(req, res, pathname, merchant)
@@ -117,6 +119,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/api/merchant/point-logs') return sendOk(res, scopedList(db.pointLogs, merchant))
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/balance')) return await handleAdjustBalance(req, res, pathname, merchant)
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/points')) return await handleAdjustPoints(req, res, pathname, merchant)
+      if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/pieces')) return await handleAdjustPieces(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/global-settings') return sendOk(res, db.globalSettings)
       if (req.method === 'POST' && pathname === '/api/merchant/global-settings') return await handleGlobalSettings(req, res)
       if (req.method === 'GET' && pathname === '/api/merchant/leaderboard') return sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
@@ -151,7 +154,10 @@ async function handleWechatLogin(req, res) {
   const identity = await code2Session(code)
   const openid = identity.openid
   const unionid = identity.unionid || ''
+  const phone = await getWechatPhoneNumber(body.phoneCode || body.phoneNumberCode || body.phone_code || '')
+  const phoneValue = String(body.phone || phone || '').trim()
   let member = db.members.find((item) => item.openid === openid)
+  if (!member && phoneValue) member = db.members.find((item) => samePhone(item.phone, phoneValue))
   if (!member) {
     member = {
       id: `MB${Date.now()}`,
@@ -159,7 +165,7 @@ async function handleWechatLogin(req, res) {
       unionid,
       nickname: body.nickname || `微信用户${String(openid).slice(-4)}`,
       avatarUrl: body.avatarUrl || '',
-      phone: '',
+      phone: phoneValue,
       level: '普通会员',
       balance: 0,
       points: 0,
@@ -171,10 +177,13 @@ async function handleWechatLogin(req, res) {
     }
     db.members.unshift(member)
   } else {
+    member.openid = member.openid || openid
     member.unionid = unionid || member.unionid || ''
     if (body.nickname) member.nickname = body.nickname
     if (body.avatarUrl) member.avatarUrl = body.avatarUrl
+    if (phoneValue) member.phone = phoneValue
   }
+  member = applyPhoneMemberId(db, member, phoneValue)
 
   const token = signToken({ type: 'user', memberId: member.id, openid })
   await persist()
@@ -279,12 +288,14 @@ function handleGetActivity(req, res, pathname) {
 
 async function handleUpdateProfile(req, res, user) {
   const body = await readJson(req)
-  const allowed = ['nickname', 'avatarUrl', 'phone', 'gender']
+  const allowed = ['nickname', 'avatarUrl', 'phone', 'gender', 'level', 'points', 'totalSpent']
   allowed.forEach((key) => {
     if (body[key] !== undefined) user.member[key] = body[key]
   })
+  const member = applyPhoneMemberId(db, user.member, user.member.phone)
+  user.member = member
   await persist()
-  sendOk(res, user.member)
+  sendOk(res, member)
 }
 
 async function handleCreateOrder(req, res, user) {
@@ -446,9 +457,42 @@ async function handleSubmitCellar(req, res, user) {
   sendOk(res, record)
 }
 
+async function handleUserCellarStatus(req, res, pathname, user) {
+  const body = await readJson(req)
+  const { id } = params(pathname, '/api/cellar/:id/status')
+  const record = db.cellar.find((item) => item.id === id && item.memberId === user.member.id)
+  if (!record) throw httpError(404, '存酒记录不存在')
+  const status = String(body.status || '').trim()
+  if (!status) throw httpError(400, '请填写状态')
+  record.status = status
+  record.updatedAt = now()
+  await persist()
+  sendOk(res, record)
+}
+
+async function handleRenewCellar(req, res, pathname, user) {
+  const body = await readJson(req)
+  const { id } = params(pathname, '/api/cellar/:id/renew')
+  const record = db.cellar.find((item) => item.id === id && item.memberId === user.member.id)
+  if (!record) throw httpError(404, '存酒记录不存在')
+  const months = Math.max(1, Number(body.months || 3))
+  const baseDate = new Date(String(record.expireAt || dateOnly(new Date())).replace(/-/g, '/'))
+  const expire = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+  expire.setMonth(expire.getMonth() + months)
+  record.months = Number(record.months || 0) + months
+  record.status = '存放中'
+  record.expireAt = dateOnly(expire)
+  record.reminder = '已续存，到期前7天提醒'
+  record.updatedAt = now()
+  await persist()
+  sendOk(res, record)
+}
+
 async function handleCreateSignup(req, res, user) {
   const body = await readJson(req)
   const activity = findById(db.activities, body.activityId || body.id, '活动不存在')
+  const deadlineAt = parseDeadlineAt(activity.deadlineAt || activity.deadline)
+  if (deadlineAt && Date.now() > deadlineAt.getTime()) throw httpError(400, '报名已截止')
   if (activity.status && activity.status !== 'open') throw httpError(400, '活动暂不可报名')
   if (db.signups.find((item) => item.memberId === user.member.id && item.activityId === activity.id)) {
     throw httpError(409, '你已经报名该活动')
@@ -469,6 +513,8 @@ async function handleCreateSignup(req, res, user) {
     location: activity.location || store.address || '',
     price: Number(activity.price || 0),
     pointsPrice: Number(activity.pointsPrice || 0),
+    avatarUrl: user.member.avatarUrl || '',
+    avatarText: (user.member.avatarText || user.member.nickname || '').slice(0, 1),
     status: '已报名',
     createdAt: now()
   }
@@ -476,6 +522,52 @@ async function handleCreateSignup(req, res, user) {
   activity.joined = joined + 1
   await persist()
   sendOk(res, signup)
+}
+
+function activityIdFromOrderItem(item) {
+  if (!item || item.categoryId !== 'activity') return ''
+  return String(item.activityId || item.id || '').replace(/^signup-/, '')
+}
+
+function createActivitySignup(activity, member) {
+  const store = inferStoreByActivity(activity)
+  return {
+    id: `SU${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    activityId: activity.id,
+    memberId: member.id,
+    nickname: member.nickname,
+    title: activity.title,
+    date: activity.date,
+    storeId: store.id || activity.storeId || '',
+    storeName: store.shortName || store.name || '',
+    location: activity.location || store.address || '',
+    price: Number(activity.price || 0),
+    pointsPrice: Number(activity.pointsPrice || 0),
+    avatarUrl: member.avatarUrl || '',
+    avatarText: (member.avatarText || member.nickname || '').slice(0, 1),
+    status: '已报名',
+    createdAt: now()
+  }
+}
+
+function syncOrderActivitySignups(order, member) {
+  if (!order || !member) return false
+  const activityIds = Array.from(new Set((order.items || []).map(activityIdFromOrderItem).filter(Boolean)))
+  let changed = false
+  activityIds.forEach((activityId) => {
+    const activity = db.activities.find((item) => item.id === activityId)
+    if (!activity) return
+    if (db.signups.find((item) => item.memberId === member.id && item.activityId === activity.id)) return
+    const deadlineAt = parseDeadlineAt(activity.deadlineAt || activity.deadline)
+    if (deadlineAt && Date.now() > deadlineAt.getTime()) return
+    const quota = Number(activity.quota || 0)
+    const joined = Number(activity.joined || 0)
+    if (quota && joined >= quota) return
+    db.signups.unshift(createActivitySignup(activity, member))
+    activity.joined = joined + 1
+    changed = true
+  })
+  return changed
 }
 
 async function handleOrderStatus(req, res, pathname, merchant) {
@@ -575,40 +667,44 @@ async function handleDeleteProduct(req, res, pathname, merchant) {
   sendOk(res, { id })
 }
 
-async function handleSaveCategory(req, res) {
-  const body = await readJson(req)
+async function handleSaveCategory(req, res, merchant) {
+  const body = applyMerchantStore(await readJson(req), merchant)
   const name = String(body.name || '').trim()
-  if (!name) throw httpError(400, '分类名称不能为空')
+  if (!name) throw httpError(400, '????????')
   const category = upsert(db.categories, body, {
     id: `cat-${Date.now()}`,
-    name
+    name,
+    storeId: String(body.storeId || '').trim()
   })
   await persist()
   sendOk(res, category)
 }
 
-async function handleDeleteCategory(req, res, pathname) {
+async function handleDeleteCategory(req, res, pathname, merchant) {
   const { id } = params(pathname, '/api/merchant/categories/:id')
-  if (db.products.some((item) => item.categoryId === id)) throw httpError(409, '该分类下还有商品，不能删除')
-  const before = db.categories.length
+  const category = findById(db.categories, id, '?????')
+  ensureMerchantStoreAccess(merchant, category.storeId || merchant.storeId)
   db.categories = db.categories.filter((item) => item.id !== id)
-  if (db.categories.length === before) throw httpError(404, '分类不存在')
   await persist()
   sendOk(res, { id })
 }
 
 async function handleSaveActivity(req, res, merchant) {
+
+
   const body = applyMerchantStore(await readJson(req), merchant)
+  const dayLabel = String(body.dayLabel || '').trim() || inferActivityDayLabel(body.date)
   const activity = upsert(db.activities, body, {
     id: `act-${Date.now()}`,
     title: '',
     type: '国际扑克',
     date: '',
-    dayLabel: '',
+    dayLabel,
     location: '',
     latitude: 0,
     longitude: 0,
     deadline: '',
+    deadlineAt: '',
     price: 0,
     pointsPrice: 0,
     quota: 10,
@@ -642,7 +738,23 @@ async function handleSaveStore(req, res, merchant) {
     if (body.id && body.id !== merchant.storeId) throw httpError(403, '只能操作本门店')
     body.id = merchant.storeId
   }
-  const store = upsert(db.stores, body, {
+  const payload = {
+    id: body.id,
+    name: String(body.name || '').trim(),
+    shortName: String(body.shortName || '').trim(),
+    address: String(body.address || '').trim(),
+    phone: String(body.phone || '').trim(),
+    status: String(body.status || '营业中').trim(),
+    latitude: Number(body.latitude || 0),
+    longitude: Number(body.longitude || 0),
+    businessHours: String(body.businessHours || '14:00 - 05:00').trim(),
+    cover: body.cover || '/assets/hero-bar.svg',
+    printerSn: String(body.printerSn || '').trim(),
+    printerName: String(body.printerName || '').trim(),
+    printerCopies: Math.max(1, Number(body.printerCopies || 1))
+  }
+  if (!payload.name || !payload.shortName) throw httpError(400, '请填写门店名称')
+  const store = upsert(db.stores, payload, {
     id: `store-${Date.now()}`,
     name: '',
     shortName: '',
@@ -651,6 +763,8 @@ async function handleSaveStore(req, res, merchant) {
     status: '营业中',
     latitude: 0,
     longitude: 0,
+    businessHours: '14:00 - 05:00',
+    cover: '/assets/hero-bar.svg',
     printerSn: '',
     printerName: '',
     printerCopies: 1
@@ -665,9 +779,8 @@ async function handleDeleteStore(req, res, pathname, merchant) {
   if (db.stores.length <= 1) throw httpError(409, '至少保留一个门店')
   const before = db.stores.length
   db.stores = db.stores.filter((item) => item.id !== id)
-  if (db.stores.length === before) throw httpError(404, '门店不存在')
   await persist()
-  sendOk(res, { id })
+  sendOk(res, { id, removed: db.stores.length < before })
 }
 
 async function handleInventoryStock(req, res, pathname, merchant) {
@@ -751,6 +864,33 @@ async function handleAdjustPoints(req, res, pathname, merchant) {
   sendOk(res, { member, record })
 }
 
+async function handleAdjustPieces(req, res, pathname, merchant) {
+  const { id } = params(pathname, '/api/merchant/members/:id/pieces')
+  const body = await readJson(req)
+  const member = findMember(id)
+  ensureMerchantMemberAccess(merchant, member.id)
+  const storeId = isSuperMerchant(merchant) ? String(body.storeId || '').trim() : merchant.storeId
+  const delta = Number(body.delta || 0)
+  if (!delta) throw httpError(400, '调整碎片无效')
+  member.invitePieces = Math.max(0, Number(member.invitePieces || 0) + delta)
+  member.gems = member.invitePieces
+  const record = {
+    id: `PI${Date.now()}`,
+    type: 'pieces',
+    memberId: member.id,
+    nickname: member.nickname,
+    delta,
+    reason: body.reason || '手动调整碎片',
+    storeId,
+    storeName: storeNameById(storeId),
+    operator: merchant.username,
+    createdAt: now()
+  }
+  db.pointLogs.unshift(record)
+  await persist()
+  sendOk(res, { member, record })
+}
+
 async function handleGlobalSettings(req, res) {
   const body = await readJson(req)
   db.globalSettings = normalizeGlobalSettings(Object.assign({}, db.globalSettings, body))
@@ -762,12 +902,17 @@ async function handleSaveLeaderboard(req, res) {
   const body = await readJson(req)
   db.leaderboard = normalizeLeaderboardBoards(db.leaderboard)
   const type = LEADERBOARD_TYPES.includes(body.type) ? body.type : 'weekly'
+  const storeId = String(body.storeId || '').trim()
   if (Array.isArray(body.list)) {
-    db.leaderboard[type] = body.list
+    const nextList = normalizeLeaderboardList(body.list)
+    db.leaderboard[type] = storeId
+      ? (db.leaderboard[type] || []).filter((item) => String(item.storeId || '').trim() !== storeId).concat(nextList.map((item) => Object.assign({}, item, { storeId })))
+      : nextList
   } else if (body.boards && typeof body.boards === 'object') {
     db.leaderboard = normalizeLeaderboardBoards(body.boards)
   } else {
-    upsert(db.leaderboard[type], body, { id: `${type}-rank-${Date.now()}`, username: '', score: 0 })
+    const next = upsert(db.leaderboard[type], body, { id: `${type}-rank-${Date.now()}`, username: '', score: 0, storeId })
+    if (storeId && next) next.storeId = storeId
   }
   db.leaderboard = normalizeLeaderboardBoards(db.leaderboard)
   await persist()
@@ -833,6 +978,11 @@ function scopedStores(merchant) {
 function scopedProducts(merchant) {
   if (isSuperMerchant(merchant)) return db.products
   return db.products.filter((item) => !item.storeId || item.storeId === merchant.storeId)
+}
+
+function scopedCategories(merchant) {
+  if (isSuperMerchant(merchant)) return db.categories
+  return db.categories.filter((item) => !item.storeId || item.storeId === merchant.storeId)
 }
 
 function scopedInventory(merchant) {
@@ -1026,6 +1176,18 @@ async function getWechatAccessToken() {
   return wechatAccessTokenCache.token
 }
 
+async function getWechatPhoneNumber(phoneCode) {
+  const code = String(phoneCode || '').trim()
+  if (!code) return ''
+  const token = await getWechatAccessToken()
+  const result = await postWechatJson(
+    `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(token)}`,
+    { code }
+  )
+  const phone = result && result.phone_info ? result.phone_info.phoneNumber || result.phone_info.phone_number || '' : ''
+  return String(phone || '').trim()
+}
+
 function postWechatBuffer(url, body) {
   const payload = JSON.stringify(body || {})
   return new Promise((resolve, reject) => {
@@ -1060,6 +1222,41 @@ function postWechatBuffer(url, body) {
             return
           }
           resolve(buffer)
+        })
+      }
+    )
+    req.on('error', reject)
+    req.write(payload)
+    req.end()
+  })
+}
+
+function postWechatJson(url, body) {
+  const payload = JSON.stringify(body || {})
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        }
+      },
+      (res) => {
+        let raw = ''
+        res.on('data', (chunk) => { raw += chunk })
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(raw || '{}')
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+              reject(httpError(502, parsed.errmsg || parsed.message || `微信接口请求失败：${res.statusCode}`))
+              return
+            }
+            resolve(parsed)
+          } catch (error) {
+            reject(error)
+          }
         })
       }
     )
@@ -1210,19 +1407,22 @@ async function applyWechatPaySuccess(transaction) {
   const transactionId = transaction.transaction_id || ''
   let changed = false
   const order = db.orders.find((item) => item.outTradeNo === outTradeNo || item.id === outTradeNo)
-  if (order && order.payStatus !== 'paid') {
-    order.payStatus = 'paid'
-    order.status = '已支付'
-    order.transactionId = transactionId
-    order.paidAt = transaction.success_time || now()
+  if (order) {
     const member = db.members.find((item) => item.id === order.memberId)
-    if (member) {
-      member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
-      member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
-      member.consumptionCount = Number(member.consumptionCount || 0) + 1
-      member.level = levelBySpend(member.totalSpent, member.points)
+    if (order.payStatus !== 'paid') {
+      order.payStatus = 'paid'
+      order.status = '已支付'
+      order.transactionId = transactionId
+      order.paidAt = transaction.success_time || now()
+      if (member) {
+        member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
+        member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
+        member.consumptionCount = Number(member.consumptionCount || 0) + 1
+        member.level = levelBySpend(member.totalSpent, member.points)
+      }
+      changed = true
     }
-    changed = true
+    if (syncOrderActivitySignups(order, member)) changed = true
   }
   const record = db.rechargeRecords.find((item) => item.outTradeNo === outTradeNo || item.id === outTradeNo)
   if (record && record.payStatus !== 'paid') {
@@ -1438,7 +1638,12 @@ async function loadDb() {
 
 function loadFileDb() {
   if (fs.existsSync(DB_FILE)) {
-    return normalizeDbShape(JSON.parse(fs.readFileSync(DB_FILE, 'utf8')))
+    const raw = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'))
+    const normalized = normalizeDbShape(raw)
+    if (JSON.stringify(raw) !== JSON.stringify(normalized)) {
+      fs.writeFileSync(DB_FILE, JSON.stringify(normalized, null, 2))
+    }
+    return normalized
   }
   const initial = createInitialDb()
   fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2))
@@ -1526,15 +1731,49 @@ function normalizeDbShape(raw) {
     },
     raw || {}
   )
+  next.stores = syncSeedList(next.stores, sourceData.stores, true, false)
   next.stores = normalizeStores(Array.isArray(next.stores) && next.stores.length ? next.stores : sourceData.stores)
   next.activities = normalizeActivities(Array.isArray(next.activities) ? next.activities : [])
-  if (!Array.isArray(next.categories) || !next.categories.length) next.categories = sourceData.categories
-  if (!Array.isArray(next.products) || !next.products.length) next.products = sourceData.products
-  if (!Array.isArray(next.inventory) || !next.inventory.length) next.inventory = defaultInventory(next.products)
+  next.categories = syncSeedList(next.categories, sourceData.categories, true, false)
+  next.products = syncSeedList(next.products, sourceData.products, true, false)
+  next.activities = syncSeedList(next.activities, normalizeActivities(sourceData.activities), true, false)
+  next.inventory = syncInventoryList(next.inventory, next.products)
   if (!next.rechargeSettings || !Array.isArray(next.rechargeSettings.packages)) next.rechargeSettings = defaultRechargeSettings()
   next.globalSettings = normalizeGlobalSettings(next.globalSettings)
   next.leaderboard = normalizeLeaderboardBoards(next.leaderboard)
+  ;(Array.isArray(next.members) ? next.members : []).forEach((member) => applyPhoneMemberId(next, member, member.phone))
   return next
+}
+
+function syncSeedList(current, source, keepExtras = true, sourceWins = true) {
+  const currentList = Array.isArray(current) ? current : []
+  const sourceList = Array.isArray(source) ? source : []
+  const currentById = new Map(currentList.filter((item) => item && item.id).map((item) => [item.id, item]))
+  const sourceById = new Map(sourceList.filter((item) => item && item.id).map((item) => [item.id, item]))
+  const next = []
+  sourceList.forEach((item) => {
+    const existing = currentById.get(item.id)
+    next.push(existing ? (sourceWins ? Object.assign({}, existing, item) : Object.assign({}, item, existing)) : item)
+    currentById.delete(item.id)
+  })
+  if (keepExtras) currentById.forEach((item) => next.push(item))
+  return next
+}
+
+function syncInventoryList(current, products) {
+  const inventory = Array.isArray(current) ? current : []
+  if (!inventory.length) return defaultInventory(products)
+  const stockMap = new Map()
+  inventory.forEach((item) => {
+    if (!item || !item.id) return
+    const id = item.id === 'ktv-room' ? 'craft-beer-lager' : item.id
+    if (!stockMap.has(id)) stockMap.set(id, Number(item.stock || 0))
+  })
+  ;(Array.isArray(products) ? products : []).forEach((product, index) => {
+    if (!product || !product.id) return
+    if (!stockMap.has(product.id)) stockMap.set(product.id, 30 + index * 5)
+  })
+  return Array.from(stockMap.entries()).map(([id, stock]) => ({ id, stock }))
 }
 
 async function persist() {
@@ -1572,6 +1811,7 @@ function normalizeActivities(activities) {
         latitude: 31.9567,
         longitude: 118.8465,
         pointsPrice: 0,
+        deadlineAt: '',
         detailImage: item.image || '/assets/activity-card.svg',
         environmentImage: '/assets/hero-bar.svg',
         resultImage: item.image || '/assets/activity-card.svg'
@@ -1694,7 +1934,8 @@ function normalizeLeaderboardList(list) {
   return (Array.isArray(list) ? list : []).map((item, index) => ({
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
-    score: Number(item.score || 0)
+    score: Number(item.score || 0),
+    storeId: String(item.storeId || '').trim()
   }))
 }
 
@@ -1752,8 +1993,76 @@ function findById(list, id, message) {
   return item
 }
 
+function samePhone(left, right) {
+  const a = String(left || '').replace(/\D/g, '')
+  const b = String(right || '').replace(/\D/g, '')
+  return Boolean(a && b && a === b)
+}
+
+function memberIdFromPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (digits.length < 4) return ''
+  return `会员${digits.slice(-4)}`
+}
+
+function applyPhoneMemberId(targetDb, member, phone) {
+  if (!targetDb || !member) return member
+  const nextId = memberIdFromPhone(phone)
+  if (!nextId) return member
+  const members = Array.isArray(targetDb.members) ? targetDb.members : []
+  const currentId = String(member.id || '').trim()
+  const existing = members.find((item) => item && item !== member && item.id === nextId)
+  if (existing) {
+    if (samePhone(existing.phone, phone) || existing.openid === member.openid) {
+      mergeMember(targetDb, member, existing)
+      return existing
+    }
+    return member
+  }
+  if (currentId && currentId !== nextId) migrateMemberReferences(targetDb, currentId, nextId)
+  member.id = nextId
+  member.phone = String(phone || member.phone || '').trim()
+  return member
+}
+
+function mergeMember(targetDb, from, to) {
+  if (!targetDb || !from || !to || from === to) return to
+  const oldId = String(from.id || '').trim()
+  const newId = String(to.id || '').trim()
+  if (oldId && newId && oldId !== newId) migrateMemberReferences(targetDb, oldId, newId)
+  ;['openid', 'unionid', 'nickname', 'avatarUrl', 'phone', 'level'].forEach((key) => {
+    if (from[key]) to[key] = from[key]
+  })
+  if (!to.createdAt && from.createdAt) to.createdAt = from.createdAt
+  ;['balance', 'points', 'totalSpent', 'consumptionCount', 'gems', 'invitePieces'].forEach((key) => {
+    to[key] = Number(to[key] || 0) + Number(from[key] || 0)
+  })
+  targetDb.members = (Array.isArray(targetDb.members) ? targetDb.members : []).filter((item) => item !== from)
+  return to
+}
+
+function migrateMemberReferences(targetDb, oldId, newId) {
+  ;['orders', 'signups', 'cellar', 'rechargeRecords', 'pointLogs'].forEach((key) => {
+    ;(Array.isArray(targetDb[key]) ? targetDb[key] : []).forEach((item) => {
+      if (item && item.memberId === oldId) item.memberId = newId
+    })
+  })
+}
+
 function findMember(id) {
-  return db.members.find((item) => item.id === id || item.openid === id || item.nickname === id) || (() => { throw httpError(404, '会员不存在') })()
+  const keyword = String(id || '').trim()
+  const normalized = keyword.toLowerCase()
+  if (!normalized) throw httpError(404, '会员不存在')
+  const fields = ['id', 'openid', 'nickname', 'phone']
+  const exact = db.members.find((item) => fields.some((field) => String(item[field] || '').trim().toLowerCase() === normalized))
+  if (exact) return exact
+  const fuzzy = db.members.filter((item) => fields.some((field) => {
+    const value = String(item[field] || '').trim().toLowerCase()
+    return value && value.indexOf(normalized) > -1
+  }))
+  if (fuzzy.length === 1) return fuzzy[0]
+  if (fuzzy.length > 1) throw httpError(400, '匹配到多个会员，请输入会员ID')
+  throw httpError(404, '会员不存在')
 }
 
 function readJson(req) {
@@ -1947,6 +2256,41 @@ function now(date = new Date()) {
 function dateOnly(date) {
   const pad = (value) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function parseDeadlineAt(value) {
+  const text = String(value || '').trim()
+  if (!text) return null
+  const normalized = text
+    .replace(/年|\/|\.|月/g, '-')
+    .replace(/日|号/g, '')
+    .replace(/\s+/g, ' ')
+  const parsed = new Date(normalized)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function inferActivityDayLabel(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  const nowDate = new Date()
+  const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  let target = null
+  const monthDay = text.match(/(\d{1,2})月(\d{1,2})日/)
+  if (monthDay) {
+    target = new Date(nowDate.getFullYear(), Number(monthDay[1]) - 1, Number(monthDay[2]))
+  } else {
+    const isoDate = text.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/)
+    if (isoDate) {
+      target = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]))
+    }
+  }
+  if (!target || Number.isNaN(target.getTime())) return ''
+  const diffDays = Math.round((startOfDay(target) - startOfDay(nowDate)) / 86400000)
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '明天'
+  if (diffDays === 2) return '后天'
+  if (diffDays === 3) return '2天后'
+  return ''
 }
 
 function loadEnv() {

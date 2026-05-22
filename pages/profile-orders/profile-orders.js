@@ -12,11 +12,17 @@ Page({
     list: []
   },
   onShow() {
-    if (!state.requireLogin('查看订单', () => this.filterList())) {
+    if (!state.requireLogin('查看订单', () => state.fetchMyOrders((orders) => {
+      if (!orders) this.setData({ list: [] })
+      else this.filterList()
+    }))) {
       this.setData({ list: [] })
       return
     }
-    this.filterList()
+    state.fetchMyOrders((orders) => {
+      if (!orders) this.setData({ list: [] })
+      else this.filterList()
+    })
   },
   selectTab(event) {
     this.setData({ active: event.currentTarget.dataset.key }, () => this.filterList())

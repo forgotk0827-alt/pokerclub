@@ -1,0 +1,25 @@
+.privacy-page {
+  min-height: 100vh;
+  padding: 24rpx;
+  background: #f4f5f7;
+}
+
+.privacy-card {
+  padding: 28rpx 24rpx;
+  border-radius: 8rpx;
+  background: #fff;
+}
+
+.privacy-title {
+  color: #111827;
+  font-size: 34rpx;
+  line-height: 46rpx;
+  font-weight: 900;
+}
+
+.privacy-text {
+  margin-top: 18rpx;
+  color: #374151;
+  font-size: 26rpx;
+  line-height: 40rpx;
+}

@@ -12,11 +12,17 @@ Page({
     list: []
   },
   onShow() {
-    if (!state.requireLogin('查看报名记录', () => this.filterList())) {
+    if (!state.requireLogin('查看报名记录', () => state.fetchMySignups((signups) => {
+      if (!signups) this.setData({ list: [] })
+      else this.filterList()
+    }))) {
       this.setData({ list: [] })
       return
     }
-    this.filterList()
+    state.fetchMySignups((signups) => {
+      if (!signups) this.setData({ list: [] })
+      else this.filterList()
+    })
   },
   selectTab(event) {
     this.setData({ active: event.currentTarget.dataset.key }, () => this.filterList())

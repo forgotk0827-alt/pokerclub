@@ -1,4 +1,5 @@
 const state = require('../../utils/state')
+const config = require('../../utils/config')
 const fallbackReminderAudio = '/assets/new-order.wav'
 
 let speechPlugin = null
@@ -25,15 +26,20 @@ const emptyActivityForm = {
   title: '',
   type: '国际扑克',
   date: '',
+  dateDate: '',
+  dateTime: '',
   dayLabel: '今天',
   location: '',
   latitude: '',
   longitude: '',
   deadline: '',
+  deadlineDate: '',
+  deadlineTime: '',
   price: '',
   pointsPrice: '',
   quota: '',
   joined: '',
+  remainingQuota: '',
   status: 'open',
   productName: '',
   image: '/assets/activity-card.svg',
@@ -42,6 +48,20 @@ const emptyActivityForm = {
   resultImage: '/assets/activity-card.svg'
 }
 
+function swapSortOrder(list, id, direction) {
+  const items = (list || []).map((item, index) => Object.assign({}, item, {
+    sortOrder: Number(item.sortOrder || index + 1)
+  }))
+  const index = items.findIndex((item) => item.id === id)
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (index < 0 || target < 0 || target >= items.length) return null
+  const current = Object.assign({}, items[index])
+  const swapped = Object.assign({}, items[target])
+  const currentOrder = current.sortOrder
+  current.sortOrder = swapped.sortOrder
+  swapped.sortOrder = currentOrder
+  return { current, swapped }
+}
 Page({
   data: {
     session: null,
@@ -68,6 +88,9 @@ Page({
     activities: [],
     activityForm: Object.assign({}, emptyActivityForm),
     menuCategoryName: '',
+    menuCategoryDraft: '',
+    menuSortDirty: false,
+    menuSortSaving: false,
     menuForm: Object.assign({}, emptyMenuForm),
     rechargeSettings: state.getRechargeSettings(),
     rechargeRecords: [],
@@ -99,11 +122,20 @@ Page({
       printerCopies: '1'
     },
     inventory: [],
+    memberDetailVisible: false,
+    selectedMember: {
+      orders: [],
+      signups: [],
+      cellar: [],
+      logs: []
+    },
     rankTabs: state.leaderboardTabs,
     activeRankType: 'weekly',
     leaderboard: [],
+    selectedRankUser: null,
     rankUsername: '',
     rankScore: '',
+    rankDeltaScore: '',
     lastReminderAt: 0
   },
   onShow() {
@@ -160,6 +192,50 @@ Page({
     const storeId = this.activeStoreId()
     if (!storeId) return stores || []
     return (stores || []).filter((item) => item.id === storeId)
+  },
+  merchantApi(path, method, data, callback) {
+    const base = String(config.apiBaseUrl || '').replace(/\/+$/, '')
+    const session = this.data.session || state.getMerchantSession()
+    if (!base || !session || !session.token) {
+      if (callback) callback(null)
+      return false
+    }
+    wx.request({
+      url: `${base}${path}`,
+      method,
+      timeout: 15000,
+      header: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${session.token}`
+      },
+      data: data || {},
+      success(res) {
+        const body = res.data || {}
+        const payload = body.data || body
+        if (res.statusCode < 200 || res.statusCode >= 300 || body.ok === false) {
+          wx.showToast({ title: body.message || payload.message || '商家接口请求失败', icon: 'none' })
+          if (callback) callback(null)
+          return
+        }
+        if (callback) callback(payload)
+      },
+      fail() {
+        wx.showToast({ title: '商家接口请求失败', icon: 'none' })
+        if (callback) callback(null)
+      }
+    })
+    return true
+  },
+  saveSortPair(path, first, second, callback) {
+    this.merchantApi(path, 'POST', first, (savedFirst) => {
+      if (!savedFirst) {
+        if (callback) callback(false)
+        return
+      }
+      this.merchantApi(path, 'POST', second, (savedSecond) => {
+        if (callback) callback(!!savedSecond)
+      })
+    })
   },
   refreshStoreScopeOptions() {
     const stores = state.getStores()
@@ -331,9 +407,9 @@ Page({
     this.setData({
       member: state.getMember(),
       pointLogs: state.getPointLogs().slice(0, 8)
-    })
+    }, () => this.syncSelectedMemberDetail())
     state.fetchPointLogs((logs) => {
-      this.setData({ pointLogs: (logs || state.getPointLogs()).slice(0, 8) })
+      this.setData({ pointLogs: (logs || state.getPointLogs()).slice(0, 8) }, () => this.syncSelectedMemberDetail())
     })
   },
   inputPointsMemberKey(event) {
@@ -374,6 +450,32 @@ Page({
       wx.showToast({ title: '积分已更新', icon: 'success' })
     })
   },
+  addMemberPoints() {
+    this.changePoints(1)
+  },
+  addMemberPieces() {
+    const amount = Number(this.data.pointsDelta || 0)
+    if (!amount || amount < 0) {
+      wx.showToast({ title: '请输入碎片数量', icon: 'none' })
+      return
+    }
+    const memberKey = String(this.data.pointsMemberKey || '').trim()
+    if (!memberKey) {
+      wx.showToast({ title: '请填写会员ID或昵称', icon: 'none' })
+      return
+    }
+    if (!String(this.data.pointsReason || '').trim()) {
+      wx.showToast({ title: '请填写操作原因', icon: 'none' })
+      return
+    }
+    state.adjustMemberPieces(memberKey, amount, this.data.pointsReason, this.data.session.name, (payload) => {
+      if (!payload) return
+      this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
+      this.refreshPoints()
+      this.refreshDataManagement()
+      wx.showToast({ title: '碎片已更新', icon: 'success' })
+    })
+  },
   refreshBasics() {
     const render = () => {
       const storeId = this.activeStoreId()
@@ -403,9 +505,36 @@ Page({
     })
   },
   refreshInventory() {
-    this.setData({ inventory: state.getInventory() })
+    const render = (items) => {
+      const list = (items || state.getInventory()).map((item) => Object.assign({}, item, { draftStock: String(item.stock || 0) }))
+      this.setData({ inventory: list })
+    }
+    render()
     state.fetchInventory((items) => {
-      this.setData({ inventory: items || state.getInventory() })
+      render(items || state.getInventory())
+    })
+  },
+  inputStock(event) {
+    const id = event.currentTarget.dataset.id
+    const value = event.detail.value
+    const inventory = this.data.inventory.map((item) => (item.id === id ? Object.assign({}, item, { draftStock: value }) : item))
+    this.setData({ inventory })
+  },
+  saveStock(event) {
+    const id = event.currentTarget.dataset.id
+    const item = this.data.inventory.find((entry) => entry.id === id)
+    if (!item) return
+    const nextStock = Number(item.draftStock)
+    if (Number.isNaN(nextStock) || nextStock < 0) {
+      wx.showToast({ title: '请输入正确库存数量', icon: 'none' })
+      return
+    }
+    const delta = nextStock - Number(item.stock || 0)
+    state.updateProductStock(id, delta, (items) => {
+      this.setData({
+        inventory: (items || state.getInventory()).map((entry) => Object.assign({}, entry, { draftStock: String(entry.stock || 0) }))
+      })
+      wx.showToast({ title: '库存已保存', icon: 'success' })
     })
   },
   changeStock(event) {
@@ -416,27 +545,35 @@ Page({
   },
   refreshProducts() {
     const render = (list) => {
-    const storeId = this.activeStoreId()
-    const sourceProducts = list || state.getProducts()
-    const rawProducts = storeId
-      ? sourceProducts.filter((item) => state.isProductVisibleInStore(item, storeId))
-      : sourceProducts
-    const categories = state.getProductCategories(rawProducts, { includeEmpty: true })
-    const products = rawProducts.map((product) => {
-      const category = categories.find((item) => item.id === product.categoryId)
-      return Object.assign({}, product, {
-        categoryName: product.categoryName || (category ? category.name : product.categoryId)
+      const storeId = this.activeStoreId()
+      const sourceProducts = list || state.getProducts()
+      const rawProducts = storeId
+        ? sourceProducts.filter((item) => state.isProductVisibleInStore(item, storeId))
+        : sourceProducts
+      const categories = state.getProductCategories(rawProducts, { includeEmpty: true, storeId })
+      const categoryIndex = new Map(categories.map((item, index) => [item.id, index]))
+      const products = rawProducts.map((product) => {
+        const category = categories.find((item) => item.id === product.categoryId)
+        return Object.assign({}, product, {
+          categoryName: product.categoryName || (category ? category.name : product.categoryId)
+        })
+      }).sort((left, right) => {
+        const leftCategory = categoryIndex.has(left.categoryId) ? categoryIndex.get(left.categoryId) : 9999
+        const rightCategory = categoryIndex.has(right.categoryId) ? categoryIndex.get(right.categoryId) : 9999
+        if (leftCategory !== rightCategory) return leftCategory - rightCategory
+        return String(left.name || '').localeCompare(String(right.name || ''))
       })
-    })
-    const currentCategory = categories[this.data.menuForm.categoryIndex] || categories[0] || null
-    this.setData({
-      categories,
-      products,
-      menuCategoryName: currentCategory ? currentCategory.name : ''
-    })
+      const currentCategory = categories[this.data.menuForm.categoryIndex] || categories[0] || null
+      this.setData({
+        categories,
+        products,
+        menuCategoryName: currentCategory ? currentCategory.name : '',
+        menuSortDirty: false
+      })
     }
-    render()
-    state.fetchMerchantProducts(render)
+    state.fetchMerchantCategories(() => {
+      state.fetchMerchantProducts((list) => render(list || []))
+    })
   },
   refreshActivities() {
     const render = (list) => this.setData({ activities: this.filterByActiveStore(list || state.getActivities()) })
@@ -449,20 +586,63 @@ Page({
   editActivity(event) {
     const activity = this.data.activities.find((item) => item.id === event.currentTarget.dataset.id)
     if (!activity) return
+    const date = this.splitDateTime(activity.date || activity.dateTime || '')
+    const deadline = this.splitDateTime(activity.deadlineAt || activity.deadline || '')
     this.setData({
       activityForm: Object.assign({}, emptyActivityForm, activity, {
         price: String(activity.price || 0),
         pointsPrice: String(activity.pointsPrice || 0),
         quota: String(activity.quota || 0),
         joined: String(activity.joined || 0),
+        remainingQuota: String(Math.max(0, Number(activity.quota || 0) - Number(activity.joined || 0))),
         latitude: String(activity.latitude || ''),
-        longitude: String(activity.longitude || '')
+        longitude: String(activity.longitude || ''),
+        dateDate: date.dateDate,
+        dateTime: date.dateTime,
+        deadlineDate: deadline.dateDate,
+        deadlineTime: deadline.dateTime
+      })
+    })
+  },
+  duplicateActivity(event) {
+    const activity = this.data.activities.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!activity) return
+    const date = this.splitDateTime(activity.date || activity.dateTime || '')
+    const deadline = this.splitDateTime(activity.deadlineAt || activity.deadline || '')
+    this.setData({
+      activityForm: Object.assign({}, emptyActivityForm, activity, {
+        id: '',
+        price: String(activity.price || 0),
+        pointsPrice: String(activity.pointsPrice || 0),
+        quota: String(activity.quota || 0),
+        joined: '0',
+        remainingQuota: String(Math.max(0, Number(activity.quota || 0) - Number(activity.joined || 0))),
+        latitude: String(activity.latitude || ''),
+        longitude: String(activity.longitude || ''),
+        dateDate: date.dateDate,
+        dateTime: date.dateTime,
+        deadlineDate: deadline.dateDate,
+        deadlineTime: deadline.dateTime
       })
     })
   },
   inputActivityField(event) {
     const field = event.currentTarget.dataset.field
     this.setData({ [`activityForm.${field}`]: event.detail.value })
+  },
+  selectActivityDateTime(event) {
+    const prefix = event.currentTarget.dataset.prefix
+    const part = event.currentTarget.dataset.part
+    const value = event.detail.value
+    const dateField = `${prefix}Date`
+    const timeField = `${prefix}Time`
+    const nextDate = part === 'date' ? value : this.data.activityForm[dateField]
+    const nextTime = part === 'time' ? value : this.data.activityForm[timeField]
+    this.setData({
+      [`activityForm.${dateField}`]: nextDate,
+      [`activityForm.${timeField}`]: nextTime,
+      [`activityForm.${prefix}`]: this.composeDateTime(nextDate, nextTime)
+    })
   },
   chooseActivityLocation() {
     if (!wx.chooseLocation) {
@@ -558,7 +738,9 @@ Page({
       wx.showToast({ title: '请填写比赛名称', icon: 'none' })
       return
     }
-    if (!String(form.date || '').trim()) {
+    const date = this.composeDateTime(form.dateDate || '', form.dateTime || '') || String(form.date || '').trim()
+    const deadline = this.composeDateTime(form.deadlineDate || '', form.deadlineTime || '') || String(form.deadline || '').trim()
+    if (!date) {
       wx.showToast({ title: '请填写比赛时间', icon: 'none' })
       return
     }
@@ -570,20 +752,24 @@ Page({
       wx.showToast({ title: '请先选择活动所属门店', icon: 'none' })
       return
     }
+    const joined = Number(form.joined || 0)
+    const remainingQuotaText = String(form.remainingQuota || '').trim()
+    const remainingQuota = remainingQuotaText === '' ? null : Number(remainingQuotaText)
+    const quota = remainingQuota === null || Number.isNaN(remainingQuota) ? Number(form.quota || 0) : joined + remainingQuota
     state.updateActivity({
       id: form.id,
       title,
       type: String(form.type || '国际扑克').trim(),
-      date: String(form.date || '').trim(),
+      date,
       dayLabel: String(form.dayLabel || '').trim(),
       location: String(form.location || '').trim(),
       latitude: Number(form.latitude || 0),
       longitude: Number(form.longitude || 0),
-      deadline: String(form.deadline || '').trim(),
+      deadline,
       price: Number(form.price || 0),
       pointsPrice: Number(form.pointsPrice || 0),
-      quota: Number(form.quota || 0),
-      joined: Number(form.joined || 0),
+      quota,
+      joined,
       status: String(form.status || 'open').trim(),
       productName: String(form.productName || title).trim(),
       image: form.image || '/assets/activity-card.svg',
@@ -639,6 +825,7 @@ Page({
     state.fetchMerchantOrders(() => {
       state.fetchMerchantBasics(() => {
         render()
+        this.syncSelectedMemberDetail()
       })
     })
     state.fetchDataOverview((overview) => {
@@ -667,6 +854,62 @@ Page({
   refreshGlobalSettings() {
     this.setData({ globalSettings: state.getGlobalSettings() })
   },
+  splitDateTime(value) {
+    const text = String(value || '').trim()
+    if (!text) return { dateDate: '', dateTime: '' }
+    const match = text.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?/)
+    if (!match) return { dateDate: '', dateTime: '' }
+    return {
+      dateDate: match[1] || '',
+      dateTime: match[2] || ''
+    }
+  },
+  composeDateTime(dateDate, dateTime) {
+    const day = String(dateDate || '').trim()
+    const time = String(dateTime || '').trim()
+    if (!day) return ''
+    if (!time) return day
+    return `${day} ${time}`
+  },
+  buildMemberDetail(member) {
+    const source = member || {}
+    const memberKeys = [source.id, source.openid, source.phone, source.nickname]
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+    const matches = (item) => {
+      const keys = [item && item.memberId, item && item.memberKey, item && item.openid, item && item.phone, item && item.nickname, item && item.userId]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+      return memberKeys.some((key) => keys.includes(key))
+    }
+    const orders = state.getOrders().filter(matches)
+    const signups = state.getSignups().filter(matches)
+    const cellar = state.getCellar().filter(matches)
+    const logs = state.getPointLogs()
+      .filter(matches)
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    return Object.assign({}, source, { orders, signups, cellar, logs })
+  },
+  syncSelectedMemberDetail() {
+    if (!this.data.memberDetailVisible || !this.data.selectedMember || !this.data.selectedMember.id) return
+    const member = this.data.allMembers.find((item) => item.id === this.data.selectedMember.id) || state.getMemberList().find((item) => item.id === this.data.selectedMember.id)
+    if (!member) return
+    this.setData({ selectedMember: this.buildMemberDetail(member) })
+  },
+  selectMember(event) {
+    const id = event.currentTarget.dataset.id
+    const member = this.data.allMembers.find((item) => item.id === id) || state.getMemberList().find((item) => item.id === id)
+    if (!member) return
+    this.setData({
+      selectedMember: this.buildMemberDetail(member),
+      memberDetailVisible: true
+    })
+  },
+  closeMemberDetail() {
+    this.setData({ memberDetailVisible: false })
+  },
+  noop() {},
   editProduct(event) {
     const product = this.data.products.find((item) => item.id === event.currentTarget.dataset.id)
     if (!product) return
@@ -702,6 +945,50 @@ Page({
     this.setData({
       'menuForm.categoryIndex': categoryIndex,
       menuCategoryName: this.data.categories[categoryIndex] ? this.data.categories[categoryIndex].name : (this.data.categories[0] ? this.data.categories[0].name : '')
+    })
+  },
+  inputMenuCategoryDraft(event) {
+    this.setData({ menuCategoryDraft: event.detail.value })
+  },
+  addMenuCategory() {
+    const name = String(this.data.menuCategoryDraft || '').trim()
+    if (!name) {
+      wx.showToast({ title: '请填写类目名称', icon: 'none' })
+      return
+    }
+    const storeId = this.activeStoreId()
+    if (this.isSuperAdmin() && !storeId) {
+      wx.showToast({ title: '请先选择类目所属门店', icon: 'none' })
+      return
+    }
+    state.saveProductCategory(name, (category) => {
+      if (!category) {
+        wx.showToast({ title: '类目保存失败', icon: 'none' })
+        return
+      }
+      this.setData({ menuCategoryDraft: '' })
+      this.refreshProducts()
+      wx.showToast({ title: '类目已添加', icon: 'success' })
+    }, { storeId })
+  },
+  deleteMenuCategory(event) {
+    const id = event.currentTarget.dataset.id
+    const category = this.data.categories.find((item) => item.id === id)
+    if (!category) return
+    wx.showModal({
+      title: '删除类目',
+      content: `确认删除 ${category.name} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteProductCategory(id, (payload, synced) => {
+          if (!payload) {
+            wx.showToast({ title: '类目删除失败', icon: 'none' })
+            return
+          }
+          this.refreshProducts()
+          wx.showToast({ title: synced ? '类目已删除' : '类目同步失败', icon: synced ? 'success' : 'none' })
+        }, this.activeStoreId())
+      }
     })
   },
   toggleMenuSale(event) {
@@ -745,6 +1032,69 @@ Page({
     this.refreshProducts()
     this.refreshInventory()
     wx.showToast({ title: '菜单已保存', icon: 'success' })
+  },
+  deleteProduct(event) {
+    const id = event.currentTarget.dataset.id
+    const product = this.data.products.find((item) => item.id === id)
+    if (!product) return
+    wx.showModal({
+      title: '删除餐品',
+      content: `确认删除 ${product.name} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteProduct(id, (payload, synced) => {
+          if (!payload) {
+            wx.showToast({ title: '餐品删除失败', icon: 'none' })
+            return
+          }
+          this.refreshProducts()
+          this.refreshInventory()
+          wx.showToast({ title: synced ? '餐品已删除' : '餐品同步失败', icon: synced ? 'success' : 'none' })
+        })
+      }
+    })
+  },
+  moveMenuCategory(event) {
+    const { id, direction } = event.currentTarget.dataset
+    const currentCategories = this.data.categories || []
+    const selectedCategoryId = currentCategories[this.data.menuForm.categoryIndex]
+      ? currentCategories[this.data.menuForm.categoryIndex].id
+      : ''
+    const categories = state.moveItemByDirection(currentCategories, id, direction)
+    if (!categories) return
+    const nextSelectedIndex = selectedCategoryId ? categories.findIndex((item) => item.id === selectedCategoryId) : 0
+    this.setData({
+      categories,
+      menuForm: Object.assign({}, this.data.menuForm, {
+        categoryIndex: nextSelectedIndex > -1 ? nextSelectedIndex : 0
+      }),
+      menuCategoryName: categories[nextSelectedIndex] ? categories[nextSelectedIndex].name : (categories[0] ? categories[0].name : ''),
+      menuSortDirty: true
+    })
+  },
+  moveMenuProduct(event) {
+  },
+  saveMenuSort() {
+    if (this.data.menuSortSaving) return
+    const storeId = this.activeStoreId()
+    if (this.isSuperAdmin() && !storeId) {
+      wx.showToast({ title: '请先选择门店', icon: 'none' })
+      return
+    }
+    this.setData({ menuSortSaving: true })
+    wx.showLoading({ title: '保存中' })
+    state.saveCategoryOrder(this.data.categories, (categories, ok1) => {
+      if (!ok1) {
+        wx.hideLoading()
+        this.setData({ menuSortSaving: false })
+        wx.showToast({ title: '类目排序保存失败', icon: 'none' })
+        return
+      }
+      wx.hideLoading()
+      this.setData({ menuSortSaving: false, menuSortDirty: false })
+      this.refreshProducts()
+      wx.showToast({ title: '类目排序已保存', icon: 'success' })
+    }, storeId)
   },
   inputRechargeSetting(event) {
     const field = event.currentTarget.dataset.field
@@ -1030,6 +1380,26 @@ Page({
     })
     this.setData({ stores: this.filterStores(stores) })
   },
+  deleteStore(event) {
+    const id = event.currentTarget.dataset.id
+    const store = this.data.stores.find((item) => item.id === id)
+    if (!store) return
+    wx.showModal({
+      title: '删除门店',
+      content: `确认删除 ${store.shortName || store.name} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteStore(id, (ok) => {
+          if (!ok) {
+            wx.showToast({ title: '门店删除失败', icon: 'none' })
+            return
+          }
+          this.refreshDataManagement()
+          wx.showToast({ title: '门店已删除', icon: 'success' })
+        })
+      }
+    })
+  },
   imageByCategory(categoryId) {
     if (categoryId === 'dishes') return '/assets/product-dish.svg'
     if (categoryId === 'packages') return '/assets/product-pack.svg'
@@ -1038,14 +1408,15 @@ Page({
   },
   refreshLeaderboard() {
     const type = this.data.activeRankType || 'weekly'
-    this.setData({ leaderboard: state.getLeaderboard(type) })
+    const storeId = this.activeStoreId()
+    this.setData({ leaderboard: state.getLeaderboard(type, storeId), selectedRankUser: null, rankDeltaScore: '' })
     state.fetchLeaderboard((list) => {
-      this.setData({ leaderboard: list || state.getLeaderboard(type) })
+      this.setData({ leaderboard: list ? state.getLeaderboard(type, storeId) : state.getLeaderboard(type, storeId) })
     }, type)
   },
   selectRankType(event) {
     const type = event.currentTarget.dataset.type || 'weekly'
-    this.setData({ activeRankType: type, leaderboard: state.getLeaderboard(type) })
+    this.setData({ activeRankType: type, leaderboard: [], selectedRankUser: null, rankDeltaScore: '' })
     this.refreshLeaderboard()
   },
   inputRankUsername(event) {
@@ -1053,6 +1424,9 @@ Page({
   },
   inputRankScore(event) {
     this.setData({ rankScore: event.detail.value })
+  },
+  inputRankDeltaScore(event) {
+    this.setData({ rankDeltaScore: event.detail.value })
   },
   addRankUser() {
     const username = String(this.data.rankUsername || '').trim()
@@ -1062,16 +1436,57 @@ Page({
       wx.showToast({ title: '请填写用户名和分数', icon: 'none' })
       return
     }
-    state.addLeaderboardUser({ username, score }, () => {
+    state.addLeaderboardUser({ username, score, storeId: this.activeStoreId() }, () => {
       this.setData({ rankUsername: '', rankScore: '' })
       this.refreshLeaderboard()
-    }, this.data.activeRankType || 'weekly')
+    }, this.data.activeRankType || 'weekly', this.activeStoreId())
+  },
+  selectRankUser(event) {
+    const id = event.currentTarget.dataset.id
+    const selected = this.data.leaderboard.find((item) => item.id === id)
+    if (!selected) return
+    this.setData({ selectedRankUser: selected, rankDeltaScore: '' })
+  },
+  addRankScore() {
+    const selected = this.data.selectedRankUser
+    if (!selected) {
+      wx.showToast({ title: '请先选择玩家', icon: 'none' })
+      return
+    }
+    const delta = Number(this.data.rankDeltaScore || 0)
+    if (!delta) {
+      wx.showToast({ title: '请输入增减分数', icon: 'none' })
+      return
+    }
+    state.adjustLeaderboardScore(selected.id, delta, () => {
+      this.refreshLeaderboard()
+      wx.showToast({ title: '分数已更新', icon: 'success' })
+    }, this.data.activeRankType || 'weekly', this.activeStoreId())
+  },
+  deleteRankUser() {
+    const selected = this.data.selectedRankUser
+    if (!selected) {
+      wx.showToast({ title: '请先选择玩家', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '删除玩家',
+      content: `确认删除 ${selected.username} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteLeaderboardUser(selected.id, () => {
+          this.setData({ selectedRankUser: null, rankDeltaScore: '' })
+          this.refreshLeaderboard()
+          wx.showToast({ title: '玩家已删除', icon: 'success' })
+        }, this.data.activeRankType || 'weekly', this.activeStoreId())
+      }
+    })
   },
   moveRank(event) {
     const { id, direction } = event.currentTarget.dataset
     state.updateLeaderboardRank(id, direction, () => {
       this.refreshLeaderboard()
-    }, this.data.activeRankType || 'weekly')
+    }, this.data.activeRankType || 'weekly', this.activeStoreId())
   },
   logout() {
     state.merchantLogout()

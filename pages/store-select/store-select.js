@@ -11,10 +11,8 @@ Page({
     this.refresh()
   },
   refresh() {
-    const stores = state.getStores()
-    this.setData({ stores }, () => this.buildVisibleStores())
     state.fetchStores((latestStores) => {
-      this.setData({ stores: latestStores }, () => this.buildVisibleStores())
+      this.setData({ stores: latestStores || [] }, () => this.buildVisibleStores())
     })
   },
   switchTab(event) {

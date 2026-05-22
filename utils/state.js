@@ -12,6 +12,7 @@ const KEYS = {
   members: 'deyou_members',
   leaderboard: 'deyou_leaderboard',
   merchantAuth: 'deyou_merchant_auth',
+  categories: 'deyou_categories',
   products: 'deyou_products',
   activities: 'deyou_activities',
   inventory: 'deyou_inventory',
@@ -35,6 +36,7 @@ const LEADERBOARD_TABS = [
 let userSessionLoggedIn = false
 let guestSessionMember = null
 let userSessionId = `${Date.now()}-${Math.random()}`
+let pendingWechatLoginCallback = null
 
 function ensureSeed() {
   if (!wx.getStorageSync(KEYS.store)) wx.setStorageSync(KEYS.store, data.stores[0].id)
@@ -43,22 +45,25 @@ function ensureSeed() {
   if (!wx.getStorageSync(KEYS.signups)) wx.setStorageSync(KEYS.signups, [])
   if (!wx.getStorageSync(KEYS.cellar)) wx.setStorageSync(KEYS.cellar, [])
   if (!wx.getStorageSync(KEYS.members)) wx.setStorageSync(KEYS.members, [Object.assign({}, data.member)])
-  if (!wx.getStorageSync(KEYS.leaderboard)) wx.setStorageSync(KEYS.leaderboard, data.leaderboard)
-  if (!wx.getStorageSync(KEYS.products)) wx.setStorageSync(KEYS.products, data.products)
-  if (!wx.getStorageSync(KEYS.activities)) wx.setStorageSync(KEYS.activities, normalizeActivities(data.activities))
-  if (!wx.getStorageSync(KEYS.inventory)) wx.setStorageSync(KEYS.inventory, defaultInventory())
+  if (!wx.getStorageSync(KEYS.leaderboard)) wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards({}))
+  if (!wx.getStorageSync(KEYS.categories)) wx.setStorageSync(KEYS.categories, [])
+  if (!wx.getStorageSync(KEYS.products)) wx.setStorageSync(KEYS.products, [])
+  if (!wx.getStorageSync(KEYS.activities)) wx.setStorageSync(KEYS.activities, [])
+  if (!wx.getStorageSync(KEYS.inventory)) wx.setStorageSync(KEYS.inventory, [])
   if (!wx.getStorageSync(KEYS.pointLogs)) wx.setStorageSync(KEYS.pointLogs, [])
   if (!wx.getStorageSync(KEYS.printLogs)) wx.setStorageSync(KEYS.printLogs, [])
   if (!wx.getStorageSync(KEYS.rechargeSettings)) wx.setStorageSync(KEYS.rechargeSettings, defaultRechargeSettings())
   if (!wx.getStorageSync(KEYS.rechargeRecords)) wx.setStorageSync(KEYS.rechargeRecords, [])
-  if (!wx.getStorageSync(KEYS.stores)) wx.setStorageSync(KEYS.stores, data.stores)
-  if (!wx.getStorageSync(KEYS.globalSettings)) wx.setStorageSync(KEYS.globalSettings, defaultGlobalSettings())
+  if (!wx.getStorageSync(KEYS.stores)) wx.setStorageSync(KEYS.stores, [])
+  if (!wx.getStorageSync(KEYS.globalSettings)) wx.setStorageSync(KEYS.globalSettings, {})
   migrateBrandNames()
+  migrateMenuCategories()
 }
 
 function migrateBrandNames() {
   const keys = [
     KEYS.stores,
+    KEYS.categories,
     KEYS.products,
     KEYS.activities,
     KEYS.leaderboard,
@@ -95,9 +100,122 @@ function replaceBrandText(value) {
   return value
 }
 
+function normalizeProductCategory(product) {
+  if (!product || typeof product !== 'object') return product
+  const next = Object.assign({}, product)
+  if (next.id === 'ktv-room') {
+    next.id = 'craft-beer-lager'
+    next.categoryId = 'craft-beer'
+    next.name = '破壳派德式拉格'
+    next.desc = '清爽麦香，适合桌游与轻食搭配'
+    next.price = 58
+    next.points = 6800
+    next.unit = '杯'
+    next.image = '/assets/product-drink.svg'
+    next.sale = true
+    next.categoryName = '精酿啤酒'
+    return next
+  }
+  if (next.categoryId === 'ktv') {
+    next.categoryId = 'craft-beer'
+    next.categoryName = '精酿啤酒'
+  } else if (next.categoryId === 'craft-beer' && next.categoryName === 'KTV') {
+    next.categoryName = '精酿啤酒'
+  }
+  return next
+}
+
+function toSortOrder(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function compareSortOrder(left, right) {
+  const leftOrder = Number(left && left.sortOrder ? left.sortOrder : 0)
+  const rightOrder = Number(right && right.sortOrder ? right.sortOrder : 0)
+  if (leftOrder !== rightOrder) return leftOrder - rightOrder
+  const leftName = String(left && (left.name || left.title || '')).trim()
+  const rightName = String(right && (right.name || right.title || '')).trim()
+  return leftName.localeCompare(rightName)
+}
+
+function moveItemByDirection(list, id, direction, idKey = 'id') {
+  const items = (Array.isArray(list) ? list : []).map((item) => Object.assign({}, item))
+  const index = items.findIndex((item) => item && item[idKey] === id)
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (index < 0 || target < 0 || target >= items.length) {
+    return null
+  }
+  const moving = items.splice(index, 1)[0]
+  items.splice(target, 0, moving)
+  return items.map((item, position) => Object.assign({}, item, {
+    sortOrder: position + 1
+  }))
+}
+
+function normalizeCategoryRecord(category, index = 0) {
+  const next = Object.assign({}, category)
+  next.sortOrder = toSortOrder(next.sortOrder, index + 1)
+  next.storeId = String(next.storeId || '').trim()
+  return next
+}
+
+function normalizeProductRecord(product, index = 0) {
+  const next = normalizeProductCategory(product)
+  next.sortOrder = toSortOrder(next.sortOrder, index + 1)
+  return next
+}
+
+function normalizeCategoriesList(categories) {
+  return (Array.isArray(categories) ? categories : [])
+    .map((category, index) => normalizeCategoryRecord(category, index))
+    .sort(compareSortOrder)
+}
+
+function normalizeProductsList(products) {
+  return (Array.isArray(products) ? products : [])
+    .map((product, index) => normalizeProductRecord(product, index))
+    .sort(compareSortOrder)
+}
+
+function migrateMenuCategories() {
+  const products = wx.getStorageSync(KEYS.products)
+  if (Array.isArray(products) && products.length) {
+    const next = products.map(normalizeProductCategory)
+    if (JSON.stringify(next) !== JSON.stringify(products)) {
+      wx.setStorageSync(KEYS.products, next)
+    }
+  }
+  const inventory = wx.getStorageSync(KEYS.inventory)
+  if (Array.isArray(inventory) && inventory.length) {
+    const stockMap = new Map()
+    inventory.forEach((item) => {
+      if (!item || !item.id) return
+      const id = item.id === 'ktv-room' ? 'craft-beer-lager' : item.id
+      if (!stockMap.has(id)) stockMap.set(id, Number(item.stock || 0))
+    })
+    getProducts().forEach((product, index) => {
+      if (!stockMap.has(product.id)) stockMap.set(product.id, 30 + index * 5)
+    })
+    const next = Array.from(stockMap.entries()).map(([id, stock]) => ({ id, stock }))
+    if (JSON.stringify(next) !== JSON.stringify(inventory)) {
+      wx.setStorageSync(KEYS.inventory, next)
+    }
+  }
+}
+
 function resetUserSession() {
-  userSessionLoggedIn = false
   guestSessionMember = null
+  const auth = wx.getStorageSync(KEYS.auth) || {}
+  if (auth && auth.token) {
+    userSessionLoggedIn = true
+    userSessionId = String(auth.sessionId || `${Date.now()}-${Math.random()}`)
+    if (!auth.sessionId) {
+      wx.setStorageSync(KEYS.auth, Object.assign({}, auth, { sessionId: userSessionId }))
+    }
+    return
+  }
+  userSessionLoggedIn = false
   userSessionId = `${Date.now()}-${Math.random()}`
 }
 
@@ -275,7 +393,23 @@ function saveMember(member) {
   return next
 }
 
-function updateNickname(nickname) {
+function updateMyProfile(data, callback) {
+  if (!isLoggedIn()) {
+    wx.showToast({ title: '请先微信登录', icon: 'none' })
+    if (callback) callback(null)
+    return
+  }
+  requestApi('/api/my/profile', 'PUT', data || {}, (member) => {
+    if (!member) {
+      if (callback) callback(null)
+      return
+    }
+    const next = saveMember(member)
+    if (callback) callback(next)
+  })
+}
+
+function updateNickname(nickname, callback) {
   if (!isLoggedIn()) {
     wx.showToast({ title: '请先微信登录', icon: 'none' })
     return getMember()
@@ -286,7 +420,11 @@ function updateNickname(nickname) {
     return getMember()
   }
   const member = getMember()
-  return saveMember(Object.assign({}, member, { nickname: value, avatarText: value.slice(0, 1) }))
+  const next = saveMember(Object.assign({}, member, { nickname: value, avatarText: value.slice(0, 1) }))
+  updateMyProfile({ nickname: value }, (serverMember) => {
+    if (callback) callback(serverMember || next)
+  })
+  return next
 }
 
 function normalizeWechatProfile(profile) {
@@ -340,7 +478,9 @@ function requestWechatIdentity(code, profile, callback) {
     data: {
       code,
       nickname: profile && profile.nickname ? profile.nickname : '',
-      avatarUrl: profile && profile.avatarUrl ? profile.avatarUrl : ''
+      avatarUrl: profile && profile.avatarUrl ? profile.avatarUrl : '',
+      phone: profile && profile.phone ? profile.phone : (getMember().phone || ''),
+      phoneCode: profile && profile.phoneCode ? profile.phoneCode : ''
     },
     success(res) {
       const body = res.data || {}
@@ -366,14 +506,14 @@ function buildMemberFromWechat(identity, code) {
   const base = stored && !stored.isGuest ? Object.assign({}, data.member, stored) : Object.assign({}, data.member)
   const openid = identity.openid || serverMember.openid || ''
   const unionid = identity.unionid || serverMember.unionid || ''
-  const nickname = serverMember.nickname || identity.nickname || base.nickname || generateNickname()
+  const nickname = identity.nickname || serverMember.nickname || base.nickname || generateNickname()
   return Object.assign({}, base, serverMember, {
     id: serverMember.id || identity.memberId || openid || base.id || `DY${Date.now()}`,
     openid,
     unionid,
     token: identity.token || serverMember.token || '',
     nickname,
-    avatarUrl: serverMember.avatarUrl || identity.avatarUrl || base.avatarUrl || '',
+    avatarUrl: identity.avatarUrl || serverMember.avatarUrl || base.avatarUrl || '',
     avatarText: nickname.slice(0, 1),
     phone: serverMember.phone || identity.phone || base.phone || '',
     loginCode: code || '',
@@ -386,6 +526,31 @@ function buildMemberFromWechat(identity, code) {
     gems: Number(serverMember.gems !== undefined ? serverMember.gems : base.gems || 0),
     invitePieces: Number(serverMember.invitePieces !== undefined ? serverMember.invitePieces : base.invitePieces || 0)
   })
+}
+
+function completeWechatLogin(next, callback, toastTitle) {
+  userSessionLoggedIn = true
+  wx.setStorageSync(KEYS.auth, {
+    loggedIn: true,
+    loginAt: formatTime(new Date()),
+    sessionId: userSessionId,
+    openid: next.openid,
+    unionid: next.unionid,
+    token: next.token
+  })
+  wx.setStorageSync(KEYS.member, next)
+  const finish = (member) => {
+    const current = member || next
+    syncMemberRegistry(current)
+    syncServerData()
+    wx.showToast({ title: toastTitle, icon: 'success' })
+    if (callback) callback(current)
+  }
+  if (next.avatarUrl) {
+    finish(next)
+    return
+  }
+  ensureMemberAvatar((member) => finish(member || next))
 }
 
 function loginWithWeChat(callback, options = {}) {
@@ -404,19 +569,7 @@ function loginWithWeChat(callback, options = {}) {
         requestWechatIdentity(res.code, profile || {}, (identity) => {
           if (!identity) return
           const next = buildMemberFromWechat(identity, res.code)
-          userSessionLoggedIn = true
-          wx.setStorageSync(KEYS.auth, {
-            loggedIn: true,
-            loginAt: formatTime(new Date()),
-            sessionId: userSessionId,
-            openid: next.openid,
-            unionid: next.unionid,
-            token: next.token
-          })
-          wx.setStorageSync(KEYS.member, next)
-          syncMemberRegistry(next)
-          wx.showToast({ title: '登录成功', icon: 'success' })
-          if (callback) callback(next)
+          completeWechatLogin(next, callback, '登录成功')
         })
       },
       fail() {
@@ -429,6 +582,97 @@ function loginWithWeChat(callback, options = {}) {
     return
   }
   requestWechatProfile(runLogin)
+}
+
+function loginWithPhoneNumber(phoneCode, callback, options = {}) {
+  const code = String(phoneCode || '').trim()
+  if (!code) {
+    wx.showToast({ title: '未获取到手机号授权码', icon: 'none' })
+    if (callback) callback(null)
+    return
+  }
+  if (!wx.login) {
+    wx.showToast({ title: '当前环境不支持登录', icon: 'none' })
+    if (callback) callback(null)
+    return
+  }
+  if (options.profileProvided) {
+    const profileData = options.profile || {}
+    const runLogin = () => {
+      wx.login({
+        success(res) {
+          if (!res.code) {
+            wx.showToast({ title: '微信登录 code 获取失败', icon: 'none' })
+            if (callback) callback(null)
+            return
+          }
+          requestWechatIdentity(res.code, Object.assign({}, profileData, { phoneCode: code }), (identity) => {
+            if (!identity) return
+            const next = buildMemberFromWechat(identity, res.code)
+            completeWechatLogin(next, callback, '注册成功')
+          })
+        },
+        fail() {
+          wx.showToast({ title: '登录失败，请重试', icon: 'none' })
+          if (callback) callback(null)
+        }
+      })
+    }
+    runLogin()
+    return
+  }
+  const runLogin = (profile) => {
+    const profileData = profile || {}
+    wx.login({
+      success(res) {
+        if (!res.code) {
+          wx.showToast({ title: '微信登录 code 获取失败', icon: 'none' })
+          if (callback) callback(null)
+          return
+        }
+        requestWechatIdentity(res.code, Object.assign({}, profileData, { phoneCode: code }), (identity) => {
+          if (!identity) return
+          const next = buildMemberFromWechat(identity, res.code)
+          completeWechatLogin(next, callback, '注册成功')
+        })
+      },
+      fail() {
+        wx.showToast({ title: '登录失败，请重试', icon: 'none' })
+        if (callback) callback(null)
+      }
+    })
+  }
+  if (options.withProfile === false) {
+    runLogin({})
+    return
+  }
+  requestWechatProfile(runLogin)
+}
+
+function ensureMemberAvatar(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback(null)
+    return
+  }
+  const member = getMember()
+  if (member.avatarUrl) {
+    if (callback) callback(member)
+    return
+  }
+  requestWechatProfile((profile) => {
+    if (!profile || !profile.avatarUrl) {
+      wx.showToast({ title: '请授权头像', icon: 'none' })
+      if (callback) callback(null)
+      return
+    }
+    const next = saveMember(Object.assign({}, member, {
+      nickname: profile.nickname || member.nickname,
+      avatarUrl: profile.avatarUrl
+    }))
+    updateMyProfile({ nickname: next.nickname, avatarUrl: next.avatarUrl }, (serverMember) => {
+      if (callback) callback(serverMember || next)
+    })
+  })
 }
 
 function apiBaseUrl() {
@@ -564,13 +808,46 @@ function createOrderWithWechatPay(options = {}, callback) {
           orders.unshift(order)
           saveOrders(orders)
         }
-        clearCart()
-        wx.showToast({ title: '支付成功', icon: 'success' })
-        if (callback) callback(order)
+        syncPaidActivitySignups(cart, () => {
+          clearCart()
+          wx.showToast({ title: '支付成功', icon: 'success' })
+          if (callback) callback(order)
+        })
       })
     }
   )
   return true
+}
+
+function syncPaidActivitySignups(cartItems, callback) {
+  const activityIds = Array.from(new Set((cartItems || [])
+    .filter((item) => item && item.categoryId === 'activity')
+    .map((item) => item.activityId || String(item.id || '').replace(/^signup-/, ''))
+    .filter(Boolean)))
+  if (!activityIds.length) {
+    if (callback) callback()
+    return
+  }
+  let pending = activityIds.length
+  const done = () => {
+    pending -= 1
+    if (pending <= 0) {
+      fetchMySignups(() => {
+        fetchActivities(() => {
+          if (callback) callback()
+        })
+      })
+    }
+  }
+  activityIds.forEach((activityId) => {
+    const member = getMember()
+    const alreadySigned = getSignups().some((item) => item.activityId === activityId && item.memberId === member.id)
+    if (alreadySigned) {
+      done()
+      return
+    }
+    addSignup(getActivity(activityId) || { id: activityId }, done)
+  })
 }
 
 function rechargeWithWechatPay(pack, callback) {
@@ -609,11 +886,19 @@ function requireLogin(actionName, callback) {
     confirmText: '微信登录',
     success(res) {
       if (res.confirm) {
-        loginWithWeChat(callback)
+        pendingWechatLoginCallback = typeof callback === 'function' ? callback : null
+        wx.navigateTo({ url: '/pages/profile/profile?login=1' })
       }
     }
   })
   return false
+}
+
+function resolvePendingWechatLogin(member) {
+  if (!pendingWechatLoginCallback) return
+  const callback = pendingWechatLoginCallback
+  pendingWechatLoginCallback = null
+  callback(member || getMember())
 }
 
 function defaultMerchantAccounts() {
@@ -650,8 +935,7 @@ function merchantLogin(username, password, callback) {
     wx.setStorageSync(KEYS.merchantAuth, session)
     done(session)
   })
-  const localAccount = defaultMerchantAccounts().find((item) => item.username === username && item.password === password)
-  return localAccount || null
+  return null
 }
 
 function merchantLogout() {
@@ -741,13 +1025,13 @@ function requestMerchantText(path, method, data, callback) {
 }
 
 function fetchMerchantOrders(callback) {
-  const done = () => {
-    if (callback) callback(getOrders())
+  const done = (orders) => {
+    if (callback) callback(orders)
   }
   const base = apiBaseUrl()
   const session = getMerchantSession()
   if (!base || !session || !session.token) {
-    done()
+    done(null)
     return
   }
   wx.request({
@@ -763,11 +1047,13 @@ function fetchMerchantOrders(callback) {
       const payload = body.data || body
       if (res.statusCode >= 200 && res.statusCode < 300 && Array.isArray(payload)) {
         saveOrders(payload)
+        done(payload)
+        return
       }
-      done()
+      done(null)
     },
     fail() {
-      done()
+      done(null)
     }
   })
 }
@@ -832,18 +1118,9 @@ function normalizeStoreLocation(store) {
 function getStores() {
   const stored = wx.getStorageSync(KEYS.stores)
   if (!Array.isArray(stored) || !stored.length) {
-    return data.stores.map(normalizeStoreLocation)
+    return []
   }
-  const normalized = stored.map(normalizeStoreLocation)
-  const missing = data.stores
-    .filter((defaultStore) => !normalized.find((store) => store.id === defaultStore.id))
-    .map(normalizeStoreLocation)
-  if (missing.length) {
-    const next = normalized.concat(missing)
-    wx.setStorageSync(KEYS.stores, next)
-    return next
-  }
-  return normalized
+  return stored.map(normalizeStoreLocation)
 }
 
 function saveStores(stores) {
@@ -858,17 +1135,17 @@ function fetchMerchantList(path, fallback, save, callback) {
       if (typeof callback === 'function') callback(payload)
       return
     }
-    if (callback) callback(fallback())
+    if (callback) callback(null)
   })
 }
 
 function fetchStores(callback) {
   const done = (stores) => {
-    if (callback) callback(stores || getStores())
+    if (callback) callback(stores || null)
   }
   const base = apiBaseUrl()
   if (!base) {
-    done()
+    done(null)
     return
   }
   wx.request({
@@ -882,11 +1159,22 @@ function fetchStores(callback) {
         done(saveStores(payload))
         return
       }
-      done()
+      done(null)
     },
     fail() {
-      done()
+      done(null)
     }
+  })
+}
+
+function fetchCategories(callback) {
+  requestApi('/api/categories', 'GET', {}, (payload) => {
+    if (Array.isArray(payload)) {
+      const saved = saveCategories(payload)
+      if (callback) callback(saved)
+      return
+    }
+    if (callback) callback(null)
   })
 }
 
@@ -897,7 +1185,7 @@ function fetchMerchantStores(callback) {
       if (callback) callback(saved)
       return
     }
-    if (callback) callback(getStores())
+    if (callback) callback(null)
   })
 }
 
@@ -919,18 +1207,39 @@ function updateStore(store, callback) {
     printerName: String(store.printerName || '').trim(),
     printerCopies: Math.max(1, Number(store.printerCopies || 1))
   })
-  const index = list.findIndex((item) => item.id === id)
-  const next = index > -1 ? list.map((item) => (item.id === id ? Object.assign({}, item, nextStore) : item)) : list.concat(nextStore)
-  const saved = saveStores(next)
-  requestMerchantApi('/api/merchant/stores', 'POST', nextStore, (serverStore) => {
+  const requested = requestMerchantApi('/api/merchant/stores', 'POST', nextStore, (serverStore) => {
     if (serverStore) {
       const current = getStores()
       const serverNext = normalizeStoreLocation(serverStore)
-      saveStores(current.map((item) => (item.id === serverNext.id ? Object.assign({}, item, serverNext) : item)))
+      const exists = current.some((item) => item.id === serverNext.id)
+      const saved = saveStores(exists
+        ? current.map((item) => (item.id === serverNext.id ? Object.assign({}, item, serverNext) : item))
+        : current.concat(serverNext))
+      if (callback) callback(serverNext, true, saved)
+      return
     }
-    if (callback) callback(serverStore)
+    if (callback) callback(null, false, [])
   })
-  return saved
+  if (requested) return list
+  if (callback) callback(null, false, list)
+  return list
+}
+
+function deleteStore(id, callback) {
+  const storeId = String(id || '').trim()
+  if (!storeId) {
+    if (callback) callback(false, [])
+    return false
+  }
+  const requested = requestMerchantApi(`/api/merchant/stores/${encodeURIComponent(storeId)}`, 'DELETE', {}, (payload) => {
+    if (payload && payload.id) {
+      const saved = saveStores(getStores().filter((item) => item.id !== payload.id))
+      if (callback) callback(true, saved)
+      return
+    }
+    if (callback) callback(false, [])
+  })
+  return requested
 }
 
 function getStore() {
@@ -1085,15 +1394,13 @@ function saveCart(cart) {
 function getProducts() {
   const stored = wx.getStorageSync(KEYS.products)
   if (!Array.isArray(stored) || !stored.length) {
-    return data.products
+    return []
   }
-  const missing = data.products.filter((defaultProduct) => !stored.find((product) => product.id === defaultProduct.id))
-  if (missing.length) {
-    const next = stored.concat(missing)
-    wx.setStorageSync(KEYS.products, next)
-    return next
+  const normalized = normalizeProductsList(stored)
+  if (JSON.stringify(normalized) !== JSON.stringify(stored)) {
+    wx.setStorageSync(KEYS.products, normalized)
   }
-  return stored
+  return normalized
 }
 
 function isDefaultProduct(product) {
@@ -1103,11 +1410,28 @@ function isDefaultProduct(product) {
 function isProductVisibleInStore(product, storeId) {
   if (!product) return false
   if (product.storeId) return product.storeId === storeId
-  return isDefaultProduct(product)
+  return true
+}
+
+function getCategories() {
+  const stored = wx.getStorageSync(KEYS.categories)
+  if (!Array.isArray(stored) || !stored.length) {
+    return []
+  }
+  const normalized = normalizeCategoriesList(stored)
+  if (JSON.stringify(normalized) !== JSON.stringify(stored)) {
+    wx.setStorageSync(KEYS.categories, normalized)
+  }
+  return normalized
+}
+
+function saveCategories(categories) {
+  wx.setStorageSync(KEYS.categories, normalizeCategoriesList(categories))
+  return getCategories()
 }
 
 function getCategoryName(categoryId, products = getProducts()) {
-  const category = data.categories.find((item) => item.id === categoryId)
+  const category = getCategories().find((item) => item.id === categoryId)
   if (category) return category.name
   const product = products.find((item) => item.categoryId === categoryId && item.categoryName)
   return product ? product.categoryName : categoryId
@@ -1115,9 +1439,18 @@ function getCategoryName(categoryId, products = getProducts()) {
 
 function getProductCategories(products = getProducts(), options = {}) {
   const includeEmpty = options.includeEmpty !== false
+  const storeId = String(options.storeId || '').trim()
   const categoryMap = new Map()
+  const categories = getCategories()
+  const scopedCategories = categories
+    .filter((category) => !storeId || !category.storeId || category.storeId === storeId)
+    .slice()
+    .sort(compareSortOrder)
   if (includeEmpty) {
-    data.categories.forEach((category) => categoryMap.set(category.id, category.name))
+    scopedCategories.forEach((category) => {
+      if (storeId && category.storeId && category.storeId !== storeId) return
+      categoryMap.set(category.id, category.name)
+    })
   }
   products.forEach((product) => {
     if (!product.categoryId) return
@@ -1125,27 +1458,86 @@ function getProductCategories(products = getProducts(), options = {}) {
       categoryMap.set(product.categoryId, product.categoryName || getCategoryName(product.categoryId, products))
     }
   })
-  const orderedDefaults = data.categories
+  const orderedDefaults = scopedCategories
     .filter((category) => categoryMap.has(category.id))
     .map((category) => ({ id: category.id, name: categoryMap.get(category.id) }))
   const extras = Array.from(categoryMap.entries())
-    .filter(([id]) => !data.categories.find((category) => category.id === id))
+    .filter(([id]) => !scopedCategories.find((category) => category.id === id))
     .map(([id, name]) => ({ id, name }))
   return orderedDefaults.concat(extras)
 }
 
+function fetchMerchantCategories(callback) {
+  requestMerchantApi('/api/merchant/categories', 'GET', {}, (payload) => {
+    if (Array.isArray(payload)) {
+      const saved = saveCategories(payload)
+      if (callback) callback(saved)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function saveProductCategory(name, callback, options = {}) {
+  const title = String(name || '').trim()
+  if (!title) return null
+  const storeId = String(options.storeId || '').trim()
+  const categories = getCategories()
+  const scopedCategories = categories.filter((item) => !storeId || !item.storeId || item.storeId === storeId)
+  const existing = scopedCategories.find((item) => item.name === title)
+  const maxSortOrder = scopedCategories.reduce((max, item) => Math.max(max, Number(item.sortOrder || 0)), 0)
+  const category = existing || {
+    id: `cat-${Date.now()}`,
+    name: title,
+    storeId,
+    sortOrder: toSortOrder(options.sortOrder, maxSortOrder + 1)
+  }
+  if (existing && options.sortOrder !== undefined) {
+    category.sortOrder = toSortOrder(options.sortOrder, toSortOrder(existing.sortOrder, maxSortOrder + 1))
+  }
+  requestMerchantApi('/api/merchant/categories', 'POST', category, (payload) => {
+    if (!payload) {
+      if (callback) callback(null)
+      return
+    }
+    const exists = categories.some((item) => item.id === payload.id)
+    const nextPayload = Object.assign({}, payload, {
+      sortOrder: toSortOrder(payload.sortOrder, category.sortOrder)
+    })
+    const saved = saveCategories(exists ? categories.map((item) => (item.id === payload.id ? nextPayload : item)) : categories.concat(nextPayload))
+    if (callback) callback(payload, saved)
+  })
+  return category
+}
+
+function deleteProductCategory(id, callback, storeId = '') {
+  const categoryId = String(id || '').trim()
+  const scopedId = String(storeId || '').trim()
+  if (!categoryId) {
+    if (callback) callback(null, false)
+    return false
+  }
+  requestMerchantApi(`/api/merchant/categories/${encodeURIComponent(categoryId)}`, 'DELETE', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    const categories = getCategories().filter((item) => item.id !== categoryId || (scopedId && item.storeId && item.storeId !== scopedId))
+    saveCategories(categories)
+    if (callback) callback(payload, true)
+  })
+  return true
+}
+
 function saveProducts(products) {
-  wx.setStorageSync(KEYS.products, products)
+  wx.setStorageSync(KEYS.products, normalizeProductsList(products))
   return getProducts()
 }
 
 function fetchProducts(callback) {
-  const done = (products) => {
-    if (callback) callback(products || getProducts())
-  }
   const base = apiBaseUrl()
   if (!base) {
-    done()
+    if (callback) callback(null)
     return
   }
   wx.request({
@@ -1156,21 +1548,34 @@ function fetchProducts(callback) {
       const body = res.data || {}
       const payload = body.data || body
       if (res.statusCode >= 200 && res.statusCode < 300 && Array.isArray(payload)) {
-        done(saveProducts(payload))
+        if (callback) callback(saveProducts(payload))
         return
       }
-      done()
+      if (callback) callback(null)
     },
     fail() {
-      done()
+      if (callback) callback(null)
     }
   })
 }
 
-function updateProduct(product) {
+function fetchActivities(callback) {
+  requestApi('/api/activities', 'GET', {}, (payload) => {
+    if (Array.isArray(payload)) {
+      const saved = saveActivities(payload)
+      if (callback) callback(saved)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function updateProduct(product, callback) {
   const list = getProducts()
   const id = product.id || `prd-${Date.now()}`
   const categoryId = product.categoryId || 'dishes'
+  const existing = list.find((item) => item.id === id)
+  const maxSortOrder = list.reduce((max, item) => Math.max(max, Number(item.sortOrder || 0)), 0)
   const nextProduct = {
     id,
     categoryId,
@@ -1182,14 +1587,186 @@ function updateProduct(product) {
     image: product.image || '/assets/product-dish.svg',
     sale: !!product.sale,
     categoryName: product.categoryName || getCategoryName(categoryId, list),
-    storeId: product.storeId === undefined ? '' : String(product.storeId || '')
+    storeId: product.storeId === undefined ? '' : String(product.storeId || ''),
+    sortOrder: toSortOrder(product.sortOrder, existing ? toSortOrder(existing.sortOrder, maxSortOrder + 1) : maxSortOrder + 1)
   }
-  const index = list.findIndex((item) => item.id === id)
-  const next = index > -1 ? list.map((item) => (item.id === id ? Object.assign({}, item, nextProduct) : item)) : [nextProduct].concat(list)
-  saveProducts(next)
-  ensureProductStock(id)
-  requestMerchantApi('/api/merchant/products', 'POST', nextProduct)
-  return getProducts()
+  const requested = requestMerchantApi('/api/merchant/products', 'POST', nextProduct, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false, [])
+      return
+    }
+    const serverProduct = Object.assign({}, nextProduct, payload, {
+      sortOrder: toSortOrder(payload.sortOrder, nextProduct.sortOrder)
+    })
+    const current = getProducts()
+    const exists = current.some((item) => item.id === serverProduct.id)
+    const saved = saveProducts(exists
+      ? current.map((item) => (item.id === serverProduct.id ? Object.assign({}, item, serverProduct) : item))
+      : [serverProduct].concat(current))
+    ensureProductStock(serverProduct.id)
+    if (callback) callback(serverProduct, true, saved)
+  })
+  if (requested) return list
+  if (callback) callback(null, false, list)
+  return list
+}
+
+function updateCategoryOrder(id, direction, callback, storeId = '') {
+  const scopedId = String(storeId || '').trim()
+  const categories = getCategories().filter((item) => !scopedId || !item.storeId || item.storeId === scopedId)
+  const index = categories.findIndex((item) => item.id === id)
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (index < 0 || target < 0 || target >= categories.length) {
+    if (callback) callback(null, false)
+    return categories
+  }
+  const next = categories.slice()
+  const current = Object.assign({}, next[index])
+  const swapped = Object.assign({}, next[target])
+  const currentOrder = Number(current.sortOrder || index + 1)
+  current.sortOrder = Number(swapped.sortOrder || target + 1)
+  swapped.sortOrder = currentOrder
+  next[index] = current
+  next[target] = swapped
+  saveCategories(next)
+  const syncOne = (category, done) => requestMerchantApi('/api/merchant/categories', 'POST', category, (payload) => done(payload))
+  syncOne(current, (first) => {
+    if (!first) {
+      if (callback) callback(null, false)
+      return
+    }
+    syncOne(swapped, (second) => {
+      if (second && callback) callback(next, true)
+      else if (callback) callback(null, false)
+    })
+  })
+  return next
+}
+
+function updateProductOrder(id, direction, callback, storeId = '') {
+  const scopedId = String(storeId || '').trim()
+  const products = getProducts().filter((item) => !scopedId || !item.storeId || item.storeId === scopedId)
+  const index = products.findIndex((item) => item.id === id)
+  const target = direction === 'up' ? index - 1 : index + 1
+  if (index < 0 || target < 0 || target >= products.length) {
+    if (callback) callback(null, false)
+    return products
+  }
+  const next = products.slice()
+  const current = Object.assign({}, next[index])
+  const swapped = Object.assign({}, next[target])
+  const currentOrder = Number(current.sortOrder || index + 1)
+  current.sortOrder = Number(swapped.sortOrder || target + 1)
+  swapped.sortOrder = currentOrder
+  next[index] = current
+  next[target] = swapped
+  const allProducts = getProducts()
+  const merged = allProducts.map((item) => {
+    if (item.id === current.id) return current
+    if (item.id === swapped.id) return swapped
+    return item
+  })
+  saveProducts(merged)
+  const syncOne = (product, done) => requestMerchantApi('/api/merchant/products', 'POST', product, (payload) => done(payload))
+  syncOne(current, (first) => {
+    if (!first) {
+      if (callback) callback(null, false)
+      return
+    }
+    syncOne(swapped, (second) => {
+      if (second && callback) callback(next, true)
+      else if (callback) callback(null, false)
+    })
+  })
+  return next
+}
+
+function saveCategoryOrder(categories, callback, storeId = '') {
+  const scopedId = String(storeId || '').trim()
+  const next = (Array.isArray(categories) ? categories : []).map((item, index) => Object.assign({}, item, {
+    sortOrder: index + 1,
+    storeId: item.storeId === undefined ? scopedId : String(item.storeId || scopedId)
+  }))
+  const allCategories = getCategories()
+  const merged = allCategories.map((item) => {
+    const found = next.find((entry) => entry.id === item.id)
+    return found ? Object.assign({}, item, found) : item
+  })
+  const syncOne = (index) => {
+    if (index >= next.length) {
+      saveCategories(merged)
+      if (callback) callback(next, true)
+      return
+    }
+    requestMerchantApi('/api/merchant/categories', 'POST', next[index], (payload) => {
+      if (!payload) {
+        if (callback) callback(null, false)
+        return
+      }
+      next[index] = Object.assign({}, next[index], payload, {
+        sortOrder: toSortOrder(payload.sortOrder, next[index].sortOrder)
+      })
+      const mergedIndex = merged.findIndex((item) => item.id === next[index].id)
+      if (mergedIndex > -1) merged[mergedIndex] = Object.assign({}, merged[mergedIndex], next[index])
+      else merged.unshift(next[index])
+      syncOne(index + 1)
+    })
+  }
+  syncOne(0)
+  return next
+}
+
+function saveProductOrder(products, callback, storeId = '') {
+  const scopedId = String(storeId || '').trim()
+  const next = (Array.isArray(products) ? products : []).map((item, index) => Object.assign({}, item, {
+    sortOrder: index + 1,
+    storeId: item.storeId === undefined ? scopedId : String(item.storeId || scopedId)
+  }))
+  const allProducts = getProducts()
+  const merged = allProducts.map((item) => {
+    const found = next.find((entry) => entry.id === item.id)
+    return found ? Object.assign({}, item, found) : item
+  })
+  const syncOne = (index) => {
+    if (index >= next.length) {
+      saveProducts(merged)
+      if (callback) callback(next, true)
+      return
+    }
+    requestMerchantApi('/api/merchant/products', 'POST', next[index], (payload) => {
+      if (!payload) {
+        if (callback) callback(null, false)
+        return
+      }
+      next[index] = Object.assign({}, next[index], payload, {
+        sortOrder: toSortOrder(payload.sortOrder, next[index].sortOrder)
+      })
+      const mergedIndex = merged.findIndex((item) => item.id === next[index].id)
+      if (mergedIndex > -1) merged[mergedIndex] = Object.assign({}, merged[mergedIndex], next[index])
+      else merged.unshift(next[index])
+      syncOne(index + 1)
+    })
+  }
+  syncOne(0)
+  return next
+}
+
+function deleteProduct(id, callback) {
+  const productId = String(id || '').trim()
+  if (!productId) {
+    if (callback) callback(null, false)
+    return false
+  }
+  requestMerchantApi(`/api/merchant/products/${encodeURIComponent(productId)}`, 'DELETE', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    saveProducts(getProducts().filter((item) => item.id !== productId))
+    wx.setStorageSync(KEYS.inventory, (wx.getStorageSync(KEYS.inventory) || []).filter((item) => item.id !== productId))
+    if (callback) callback(payload, true)
+  })
+  return true
 }
 
 function fetchMerchantProducts(callback) {
@@ -1208,10 +1785,64 @@ function generateTableQrcodes(callback) {
   })
 }
 
+function parseActivityDateTime(value) {
+  const text = String(value || '').trim()
+  if (!text) return null
+  let normalized = text
+    .replace(/年|\/|\.|月/g, '-')
+    .replace(/日|号/g, '')
+    .replace(/\s+/g, ' ')
+  if (/^\d{1,2}-\d{1,2}/.test(normalized)) {
+    normalized = `${new Date().getFullYear()}-${normalized}`
+  }
+  const parts = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/)
+  if (!parts) return null
+  const parsed = new Date(
+    Number(parts[1]),
+    Number(parts[2]) - 1,
+    Number(parts[3]),
+    Number(parts[4] || 0),
+    Number(parts[5] || 0)
+  )
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function isActivitySignupClosed(activity) {
+  if (!activity) return true
+  if (activity.status && activity.status !== 'open') return true
+  const deadline = parseActivityDateTime(activity.deadlineAt || activity.deadline)
+  return !!(deadline && Date.now() > deadline.getTime())
+}
+
 function normalizeActivity(activity, index = 0) {
   const fallbackStore = inferStoreByActivity(activity)
   const joined = Number(activity.joined || 0)
   const quota = Number(activity.quota || 10)
+  const explicitDayLabel = String(activity.dayLabel || '').trim()
+  const inferredDayLabel = (() => {
+    if (explicitDayLabel) return explicitDayLabel
+    const text = String(activity.date || '').trim()
+    if (!text) return ''
+    const now = new Date()
+    const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    let target = null
+    const monthDay = text.match(/(\d{1,2})月(\d{1,2})日/)
+    if (monthDay) {
+      target = new Date(now.getFullYear(), Number(monthDay[1]) - 1, Number(monthDay[2]))
+    } else {
+      const isoDate = text.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/)
+      if (isoDate) {
+        target = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]))
+      }
+    }
+    if (!target || Number.isNaN(target.getTime())) return ''
+    const diffDays = Math.round((startOfDay(target) - startOfDay(now)) / 86400000)
+    if (diffDays === 0) return '今天'
+    if (diffDays === 1) return '明天'
+    if (diffDays === 2) return '后天'
+    if (diffDays === 3) return '2天后'
+    return ''
+  })()
   return Object.assign(
     {
       id: `act-${Date.now()}-${index}`,
@@ -1223,6 +1854,7 @@ function normalizeActivity(activity, index = 0) {
       latitude: fallbackStore.latitude || 31.9567,
       longitude: fallbackStore.longitude || 118.8465,
       deadline: '',
+      deadlineAt: '',
       price: 0,
       pointsPrice: 0,
       quota,
@@ -1236,6 +1868,7 @@ function normalizeActivity(activity, index = 0) {
     },
     activity || {},
     {
+      dayLabel: inferredDayLabel,
       quota,
       joined,
       price: Number(activity && activity.price ? activity.price : 0),
@@ -1251,9 +1884,7 @@ function normalizeActivities(activities) {
 function getActivities() {
   const stored = wx.getStorageSync(KEYS.activities)
   if (!Array.isArray(stored) || !stored.length) {
-    const next = normalizeActivities(data.activities)
-    wx.setStorageSync(KEYS.activities, next)
-    return next
+    return []
   }
   return normalizeActivities(stored)
 }
@@ -1267,15 +1898,26 @@ function saveActivities(activities) {
   return getActivities()
 }
 
-function updateActivity(activity) {
+function updateActivity(activity, callback) {
   const list = getActivities()
   const id = activity.id || `act-${Date.now()}`
   const nextActivity = normalizeActivity(Object.assign({}, activity, { id }))
-  const index = list.findIndex((item) => item.id === id)
-  const next = index > -1 ? list.map((item) => (item.id === id ? Object.assign({}, item, nextActivity) : item)) : [nextActivity].concat(list)
-  const saved = saveActivities(next)
-  requestMerchantApi('/api/merchant/activities', 'POST', nextActivity)
-  return saved
+  const requested = requestMerchantApi('/api/merchant/activities', 'POST', nextActivity, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false, [])
+      return
+    }
+    const serverActivity = normalizeActivity(Object.assign({}, nextActivity, payload))
+    const current = getActivities()
+    const exists = current.some((item) => item.id === serverActivity.id)
+    const saved = saveActivities(exists
+      ? current.map((item) => (item.id === serverActivity.id ? Object.assign({}, item, serverActivity) : item))
+      : [serverActivity].concat(current))
+    if (callback) callback(serverActivity, true, saved)
+  })
+  if (requested) return list
+  if (callback) callback(null, false, list)
+  return list
 }
 
 function fetchMerchantActivities(callback) {
@@ -1293,6 +1935,130 @@ function fetchMerchantBasics(callback) {
   fetchMerchantList('/api/merchant/members', getMemberList, (list) => wx.setStorageSync(KEYS.members, list), done)
   fetchMerchantList('/api/merchant/recharge-records', getRechargeRecords, (list) => wx.setStorageSync(KEYS.rechargeRecords, list), done)
   fetchMerchantList('/api/merchant/point-logs', getPointLogs, (list) => wx.setStorageSync(KEYS.pointLogs, list), done)
+}
+
+function fetchMyProfile(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback(null)
+    return
+  }
+  requestApi('/api/my/profile', 'GET', {}, (member) => {
+    if (member) {
+      const next = saveMember(member)
+      if (callback) callback(next)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function fetchMyOrders(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback([])
+    return
+  }
+  requestApi('/api/my/orders', 'GET', {}, (list) => {
+    if (Array.isArray(list)) {
+      saveOrders(list)
+      if (callback) callback(list)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function fetchMySignups(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback([])
+    return
+  }
+  requestApi('/api/my/signups', 'GET', {}, (list) => {
+    if (Array.isArray(list)) {
+      wx.setStorageSync(KEYS.signups, list)
+      if (callback) callback(list)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function fetchMyCellar(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback([])
+    return
+  }
+  requestApi('/api/my/cellar', 'GET', {}, (list) => {
+    if (Array.isArray(list)) {
+      wx.setStorageSync(KEYS.cellar, list)
+      if (callback) callback(list)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function fetchMyRechargeRecords(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback([])
+    return
+  }
+  requestApi('/api/my/recharge-records', 'GET', {}, (list) => {
+    if (Array.isArray(list)) {
+      saveRechargeRecords(list)
+      if (callback) callback(list)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function clearSyncedCaches() {
+  ;[
+    KEYS.stores,
+    KEYS.categories,
+    KEYS.products,
+    KEYS.activities,
+    KEYS.members,
+    KEYS.orders,
+    KEYS.signups,
+    KEYS.cellar,
+    KEYS.inventory,
+    KEYS.rechargeSettings,
+    KEYS.rechargeRecords,
+    KEYS.pointLogs,
+    KEYS.globalSettings,
+    KEYS.leaderboard,
+    KEYS.printLogs
+  ].forEach((key) => wx.removeStorageSync(key))
+}
+
+function syncServerData(callback) {
+  clearSyncedCaches()
+  const tasks = [
+    fetchStores,
+    fetchCategories,
+    fetchProducts,
+    fetchActivities,
+    fetchRechargeSettings,
+    fetchGlobalSettings,
+    fetchPublicLeaderboard
+  ]
+  if (isLoggedIn()) {
+    tasks.push(fetchMyProfile, fetchMyOrders, fetchMySignups, fetchMyCellar, fetchMyRechargeRecords)
+  }
+  if (isMerchantLoggedIn()) {
+    tasks.push(fetchMerchantBasics, fetchInventory)
+  }
+  if (!tasks.length) {
+    if (callback) callback()
+    return
+  }
+  let pending = tasks.length
+  const done = () => {
+    pending -= 1
+    if (pending <= 0 && callback) callback()
+  }
+  tasks.forEach((task) => task(done))
 }
 
 function openActivityLocation(activity) {
@@ -1370,27 +2136,37 @@ function getRechargeSettings() {
 }
 
 function fetchRechargeSettings(callback) {
-  requestMerchantApi('/api/merchant/recharge-settings', 'GET', {}, (payload) => {
-    const next = payload ? Object.assign({}, defaultRechargeSettings(), payload) : getRechargeSettings()
+  const done = (payload) => {
+    if (!payload) {
+      if (callback) callback(null)
+      return
+    }
+    const next = Object.assign({}, defaultRechargeSettings(), payload)
     next.packages = Array.isArray(next.packages) && next.packages.length ? next.packages : defaultRechargeSettings().packages
     wx.setStorageSync(KEYS.rechargeSettings, next)
     if (callback) callback(next)
-  })
+  }
+  if (isMerchantLoggedIn()) {
+    requestMerchantApi('/api/merchant/recharge-settings', 'GET', {}, done)
+    return
+  }
+  requestApi('/api/recharge-settings', 'GET', {}, done)
 }
 
 function saveRechargeSettings(settings, callback) {
   const next = Object.assign({}, getRechargeSettings(), settings || {})
   next.packages = Array.isArray(next.packages) && next.packages.length ? next.packages : defaultRechargeSettings().packages
-  wx.setStorageSync(KEYS.rechargeSettings, next)
-  requestMerchantApi('/api/merchant/recharge-settings', 'POST', next, (payload) => {
+  const requested = requestMerchantApi('/api/merchant/recharge-settings', 'POST', next, (payload) => {
     if (payload) {
       const saved = Object.assign({}, next, payload)
       wx.setStorageSync(KEYS.rechargeSettings, saved)
-      if (callback) callback(saved)
+      if (callback) callback(saved, true)
       return
     }
-    if (callback) callback(null)
+    if (callback) callback(null, false)
   })
+  if (requested) return getRechargeSettings()
+  if (callback) callback(null, false)
   return next
 }
 
@@ -1454,11 +2230,7 @@ function adjustMemberBalance(memberKey, delta, options = {}, callback) {
       storeId: options.storeId || ''
     }, (payload) => {
       if (payload && payload.member) {
-        const members = getMemberList()
-        const index = members.findIndex((item) => item.id === payload.member.id)
-        if (index > -1) members[index] = payload.member
-        else members.unshift(payload.member)
-        wx.setStorageSync(KEYS.members, members)
+        syncMemberCache(payload.member)
       }
       if (payload && payload.record) {
         const records = getRechargeRecords()
@@ -1525,13 +2297,17 @@ function getGlobalSettings() {
 
 function fetchGlobalSettings(callback) {
   const done = (settings) => {
-    const next = settings ? normalizeGlobalSettings(settings) : getGlobalSettings()
+    if (!settings) {
+      if (callback) callback(null)
+      return
+    }
+    const next = normalizeGlobalSettings(settings)
     wx.setStorageSync(KEYS.globalSettings, next)
     if (callback) callback(next)
   }
   const base = apiBaseUrl()
   if (!base) {
-    done()
+    done(null)
     return
   }
   wx.request({
@@ -1545,18 +2321,26 @@ function fetchGlobalSettings(callback) {
         done(payload)
         return
       }
-      done()
+      done(null)
     },
     fail() {
-      done()
+      done(null)
     }
   })
 }
 
-function saveGlobalSettings(settings) {
+function saveGlobalSettings(settings, callback) {
   const next = normalizeGlobalSettings(Object.assign({}, getGlobalSettings(), settings || {}))
-  wx.setStorageSync(KEYS.globalSettings, next)
-  requestMerchantApi('/api/merchant/global-settings', 'POST', next)
+  const requested = requestMerchantApi('/api/merchant/global-settings', 'POST', next, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    const saved = normalizeGlobalSettings(payload)
+    wx.setStorageSync(KEYS.globalSettings, saved)
+    if (callback) callback(saved, true)
+  })
+  if (!requested && callback) callback(null, false)
   return next
 }
 
@@ -1605,13 +2389,22 @@ function cancelOrder(id) {
   return updateOrderStatus(id, '已取消')
 }
 
-function updateOrderStatus(id, status) {
+function updateOrderStatus(id, status, callback) {
   const orders = getOrders()
   const index = orders.findIndex((item) => item.id === id)
   if (index < 0) return null
-  orders[index] = Object.assign({}, orders[index], { status })
-  saveOrders(orders)
-  requestMerchantApi(`/api/merchant/orders/${id}/status`, 'PATCH', { status })
+  const requested = requestMerchantApi(`/api/merchant/orders/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
+    if (payload) {
+      const current = getOrders()
+      const next = current.map((item) => (item.id === payload.id ? Object.assign({}, item, payload) : item))
+      saveOrders(next)
+      if (callback) callback(payload, true)
+      return
+    }
+    if (callback) callback(null, false)
+  })
+  if (requested) return orders[index]
+  if (callback) callback(null, false)
   return orders[index]
 }
 
@@ -1712,32 +2505,60 @@ function getSignups() {
   return wx.getStorageSync(KEYS.signups) || []
 }
 
-function addSignup(activity) {
-  if (!isLoggedIn()) return getSignups()
-  const signups = getSignups()
-  if (!signups.find((item) => item.id === activity.id)) {
-    const store = inferStoreByActivity(activity)
-    signups.unshift({
-      id: activity.id,
-      title: activity.title,
-      date: activity.date,
-      storeId: store.id,
-      storeName: store.shortName,
-      price: activity.price,
-      status: '已报名',
-      createdAt: formatTime(new Date())
-    })
-    wx.setStorageSync(KEYS.signups, signups)
-    updateActivity(Object.assign({}, activity, { joined: Number(activity.joined || 0) + 1 }))
+function addSignup(activity, callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback(null)
+    return getSignups()
   }
-  return signups
+  const currentMember = getMember()
+  const signups = getSignups()
+  if (isActivitySignupClosed(activity)) {
+    wx.showToast({ title: '报名已截止', icon: 'none' })
+    if (callback) callback(null)
+    return signups
+  }
+  if (signups.find((item) => item.activityId === activity.id && item.memberId === currentMember.id)) {
+    if (callback) callback(signups)
+    return signups
+  }
+  const store = inferStoreByActivity(activity)
+  const baseRecord = {
+    activityId: activity.id,
+    storeId: activity.storeId || store.id,
+    storeName: activity.storeName || store.shortName,
+    avatarUrl: currentMember.avatarUrl || '',
+    avatarText: (currentMember.avatarText || currentMember.nickname || '会员').slice(0, 1)
+  }
+  const mergeLocal = (signup) => {
+    const next = getSignups()
+    if (!next.find((item) => item.id === signup.id)) {
+      next.unshift(signup)
+      wx.setStorageSync(KEYS.signups, next)
+      const activities = getActivities().map((item) => (item.id === activity.id ? Object.assign({}, item, { joined: Number(item.joined || 0) + 1 }) : item))
+      wx.setStorageSync(KEYS.activities, activities)
+    }
+    return next
+  }
+  requestApi('/api/signups', 'POST', baseRecord, (payload) => {
+    if (payload) {
+      const next = mergeLocal(Object.assign({}, payload, {
+        avatarUrl: payload.avatarUrl || baseRecord.avatarUrl,
+        avatarText: payload.avatarText || baseRecord.avatarText
+      }))
+      if (callback) callback(next)
+      return
+    }
+    if (callback) callback(null)
+  })
+  return getSignups()
 }
 
 function inferStoreByActivity(activity) {
+  const stores = getStores()
   if (activity && activity.location && activity.location.indexOf('新街口') > -1) {
-    return data.stores.find((item) => item.id === 'xinjiekou') || data.stores[0]
+    return stores.find((item) => item.id === 'xinjiekou') || stores[0] || normalizeStoreLocation(data.stores[0])
   }
-  return data.stores[0]
+  return stores[0] || normalizeStoreLocation(data.stores[0])
 }
 
 function getStoreSignups(storeId) {
@@ -1748,16 +2569,18 @@ function getStoreSignups(storeId) {
 }
 
 function updateSignupStatus(id, status, callback) {
-  const signups = getSignups().map((item) => (item.id === id ? Object.assign({}, item, { status }) : item))
-  wx.setStorageSync(KEYS.signups, signups)
-  requestMerchantApi(`/api/merchant/signups/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
+  const requested = requestMerchantApi(`/api/merchant/signups/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
     if (payload) {
       const next = getSignups().map((item) => (item.id === payload.id ? Object.assign({}, item, payload) : item))
       wx.setStorageSync(KEYS.signups, next)
+      if (callback) callback(payload, true)
+      return
     }
-    if (callback) callback(payload)
+    if (callback) callback(null, false)
   })
-  return signups
+  if (requested) return getSignups()
+  if (callback) callback(null, false)
+  return getSignups()
 }
 
 function getCellar() {
@@ -1775,8 +2598,19 @@ function addCellar(record) {
   return list
 }
 
-function submitCellar(record) {
+function submitCellar(record, callback) {
   if (!isLoggedIn()) return getCellar()
+  requestApi('/api/cellar', 'POST', record || {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null)
+      return
+    }
+    const list = getCellar().filter((item) => item.id !== payload.id)
+    list.unshift(payload)
+    wx.setStorageSync(KEYS.cellar, list)
+    if (callback) callback(payload)
+  })
+  return getCellar()
   const now = new Date()
   const months = Number(record.months || 3)
   const expireAt = new Date(now)
@@ -1799,23 +2633,49 @@ function submitCellar(record) {
 }
 
 function updateCellarStatus(id, status, callback) {
-  const list = getCellar().map((item) => (item.id === id ? Object.assign({}, item, { status }) : item))
-  wx.setStorageSync(KEYS.cellar, list)
-  requestMerchantApi(`/api/merchant/cellar/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
+  if (!isMerchantContext()) {
+    requestApi(`/api/cellar/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
+      if (payload) {
+        const next = getCellar().map((item) => (item.id === payload.id ? Object.assign({}, item, payload) : item))
+        wx.setStorageSync(KEYS.cellar, next)
+        if (callback) callback(payload, true)
+        return
+      }
+      if (callback) callback(null, false)
+    })
+    return getCellar()
+  }
+  const requested = requestMerchantApi(`/api/merchant/cellar/${encodeURIComponent(id)}/status`, 'PATCH', { status }, (payload) => {
     if (payload) {
       const next = getCellar().map((item) => (item.id === payload.id ? Object.assign({}, item, payload) : item))
       wx.setStorageSync(KEYS.cellar, next)
+      if (callback) callback(payload, true)
+      return
     }
-    if (callback) callback(payload)
+    if (callback) callback(null, false)
   })
-  return list
+  if (requested) return getCellar()
+  if (callback) callback(null, false)
+  return getCellar()
 }
 
 function getStoreCellar(storeId) {
   return getCellar().filter((item) => !storeId || item.storeId === storeId)
 }
 
-function renewCellar(id, months = 3) {
+function renewCellar(id, months = 3, callback) {
+  if (!isMerchantContext()) {
+    requestApi(`/api/cellar/${encodeURIComponent(id)}/renew`, 'POST', { months }, (payload) => {
+      if (!payload) {
+        if (callback) callback(null)
+        return
+      }
+      const next = getCellar().map((item) => (item.id === payload.id ? Object.assign({}, item, payload) : item))
+      wx.setStorageSync(KEYS.cellar, next)
+      if (callback) callback(payload)
+    })
+    return getCellar()
+  }
   const list = getCellar().map((item) => {
     if (item.id !== id) return item
     const date = new Date(String(item.expireAt || formatDate(new Date())).replace(/-/g, '/'))
@@ -1827,6 +2687,7 @@ function renewCellar(id, months = 3) {
     })
   })
   wx.setStorageSync(KEYS.cellar, list)
+  if (callback) callback(list.find((item) => item.id === id) || null)
   return list
 }
 
@@ -1861,11 +2722,7 @@ function adjustMemberPoints(memberKey, delta, reason, operator, callback) {
       storeId: ''
     }, (payload) => {
       if (payload && payload.member) {
-        const members = getMemberList()
-        const index = members.findIndex((item) => item.id === payload.member.id)
-        if (index > -1) members[index] = payload.member
-        else members.unshift(payload.member)
-        wx.setStorageSync(KEYS.members, members)
+        syncMemberCache(payload.member)
       }
       if (payload && payload.record) {
         const logs = wx.getStorageSync(KEYS.pointLogs) || []
@@ -1893,11 +2750,68 @@ function adjustMemberPoints(memberKey, delta, reason, operator, callback) {
   return { member: next, logs }
 }
 
+function adjustMemberPieces(memberKey, delta, reason, operator, callback) {
+  if (!isLoggedIn() && !isMerchantContext()) return null
+  const amount = Number(delta || 0)
+  const text = String(reason || '').trim()
+  if (!amount || !text) return null
+  const member = memberKey ? null : getMember()
+  const targetId = memberKey || (member && (member.id || member.openid || member.nickname))
+  if (isMerchantContext() && targetId) {
+    requestMerchantApi(`/api/merchant/members/${encodeURIComponent(targetId)}/pieces`, 'POST', {
+      delta: amount,
+      reason: text,
+      storeId: ''
+    }, (payload) => {
+      if (payload && payload.member) {
+        syncMemberCache(payload.member)
+      }
+      if (payload && payload.record) {
+        const logs = wx.getStorageSync(KEYS.pointLogs) || []
+        logs.unshift(payload.record)
+        wx.setStorageSync(KEYS.pointLogs, logs)
+      }
+      if (callback) callback(payload)
+    })
+    return null
+  }
+  if (!member) return null
+  const nextPieces = Math.max(0, Number(member.invitePieces || 0) + amount)
+  const next = saveMember(Object.assign({}, member, { invitePieces: nextPieces, gems: nextPieces }))
+  const logs = wx.getStorageSync(KEYS.pointLogs) || []
+  logs.unshift({
+    id: `PI${Date.now()}`,
+    memberId: next.id || 'guest',
+    nickname: next.nickname,
+    delta: amount,
+    type: 'pieces',
+    reason: text,
+    operator: operator || '商家端',
+    createdAt: formatTime(new Date())
+  })
+  wx.setStorageSync(KEYS.pointLogs, logs)
+  if (callback) callback({ member: next, logs })
+  return { member: next, logs }
+}
+
 function getPointLogs() {
   if (!canReadPrivateData()) {
     return []
   }
   return wx.getStorageSync(KEYS.pointLogs) || []
+}
+
+function syncMemberCache(member) {
+  if (!member || !member.id) return
+  const members = getMemberList()
+  const index = members.findIndex((item) => item.id === member.id)
+  if (index > -1) members[index] = Object.assign({}, members[index], member)
+  else members.unshift(Object.assign({}, member))
+  wx.setStorageSync(KEYS.members, members)
+  const current = wx.getStorageSync(KEYS.member)
+  if (current && current.id === member.id) {
+    wx.setStorageSync(KEYS.member, Object.assign({}, current, member))
+  }
 }
 
 function fetchPointLogs(callback) {
@@ -1937,7 +2851,7 @@ function fetchInventory(callback) {
       if (callback) callback(payload)
       return
     }
-    if (callback) callback(getInventory())
+    if (callback) callback(null)
   })
 }
 
@@ -1950,34 +2864,25 @@ function ensureProductStock(id) {
 }
 
 function updateProductStock(id, delta, callback) {
-  const stored = wx.getStorageSync(KEYS.inventory) || defaultInventory()
-  const next = stored.map((item) => {
-    if (item.id === id) {
-      return Object.assign({}, item, {
-        stock: Math.max(0, Number(item.stock || 0) + Number(delta || 0))
-      })
-    }
-    return item
-  })
-  if (!next.find((item) => item.id === id)) {
-    next.push({ id, stock: Math.max(0, Number(delta || 0)) })
-  }
-  wx.setStorageSync(KEYS.inventory, next)
-  requestMerchantApi(`/api/merchant/inventory/${encodeURIComponent(id)}/stock`, 'PATCH', { delta: Number(delta || 0) }, (payload) => {
+  const requested = requestMerchantApi(`/api/merchant/inventory/${encodeURIComponent(id)}/stock`, 'PATCH', { delta: Number(delta || 0) }, (payload) => {
     if (payload) {
       const serverInventory = (wx.getStorageSync(KEYS.inventory) || []).filter((item) => item.id !== id)
       serverInventory.push({ id, stock: Number(payload.stock || 0) })
       wx.setStorageSync(KEYS.inventory, serverInventory)
+      if (callback) fetchInventory((items) => callback(items, true))
+      return
     }
-    if (callback) fetchInventory(callback)
+    if (callback) callback(null, false)
   })
+  if (requested) return getInventory()
+  if (callback) callback(null, false)
   return getInventory()
 }
 
 function getBoardGameReservations(storeId) {
   return getOrders().filter((order) => {
     const storeMatched = !storeId || order.storeId === storeId
-    const hasBoardItem = (order.items || []).some((item) => item.categoryId === 'packages' || item.categoryId === 'ktv')
+    const hasBoardItem = (order.items || []).some((item) => item.categoryId === 'packages')
     return storeMatched && hasBoardItem
   })
 }
@@ -1986,7 +2891,8 @@ function normalizeLeaderboardList(list) {
   return (Array.isArray(list) ? list : []).map((item, index) => ({
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
-    score: Number(item.score || 0)
+    score: Number(item.score || 0),
+    storeId: String(item.storeId || '').trim()
   }))
 }
 
@@ -1999,10 +2905,9 @@ function normalizeLeaderboardBoards(payload) {
       yearly: list.slice()
     }
   }
-  const fallback = normalizeLeaderboardList(data.leaderboard)
   const source = payload && typeof payload === 'object' ? payload : {}
   return LEADERBOARD_TYPES.reduce((boards, type) => {
-    boards[type] = normalizeLeaderboardList(source[type] || fallback)
+    boards[type] = normalizeLeaderboardList(source[type] || [])
     return boards
   }, {})
 }
@@ -2014,20 +2919,23 @@ function rankLeaderboardList(list) {
 
 function getLeaderboardBoards() {
   const stored = wx.getStorageSync(KEYS.leaderboard)
-  const boards = normalizeLeaderboardBoards(stored || data.leaderboard)
+  const boards = normalizeLeaderboardBoards(stored || {})
   wx.setStorageSync(KEYS.leaderboard, boards)
   return boards
 }
 
-function getLeaderboard(type = 'weekly') {
+function getLeaderboard(type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  return rankLeaderboardList(boards[type] || boards.weekly)
+  const list = rankLeaderboardList(boards[type] || boards.weekly)
+  const scopedStoreId = String(storeId || '').trim()
+  if (!scopedStoreId) return list
+  return list.filter((item) => !item.storeId || item.storeId === scopedStoreId)
 }
 
 function fetchPublicLeaderboard(callback, type = 'weekly') {
   const base = apiBaseUrl()
   if (!base) {
-    if (callback) callback(getLeaderboard(type))
+    if (callback) callback(null)
     return
   }
   wx.request({
@@ -2042,10 +2950,10 @@ function fetchPublicLeaderboard(callback, type = 'weekly') {
         if (callback) callback(getLeaderboard(type))
         return
       }
-      if (callback) callback(getLeaderboard(type))
+      if (callback) callback(null)
     },
     fail() {
-      if (callback) callback(getLeaderboard(type))
+      if (callback) callback(null)
     }
   })
 }
@@ -2057,36 +2965,51 @@ function fetchLeaderboard(callback, type = 'weekly') {
       if (callback) callback(getLeaderboard(type))
       return
     }
-    if (callback) callback(getLeaderboard(type))
+    if (callback) callback(null)
   })
 }
 
-function saveLeaderboard(list, callback, type = 'weekly') {
+function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  boards[type] = normalizeLeaderboardList(list)
-  wx.setStorageSync(KEYS.leaderboard, boards)
-  requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: boards[type] }, (payload) => {
-    if (payload) wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards(payload))
-    if (callback) callback(getLeaderboard(type))
+  const nextList = normalizeLeaderboardList(list)
+  if (storeId) {
+    const scopedId = String(storeId || '').trim()
+    const merged = (boards[type] || []).filter((item) => String(item.storeId || '').trim() !== scopedId)
+    boards[type] = merged.concat(nextList.map((item) => Object.assign({}, item, { storeId: scopedId })))
+  } else {
+    boards[type] = nextList
+  }
+  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: boards[type], storeId: String(storeId || '').trim() }, (payload) => {
+    if (payload) {
+      wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards(payload))
+      if (callback) callback(getLeaderboard(type), true)
+      return
+    }
+    if (callback) callback(null, false)
   })
+  if (requested) return getLeaderboard(type)
+  if (callback) callback(null, false)
   return getLeaderboard(type)
 }
 
-function addLeaderboardUser(record, callback, type = 'weekly') {
+function addLeaderboardUser(record, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const list = boards[type] || []
+  const scopedId = String(storeId || record.storeId || '').trim()
+  const list = (boards[type] || []).filter((item) => String(item.storeId || '').trim() !== scopedId)
   list.push({
     id: `${type}-rank-${Date.now()}`,
     username: record.username,
-    score: Number(record.score || 0)
+    score: Number(record.score || 0),
+    storeId: scopedId
   })
   list.sort((a, b) => b.score - a.score)
-  return saveLeaderboard(list, callback, type)
+  return saveLeaderboard(list, callback, type, scopedId)
 }
 
-function updateLeaderboardRank(id, direction, callback, type = 'weekly') {
+function updateLeaderboardRank(id, direction, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const list = rankLeaderboardList(boards[type] || [])
+  const scopedId = String(storeId || '').trim()
+  const list = rankLeaderboardList((boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId))
   const index = list.findIndex((item) => item.id === id)
   const target = direction === 'up' ? index - 1 : index + 1
   if (index < 0 || target < 0 || target >= list.length) {
@@ -2096,7 +3019,27 @@ function updateLeaderboardRank(id, direction, callback, type = 'weekly') {
   const temp = next[index]
   next[index] = next[target]
   next[target] = temp
-  return saveLeaderboard(next, callback, type)
+  return saveLeaderboard(next, callback, type, scopedId)
+}
+
+function adjustLeaderboardScore(id, delta, callback, type = 'weekly', storeId = '') {
+  const amount = Number(delta || 0)
+  if (!id || !amount) return getLeaderboard(type, storeId)
+  const boards = getLeaderboardBoards()
+  const scopedId = String(storeId || '').trim()
+  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
+  const next = list.map((item) => (item.id === id ? Object.assign({}, item, { score: Number(item.score || 0) + amount }) : item))
+  next.sort((a, b) => b.score - a.score)
+  return saveLeaderboard(next, callback, type, scopedId)
+}
+
+function deleteLeaderboardUser(id, callback, type = 'weekly', storeId = '') {
+  if (!id) return getLeaderboard(type, storeId)
+  const boards = getLeaderboardBoards()
+  const scopedId = String(storeId || '').trim()
+  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
+  const next = list.filter((item) => item.id !== id)
+  return saveLeaderboard(next, callback, type, scopedId)
 }
 
 function getDataOverview() {
@@ -2181,10 +3124,12 @@ ensureSeed()
 
 module.exports = {
   ensureSeed,
+  syncServerData,
   resetUserSession,
   isLoggedIn,
   loginWithWeChat,
   requireLogin,
+  resolvePendingWechatLogin,
   requestApi,
   fetchMerchantOrders,
   uploadMerchantMedia,
@@ -2201,6 +3146,7 @@ module.exports = {
   fetchMerchantStores,
   saveStores,
   updateStore,
+  deleteStore,
   getStore,
   setStore,
   storeIdByTableNo,
@@ -2217,21 +3163,41 @@ module.exports = {
   getCartSummary,
   getProducts,
   isProductVisibleInStore,
+  fetchCategories,
   fetchProducts,
   fetchMerchantProducts,
+  getCategories,
+  fetchMerchantCategories,
+  saveProductCategory,
+  deleteProductCategory,
+  saveCategoryOrder,
   fetchTableQrcodes,
   generateTableQrcodes,
   getProductCategories,
+  moveItemByDirection,
+  updateCategoryOrder,
   updateProduct,
+  deleteProduct,
   getActivities,
+  fetchActivities,
   fetchMerchantActivities,
   getActivity,
   saveActivities,
   updateActivity,
+  isActivitySignupClosed,
   openActivityLocation,
   getMember,
+  fetchMyProfile,
+  fetchMyOrders,
+  fetchMySignups,
+  fetchMyCellar,
+  fetchMyRechargeRecords,
   saveMember,
+  updateMyProfile,
   updateNickname,
+  loginWithWeChat,
+  loginWithPhoneNumber,
+  ensureMemberAvatar,
   getRechargeSettings,
   fetchRechargeSettings,
   saveRechargeSettings,
@@ -2270,10 +3236,13 @@ module.exports = {
   renewCellar,
   cellarReminder,
   adjustMemberPoints,
+  adjustMemberPieces,
   getPointLogs,
   fetchPointLogs,
   getInventory,
   fetchInventory,
+  updateProductOrder,
+  saveProductOrder,
   updateProductStock,
   getBoardGameReservations,
   getLeaderboard,
@@ -2281,6 +3250,8 @@ module.exports = {
   fetchLeaderboard,
   addLeaderboardUser,
   updateLeaderboardRank,
+  adjustLeaderboardScore,
+  deleteLeaderboardUser,
   saveLeaderboard,
   getLeaderboardBoards,
   leaderboardTabs: LEADERBOARD_TABS

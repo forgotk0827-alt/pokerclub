@@ -1,9 +1,8 @@
-const data = require('../../utils/data')
 const state = require('../../utils/state')
 
 Page({
   data: {
-    stores: data.stores,
+    stores: [],
     storeIndex: 0,
     wineName: '',
     quantity: 1,
@@ -13,7 +12,10 @@ Page({
   },
   onShow() {
     state.requireLogin('查看存酒记录', () => {
-      this.refresh()
+      state.fetchStores((stores) => {
+        this.setData({ stores: stores || [] })
+        state.fetchMyCellar(() => this.refresh())
+      })
     })
   },
   refresh() {
@@ -77,26 +79,32 @@ Page({
         wineName,
         quantity,
         months
+      }, (saved) => {
+        if (!saved) return
+        this.setData({ wineName: '', quantity: 1, months: 3 })
+        state.fetchMyCellar(() => this.refresh())
+        wx.showToast({ title: '已提交申请', icon: 'success' })
       })
-      this.setData({ wineName: '', quantity: 1, months: 3 })
-      this.refresh()
-      wx.showToast({ title: '已提交申请', icon: 'success' })
     })
   },
   extract(event) {
     const id = event.currentTarget.dataset.id
     state.requireLogin('提取存酒', () => {
-      state.updateCellarStatus(id, '已提取')
-      this.refresh()
-      wx.showToast({ title: '已提交提取', icon: 'success' })
+      state.updateCellarStatus(id, '已提取', (saved) => {
+        if (!saved) return
+        state.fetchMyCellar(() => this.refresh())
+        wx.showToast({ title: '已提交提取', icon: 'success' })
+      })
     })
   },
   renew(event) {
     const id = event.currentTarget.dataset.id
     state.requireLogin('续存存酒', () => {
-      state.renewCellar(id, 3)
-      this.refresh()
-      wx.showToast({ title: '已续存3个月', icon: 'success' })
+      state.renewCellar(id, 3, (saved) => {
+        if (!saved) return
+        state.fetchMyCellar(() => this.refresh())
+        wx.showToast({ title: '已续存3个月', icon: 'success' })
+      })
     })
   }
 })

@@ -2,10 +2,9 @@ const state = require('../../utils/state')
 
 Page({
   data: {
-    globalSettings: state.getGlobalSettings()
+    globalSettings: null
   },
   onShow() {
-    this.refresh()
     state.fetchGlobalSettings((globalSettings) => {
       this.setData({ globalSettings })
     })

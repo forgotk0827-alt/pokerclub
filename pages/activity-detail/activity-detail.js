@@ -9,15 +9,20 @@ Page({
       { key: 'environment', name: '环境详情' },
       { key: 'result', name: '赛事结果' }
     ],
-    avatars: ['帅哥', '帅哥', '帅哥', '帅哥', '帅哥']
+    avatars: []
   },
   onLoad(options) {
-    this.loadActivity(options.id)
+    this.loadActivityFromServer(options.id)
   },
   onShow() {
     if (this.data.activity) {
-      this.loadActivity(this.data.activity.id)
+      this.loadActivityFromServer(this.data.activity.id)
     }
+  },
+  loadActivityFromServer(id) {
+    state.fetchActivities(() => {
+      state.fetchMySignups(() => this.loadActivity(id))
+    })
   },
   loadActivity(id) {
     const activity = state.getActivity(id)
@@ -26,10 +31,20 @@ Page({
       setTimeout(() => wx.navigateBack(), 600)
       return
     }
+    const avatars = state.getSignups()
+      .filter((item) => item.activityId === activity.id)
+      .slice(0, 6)
+      .map((item) => ({
+        avatarUrl: item.avatarUrl || '',
+        avatarText: item.avatarText || (item.nickname || '').slice(0, 1) || '人'
+      }))
     this.setData({
       activity: Object.assign({}, activity, {
-        remaining: Math.max(0, Number(activity.quota || 0) - Number(activity.joined || 0))
-      })
+        remaining: Math.max(0, Number(activity.quota || 0) - Number(activity.joined || 0)),
+        signupClosed: state.isActivitySignupClosed(activity),
+        signupText: state.isActivitySignupClosed(activity) ? '已截止' : '立即报名'
+      }),
+      avatars
     })
   },
   switchTab(event) {
@@ -40,8 +55,8 @@ Page({
   },
   signup() {
     const activity = this.data.activity
-    if (!activity || activity.status !== 'open') {
-      wx.showToast({ title: '活动已结束', icon: 'none' })
+    if (!activity || activity.signupClosed || state.isActivitySignupClosed(activity)) {
+      wx.showToast({ title: '报名已截止', icon: 'none' })
       return
     }
     if (Number(activity.joined || 0) >= Number(activity.quota || 0)) {
@@ -49,26 +64,29 @@ Page({
       return
     }
     state.requireLogin('活动报名', () => {
-      state.addToCart({
-        id: `signup-${activity.id}`,
-        name: activity.productName || activity.title,
-        desc: `${activity.title} - ${activity.date}`,
-        price: Number(activity.price || 0),
-        unit: '张',
-        image: activity.image,
-        categoryId: 'activity',
-        points: Number(activity.pointsPrice || 0)
-      })
-      state.addSignup(activity)
-      wx.showModal({
-        title: '报名已加入购物车',
-        content: '请到购物车完成结算，支付完成后即可核销入场。',
-        confirmText: '去结算',
-        success(res) {
-          if (res.confirm) {
-            wx.reLaunch({ url: '/pages/cart/cart' })
+      state.ensureMemberAvatar((member) => {
+        if (!member || !member.avatarUrl) return
+        state.addToCart({
+          id: `signup-${activity.id}`,
+          activityId: activity.id,
+          name: activity.productName || activity.title,
+          desc: `${activity.title} - ${activity.date}`,
+          price: Number(activity.price || 0),
+          unit: '张',
+          image: activity.image,
+          categoryId: 'activity',
+          points: Number(activity.pointsPrice || 0)
+        })
+        wx.showModal({
+          title: '报名已加入购物车',
+          content: '请到购物车完成结算，支付完成后即可核销入场。',
+          confirmText: '去结算',
+          success(res) {
+            if (res.confirm) {
+              wx.reLaunch({ url: '/pages/cart/cart' })
+            }
           }
-        }
+        })
       })
     })
   }

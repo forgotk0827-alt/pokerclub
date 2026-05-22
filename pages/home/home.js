@@ -1,36 +1,34 @@
-const data = require('../../utils/data')
 const state = require('../../utils/state')
 
 Page({
   data: {
-    store: data.stores[0],
-    globalSettings: state.getGlobalSettings(),
+    store: null,
+    globalSettings: null,
     featured: [],
-    latestActivities: [],
+    leaderboard: [],
     avatarList: ['客', '客', '客', '客', '客'],
     cartSummary: { count: 0, total: 0 }
   },
   onShow() {
-    this.loadHome()
     state.fetchStores(() => {
-      this.loadHome()
-    })
-    state.fetchProducts(() => {
-      this.loadHome()
-    })
-    state.fetchGlobalSettings((globalSettings) => {
-      this.setData({ globalSettings })
+      state.fetchProducts(() => {
+        state.fetchGlobalSettings((globalSettings) => {
+          state.fetchPublicLeaderboard(() => {
+            this.setData({ globalSettings })
+            this.loadHome()
+          }, 'yearly')
+        })
+      })
     })
   },
   loadHome() {
     const store = state.getStore()
     const products = state.getProducts()
-    const activities = state.getActivities()
     const storeProducts = products.filter((item) => state.isProductVisibleInStore(item, store.id))
     this.setData({
       store,
       featured: storeProducts.filter((item) => item.categoryId === 'packages' && item.sale).slice(0, 3),
-      latestActivities: activities.filter((item) => item.status === 'open').slice(0, 2),
+      leaderboard: state.getLeaderboard('yearly', store.id).slice(0, 3),
       cartSummary: state.getCartSummary()
     })
   },
@@ -66,7 +64,7 @@ Page({
     wx.reLaunch({ url: event.currentTarget.dataset.url })
   },
   goActivity() {
-    wx.reLaunch({ url: '/pages/activity/activity' })
+    wx.navigateTo({ url: '/pages/leaderboard/leaderboard' })
   },
   goLeaderboard() {
     wx.navigateTo({ url: '/pages/leaderboard/leaderboard' })

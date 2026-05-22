@@ -13,23 +13,30 @@
 
       <view class="meta-row">
         <view class="meta-dot">⌖</view>
-        <view class="meta-text address-text">{{activity.location}} <text class="nav-link" bindtap="openLocation">[点击导航]</text></view>
+        <view class="meta-text address-text">
+          {{activity.location}}
+          <text class="nav-link" bindtap="openLocation">[点击导航]</text>
+        </view>
       </view>
 
       <view class="meta-row">
         <view class="meta-dot">¥</view>
-        <view class="meta-text price-text">¥{{activity.price}}.00<text wx:if="{{activity.pointsPrice}}"> 或 {{activity.pointsPrice}}积分</text></view>
+        <view class="meta-text price-text">
+          ¥{{activity.price}}.00
+          <text wx:if="{{activity.pointsPrice}}"> 或 {{activity.pointsPrice}}积分</text>
+        </view>
       </view>
 
       <view class="meta-row no-border">
-        <view class="meta-dot">♟</view>
-        <view class="meta-text">已报名{{activity.joined}}人,剩余{{activity.remaining}}个名额</view>
+        <view class="meta-dot">◷</view>
+        <view class="meta-text">截止 {{activity.deadlineAt || activity.deadline || '未设置'}} · 已报名{{activity.joined}}人 · 剩余{{activity.remaining}}个名额</view>
       </view>
 
       <view class="avatar-row">
-        <view wx:for="{{avatars}}" wx:key="*this" class="avatar-item">
-          <image class="avatar-img" src="/assets/hero-bar.svg" mode="aspectFill" />
-          <view class="avatar-name">{{item}}</view>
+        <view wx:for="{{avatars}}" wx:key="avatarText" class="avatar-item">
+          <image wx:if="{{item.avatarUrl}}" class="avatar-img" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="avatar fallback-avatar">{{item.avatarText}}</view>
+          <view class="avatar-name">{{item.avatarText}}</view>
         </view>
       </view>
     </view>
@@ -45,5 +52,5 @@
     </view>
   </scroll-view>
 
-  <view class="signup-bar" bindtap="signup">立即抢报</view>
+  <view class="signup-bar {{activity.signupClosed ? 'signup-disabled' : ''}}" bindtap="signup">{{activity.signupText}}</view>
 </view>

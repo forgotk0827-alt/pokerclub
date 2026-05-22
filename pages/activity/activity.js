@@ -15,7 +15,13 @@ Page({
   },
   onShow() {
     this.refreshDates()
-    this.setData({ activities: state.getActivities() }, () => this.filterList())
+    state.fetchActivities(() => {
+      state.fetchMySignups(() => this.refreshActivityList())
+    })
+  },
+  refreshActivityList() {
+    const store = state.getStore()
+    this.setData({ activities: state.getActivities().filter((item) => !item.storeId || item.storeId === store.id) }, () => this.filterList())
   },
   refreshDates() {
     const labels = [
@@ -51,11 +57,22 @@ Page({
     return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
   },
   filterList() {
+    const signups = state.getSignups()
     const list = this.data.activities.filter((item) => {
       const dayMatched = this.data.activeDay === 'all' || item.dayLabel === this.dayLabel(this.data.activeDay)
       const typeMatched = this.data.activeType === '全部' || item.type === this.data.activeType
       return dayMatched && typeMatched
-    })
+    }).map((item) => Object.assign({}, item, {
+      signupClosed: state.isActivitySignupClosed(item),
+      statusText: state.isActivitySignupClosed(item) ? '已截止' : '报名中',
+      avatars: signups
+        .filter((signup) => signup.activityId === item.id)
+        .slice(0, 4)
+        .map((signup) => ({
+          avatarUrl: signup.avatarUrl || '',
+          avatarText: signup.avatarText || (signup.nickname || '').slice(0, 1) || '人'
+        }))
+    }))
     this.setData({ list })
   },
   dayLabel(key) {

@@ -58,16 +58,18 @@ Page({
         wx.showToast({ title: '购物车为空', icon: 'none' })
         return
       }
+      const activityItem = this.data.cart.find((item) => item && item.categoryId === 'activity')
+      const activityId = activityItem ? (activityItem.activityId || String(activityItem.id || '').replace(/^signup-/, '')) : ''
       state.createOrderWithWechatPay({ mode: '堂食' }, (order) => {
         if (!order) return
         this.refresh()
         wx.showModal({
           title: '订单已支付',
           content: `订单号 ${order.id} 已生成，支付结果以微信支付通知为准。`,
-          confirmText: '去我的',
+          confirmText: activityId ? '查看活动' : '去我的',
           success(res) {
             if (res.confirm) {
-              wx.reLaunch({ url: '/pages/profile/profile' })
+              wx.reLaunch({ url: activityId ? `/pages/activity-detail/activity-detail?id=${activityId}` : '/pages/profile/profile' })
             }
           }
         })

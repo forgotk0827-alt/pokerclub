@@ -1,7 +1,11 @@
-<topbar title="我的积分" showBack="{{true}}" />
+<topbar title="{{activeTab === 'points' ? '我的积分' : '我的碎片'}}" showBack="{{true}}" />
 <view class="points-page">
+  <view class="tab-row">
+    <view class="tab {{activeTab === 'points' ? 'tab-active' : ''}}" data-key="points" bindtap="switchTab">积分</view>
+    <view class="tab {{activeTab === 'fragments' ? 'tab-active' : ''}}" data-key="fragments" bindtap="switchTab">碎片</view>
+  </view>
   <view class="points-card">
-    <view class="points-num">{{member.points}}</view>
-    <view class="points-label">积分余额</view>
+    <view class="points-num">{{activeTab === 'points' ? member.points : (member.gems || member.invitePieces || 0)}}</view>
+    <view class="points-label">{{activeTab === 'points' ? '积分余额' : '碎片余额'}}</view>
   </view>
 </view>

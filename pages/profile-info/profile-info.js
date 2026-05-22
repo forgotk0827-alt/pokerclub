@@ -2,14 +2,19 @@ const state = require('../../utils/state')
 
 Page({
   data: {
-    member: state.getMember()
+    member: {}
   },
   onShow() {
-    if (!state.requireLogin('查看个人资料', () => this.setData({ member: state.getMember() }))) {
+    if (!state.requireLogin('查看个人资料', () => this.refreshMemberFromServer())) {
       this.setData({ member: state.getMember() })
       return
     }
-    this.setData({ member: state.getMember() })
+    this.refreshMemberFromServer()
+  },
+  refreshMemberFromServer() {
+    state.fetchMyProfile((member) => {
+      this.setData({ member: member || state.getMember() })
+    })
   },
   editName() {
     if (!state.requireLogin('修改姓名')) {
@@ -22,7 +27,9 @@ Page({
       confirmText: '保存',
       success: (res) => {
         if (res.confirm) {
-          const member = state.updateNickname(res.content)
+          const member = state.updateNickname(res.content, (serverMember) => {
+            if (serverMember) this.setData({ member: serverMember })
+          })
           this.setData({ member })
         }
       }
@@ -36,8 +43,9 @@ Page({
       itemList: ['男', '女', '未设置'],
       success: (res) => {
         const gender = ['男', '女', '未设置'][res.tapIndex]
-        const member = state.saveMember(Object.assign({}, this.data.member, { gender }))
-        this.setData({ member })
+        state.updateMyProfile({ gender }, (member) => {
+          if (member) this.setData({ member })
+        })
       }
     })
   },
@@ -52,8 +60,9 @@ Page({
       confirmText: '保存',
       success: (res) => {
         if (res.confirm) {
-          const member = state.saveMember(Object.assign({}, this.data.member, { phone: res.content }))
-          this.setData({ member })
+          state.updateMyProfile({ phone: res.content }, (member) => {
+            if (member) this.setData({ member })
+          })
         }
       }
     })

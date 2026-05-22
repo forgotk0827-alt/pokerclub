@@ -2,18 +2,25 @@ const state = require('../../utils/state')
 
 Page({
   data: {
-    member: state.getMember(),
-    settings: state.getRechargeSettings(),
+    member: {},
+    settings: { packages: [] },
     selectedIndex: 0,
     records: [],
     balanceAfter: 0
   },
   onShow() {
-    if (!state.requireLogin('查看储值账户', () => this.refresh())) {
+    if (!state.requireLogin('查看储值账户', () => this.refreshFromServer())) {
       this.setData({ member: state.getMember(), records: [], balanceAfter: 0 })
       return
     }
-    this.refresh()
+    this.refreshFromServer()
+  },
+  refreshFromServer() {
+    state.fetchMyProfile(() => {
+      state.fetchRechargeSettings(() => {
+        state.fetchMyRechargeRecords(() => this.refresh())
+      })
+    })
   },
   refresh() {
     const member = state.getMember()
@@ -42,6 +49,6 @@ Page({
       wx.showToast({ title: '暂无充值套餐', icon: 'none' })
       return
     }
-    state.rechargeWithWechatPay(pack, () => this.refresh())
+    state.rechargeWithWechatPay(pack, () => this.refreshFromServer())
   }
 })

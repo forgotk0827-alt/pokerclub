@@ -1,9 +1,9 @@
 <topbar title="首页" />
 <scroll-view scroll-y class="page home-page">
   <view class="hero">
-    <image class="hero-img" src="/bac-clean.jpg" mode="aspectFill" />
+    <image class="hero-img" src="/bac-clean.jpg" mode="aspectFit" />
     <view class="notice">
-      <view class="notice-track">{{globalSettings.homeNotice}}</view>
+      <view class="notice-track">{{globalSettings.homeNotice || '破壳派酒吧欢迎您'}}</view>
     </view>
   </view>
 
@@ -96,38 +96,38 @@
   </view>
 
   <view class="section-head">
-    <view class="section-name">活动报名</view>
-    <view class="section-more" bindtap="goActivity">更多</view>
+    <view class="section-name">排行榜</view>
+    <view class="section-more" bindtap="goLeaderboard">更多</view>
   </view>
   <view class="home-activity-list">
-    <view class="home-activity-card" wx:for="{{latestActivities}}" wx:key="id" bindtap="goActivity">
+    <view class="home-activity-card" wx:for="{{leaderboard}}" wx:key="id" bindtap="goLeaderboard">
       <view class="home-activity-top">
-        <view class="home-activity-title">{{item.title}}</view>
+        <view class="home-activity-title">{{item.username}}</view>
         <view class="home-activity-link">查看详情</view>
       </view>
       <view class="home-activity-body">
-        <image class="home-activity-img" src="{{item.image}}" mode="aspectFill" />
+        <image class="home-activity-img" src="/assets/activity-card.svg" mode="aspectFill" />
         <view class="home-activity-main">
           <view class="home-meta-line">
             <text class="home-meta-icon">•</text>
-            <text class="line-clamp">{{item.date}}</text>
+            <text class="line-clamp">年度榜第 {{item.rank}} 名</text>
           </view>
           <view class="home-meta-line">
             <text class="home-meta-icon">◎</text>
-            <text class="line-clamp">{{item.location}}</text>
+            <text class="line-clamp">分数 {{item.score}}</text>
           </view>
           <view class="home-meta-line muted">
             <text class="home-meta-icon">•</text>
-            <text class="line-clamp">{{item.deadline}}</text>
+            <text class="line-clamp">点击进入完整排行榜</text>
           </view>
         </view>
-        <view class="home-activity-price">¥{{item.price}}.00</view>
+        <view class="home-activity-price">{{item.score}}</view>
       </view>
       <view class="home-join-row">
         <view class="home-avatars">
           <view wx:for="{{avatarList}}" wx:key="*this" class="home-avatar">{{item}}</view>
         </view>
-        <view class="home-quota"><text>{{item.joined}}</text>/{{item.quota}}</view>
+        <view class="home-quota"><text>{{item.rank}}</text>名</view>
       </view>
     </view>
   </view>

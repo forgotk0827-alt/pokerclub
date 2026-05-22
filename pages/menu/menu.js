@@ -1,9 +1,8 @@
-const data = require('../../utils/data')
 const state = require('../../utils/state')
 
 Page({
   data: {
-    store: data.stores[0],
+    store: null,
     categories: [],
     products: [],
     activeCategory: '',
@@ -19,8 +18,11 @@ Page({
     state.applyTablePayload(options, { toast: false })
   },
   onShow() {
-    this.refreshProducts()
-    state.fetchProducts(() => this.refreshProducts())
+    state.fetchStores(() => {
+      state.fetchCategories(() => {
+        state.fetchProducts(() => this.refreshProducts())
+      })
+    })
   },
   refreshProducts() {
     const store = state.getStore()
@@ -30,7 +32,7 @@ Page({
       store,
       tableContext: state.getTableContext(),
       products: visibleProducts,
-      categories: state.getProductCategories(visibleProducts, { includeEmpty: false }),
+      categories: state.getProductCategories(visibleProducts, { includeEmpty: true }),
       cartSummary: state.getCartSummary()
     })
     this.buildList()
@@ -44,7 +46,7 @@ Page({
       const inKeyword = !keyword || name.includes(keyword) || desc.includes(keyword)
       return inKeyword
     })
-    const categories = state.getProductCategories(visibleProducts, { includeEmpty: false })
+    const categories = state.getProductCategories(visibleProducts, { includeEmpty: true })
     const activeCategory = categories.some((category) => category.id === this.data.activeCategory)
       ? this.data.activeCategory
       : (categories[0] && categories[0].id) || ''

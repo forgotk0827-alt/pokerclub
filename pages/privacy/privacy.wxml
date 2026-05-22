@@ -1,0 +1,11 @@
+<topbar title="隐私协议" showBack="{{true}}" />
+<scroll-view scroll-y class="privacy-page">
+  <view class="privacy-card">
+    <view class="privacy-title">隐私协议</view>
+    <view class="privacy-text">1. 我们会在你登录、下单、报名和使用会员功能时收集必要的账号信息、昵称、头像、手机号等，用于提供服务。</view>
+    <view class="privacy-text">2. 你授权的头像和昵称会同步到你的会员资料，并展示在“我的信息”和相关报名记录中。</view>
+    <view class="privacy-text">3. 我们仅在业务需要范围内使用你的数据，不会向无关第三方泄露。</view>
+    <view class="privacy-text">4. 你可以在“我的信息”里修改昵称和头像，相关变更会同步到后端。</view>
+    <view class="privacy-text">5. 使用本小程序即表示你已阅读并同意本协议。</view>
+  </view>
+</scroll-view>

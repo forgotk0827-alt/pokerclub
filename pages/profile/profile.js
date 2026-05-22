@@ -3,16 +3,42 @@ const qrcode = require('../../utils/qrcode')
 
 Page({
   data: {
-    member: state.getMember(),
+    member: {},
     isLoggedIn: false,
     signups: [],
     orders: [],
     qrVisible: false,
     qrTime: '',
-    memberQr: []
+    memberQr: [],
+    profileEditorVisible: false,
+    profileEditorMode: 'edit',
+    privacyAgreed: false,
+    nicknameTipVisible: false,
+    profileForm: {
+      nickname: '',
+      avatarUrl: ''
+    }
+  },
+  loginFromRoute: false,
+  onLoad(options) {
+    this.loginFromRoute = String(options && options.login || '') === '1'
   },
   onShow() {
+    if (this.loginFromRoute && !state.isLoggedIn()) {
+      this.startLoginProfile()
+    }
+    if (state.isLoggedIn()) {
+      state.fetchMyProfile(() => {
+        state.fetchMyOrders(() => {
+          state.fetchMySignups(() => this.refresh())
+        })
+      })
+      return
+    }
     this.refresh()
+  },
+  onUnload() {
+    this.clearNicknameTipTimer()
   },
   refresh() {
     const member = state.getMember()
@@ -34,8 +60,128 @@ Page({
     const payload = `DY;U=${shortName};P=${member.points || 0};B=${member.balance || 0};O=${orders.length};S=${signups.length};I=${shortId}`
     return qrcode.generate(payload)
   },
-  login() {
-    state.loginWithWeChat(() => this.refresh())
+  oneTapLogin(event) {
+    this.startLoginProfile()
+  },
+  startLoginProfile() {
+    this.setData({
+      profileEditorVisible: true,
+      profileEditorMode: 'login',
+      privacyAgreed: false,
+      nicknameTipVisible: false,
+      profileForm: {
+        nickname: '',
+        avatarUrl: ''
+      }
+    })
+  },
+  confirmProfileLogin(event) {
+    const code = event && event.detail && event.detail.code
+    if (!code) {
+      wx.showToast({ title: '未获取到手机号授权', icon: 'none' })
+      return
+    }
+    if (!this.data.privacyAgreed) {
+      wx.showToast({ title: '请先阅读并同意隐私协议', icon: 'none' })
+      return
+    }
+    this.resolveProfileForm((profile) => {
+      if (!profile) return
+      state.loginWithPhoneNumber(code, (member) => {
+        if (!member) return
+        this.setData({ profileEditorVisible: false })
+        this.refresh()
+        state.resolvePendingWechatLogin(member)
+        if (this.loginFromRoute && wx.navigateBack) {
+          this.loginFromRoute = false
+          wx.navigateBack()
+        }
+      }, {
+        profile,
+        profileProvided: true
+      })
+    })
+  },
+  openProfileEditor() {
+    const member = state.getMember()
+    this.setData({
+      profileEditorVisible: true,
+      profileEditorMode: 'edit',
+      nicknameTipVisible: false,
+      profileForm: {
+        nickname: member.nickname || '',
+        avatarUrl: member.avatarUrl || ''
+      }
+    })
+  },
+  closeProfileEditor() {
+    this.clearNicknameTipTimer()
+    this.setData({ profileEditorVisible: false, privacyAgreed: false, nicknameTipVisible: false })
+  },
+  chooseProfileAvatar(event) {
+    const avatarUrl = event && event.detail && event.detail.avatarUrl
+    if (!avatarUrl) return
+    this.setData({ 'profileForm.avatarUrl': avatarUrl })
+  },
+  inputProfileNickname(event) {
+    this.setData({ 'profileForm.nickname': event.detail.value })
+  },
+  showNicknameTip() {
+    this.setData({ nicknameTipVisible: true })
+    this.clearNicknameTipTimer()
+    this.nicknameTipTimer = setTimeout(() => {
+      this.setData({ nicknameTipVisible: false })
+    }, 1500)
+  },
+  clearNicknameTipTimer() {
+    if (this.nicknameTipTimer) {
+      clearTimeout(this.nicknameTipTimer)
+      this.nicknameTipTimer = null
+    }
+  },
+  togglePrivacyAgreement(event) {
+    const value = event.detail.value || []
+    this.setData({ privacyAgreed: value.indexOf('agree') > -1 })
+  },
+  openPrivacyPolicy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' })
+  },
+  resolveProfileForm(callback) {
+    const nickname = String(this.data.profileForm.nickname || '').trim()
+    const avatarUrl = String(this.data.profileForm.avatarUrl || '').trim()
+    if (!nickname) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' })
+      if (callback) callback(null)
+      return
+    }
+    if (!avatarUrl) {
+      wx.showToast({ title: '请选择头像', icon: 'none' })
+      if (callback) callback(null)
+      return
+    }
+    const done = (finalAvatarUrl) => {
+      if (!finalAvatarUrl) {
+        if (callback) callback(null)
+        return
+      }
+      if (callback) callback({ nickname, avatarUrl: finalAvatarUrl })
+    }
+    if (/^https?:\/\//i.test(avatarUrl)) {
+      done(avatarUrl)
+      return
+    }
+    state.uploadMerchantMedia(avatarUrl, 'image', done)
+  },
+  saveProfileEditor() {
+    this.resolveProfileForm((profile) => {
+      if (!profile) return
+      state.updateMyProfile(profile, (member) => {
+        if (!member) return
+        this.setData({ profileEditorVisible: false })
+        this.refresh()
+        wx.showToast({ title: '资料已同步', icon: 'success' })
+      })
+    })
   },
   showMemberQr() {
     state.requireLogin('查看会员二维码', () => {
@@ -92,7 +238,12 @@ Page({
   },
   goPoints() {
     state.requireLogin('查看积分', () => {
-      wx.navigateTo({ url: '/pages/profile-points/profile-points' })
+      wx.navigateTo({ url: '/pages/profile-points/profile-points?tab=points' })
+    })
+  },
+  goFragments() {
+    state.requireLogin('查看碎片', () => {
+      wx.navigateTo({ url: '/pages/profile-points/profile-points?tab=fragments' })
     })
   },
   goRecharge() {

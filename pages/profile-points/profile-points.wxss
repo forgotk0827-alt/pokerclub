@@ -4,6 +4,28 @@
   background: #f7f7f7;
 }
 
+.tab-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.tab {
+  flex: 1;
+  height: 62rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #4b5563;
+}
+
+.tab-active {
+  background: #111827;
+  color: #fff;
+}
+
 .points-card {
   height: 158rpx;
   border-radius: 16rpx;

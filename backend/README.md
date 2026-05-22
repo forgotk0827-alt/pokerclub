@@ -48,7 +48,7 @@ WX_PAY_MCH_ID=微信支付商户号
 WX_PAY_SERIAL_NO=商户 API 证书序列号
 WX_PAY_API_V3_KEY=API v3 密钥
 WX_PAY_PRIVATE_KEY_PATH=/opt/pokerclub/certs/apiclient_key.pem
-WX_PAY_NOTIFY_URL=http://47.103.113.60/api/wechat/pay/notify
+WX_PAY_NOTIFY_URL=https://www.pokerpai.cn/api/wechat/pay/notify
 WX_PAY_PLATFORM_CERT_PATH=/opt/pokerclub/certs/wechatpay_platform.pem
 WX_PAY_REQUIRE_NOTIFY_VERIFY=true
 ```
