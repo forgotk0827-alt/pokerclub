@@ -2,6 +2,9 @@ const state = require('../../utils/state')
 
 Page({
   data: {
+    stores: [],
+    selectedStoreId: '',
+    selectedStoreName: '',
     dates: [],
     types: [{ name: '全部' }, { name: '国际扑克' }, { name: '掼蛋' }],
     activeDay: 'all',
@@ -15,13 +18,29 @@ Page({
   },
   onShow() {
     this.refreshDates()
-    state.fetchActivities(() => {
-      state.fetchMySignups(() => this.refreshActivityList())
+    state.fetchStores(() => {
+      const stores = state.getStores()
+      const current = state.getStore()
+      const selected = stores.find((item) => item.id === this.data.selectedStoreId) || stores.find((item) => item.id === current.id) || stores[0] || null
+      this.setData({
+        stores,
+        selectedStoreId: selected ? selected.id : '',
+        selectedStoreName: selected ? (selected.shortName || selected.name) : ''
+      }, () => {
+        state.fetchActivities(() => {
+          state.fetchMySignups(() => this.refreshActivityList())
+        })
+      })
     })
   },
   refreshActivityList() {
-    const store = state.getStore()
-    this.setData({ activities: state.getActivities().filter((item) => !item.storeId || item.storeId === store.id) }, () => this.filterList())
+    const selectedStoreId = String(this.data.selectedStoreId || '').trim()
+    this.setData({
+      activities: state.getActivities().filter((item) => {
+        if (!selectedStoreId) return true
+        return !item.storeId || item.storeId === selectedStoreId
+      })
+    }, () => this.filterList())
   },
   refreshDates() {
     const labels = [
@@ -88,6 +107,24 @@ Page({
   },
   selectType(event) {
     this.setData({ activeType: event.currentTarget.dataset.name }, () => this.filterList())
+  },
+  switchStore() {
+    const stores = this.data.stores.length ? this.data.stores : state.getStores()
+    if (!stores.length) {
+      wx.showToast({ title: '暂无门店', icon: 'none' })
+      return
+    }
+    wx.showActionSheet({
+      itemList: stores.map((item) => item.shortName || item.name),
+      success: (res) => {
+        const store = stores[res.tapIndex]
+        if (!store) return
+        this.setData({
+          selectedStoreId: store.id,
+          selectedStoreName: store.shortName || store.name
+        }, () => this.refreshActivityList())
+      }
+    })
   },
   openDetail(event) {
     wx.navigateTo({ url: `/pages/activity-detail/activity-detail?id=${event.currentTarget.dataset.id}` })

@@ -19,6 +19,8 @@ const KEYS = {
   pointLogs: 'deyou_point_logs',
   printLogs: 'deyou_print_logs',
   rechargeSettings: 'deyou_recharge_settings',
+  voucherSettings: 'deyou_voucher_settings',
+  voucherLogs: 'deyou_voucher_logs',
   rechargeRecords: 'deyou_recharge_records',
   stores: 'deyou_stores',
   tableContext: 'deyou_table_context',
@@ -53,6 +55,8 @@ function ensureSeed() {
   if (!wx.getStorageSync(KEYS.pointLogs)) wx.setStorageSync(KEYS.pointLogs, [])
   if (!wx.getStorageSync(KEYS.printLogs)) wx.setStorageSync(KEYS.printLogs, [])
   if (!wx.getStorageSync(KEYS.rechargeSettings)) wx.setStorageSync(KEYS.rechargeSettings, defaultRechargeSettings())
+  if (!wx.getStorageSync(KEYS.voucherSettings)) wx.setStorageSync(KEYS.voucherSettings, defaultVoucherSettings())
+  if (!wx.getStorageSync(KEYS.voucherLogs)) wx.setStorageSync(KEYS.voucherLogs, [])
   if (!wx.getStorageSync(KEYS.rechargeRecords)) wx.setStorageSync(KEYS.rechargeRecords, [])
   if (!wx.getStorageSync(KEYS.stores)) wx.setStorageSync(KEYS.stores, [])
   if (!wx.getStorageSync(KEYS.globalSettings)) wx.setStorageSync(KEYS.globalSettings, {})
@@ -69,6 +73,8 @@ function migrateBrandNames() {
     KEYS.leaderboard,
     KEYS.globalSettings,
     KEYS.rechargeSettings,
+    KEYS.voucherSettings,
+    KEYS.voucherLogs,
     KEYS.printLogs
   ]
   keys.forEach((key) => {
@@ -219,6 +225,15 @@ function resetUserSession() {
   userSessionId = `${Date.now()}-${Math.random()}`
 }
 
+function clearUserSessionLocally() {
+  userSessionLoggedIn = false
+  guestSessionMember = null
+  userSessionId = `${Date.now()}-${Math.random()}`
+  pendingWechatLoginCallback = null
+  wx.removeStorageSync(KEYS.auth)
+  wx.removeStorageSync(KEYS.member)
+}
+
 function defaultRechargeSettings() {
   return {
     title: '储值账户',
@@ -229,6 +244,16 @@ function defaultRechargeSettings() {
       { id: 'pkg-2000', payAmount: 2000, creditAmount: 2400, label: '充2000元', subLabel: '得2400元', tip: '' },
       { id: 'pkg-3000', payAmount: 3000, creditAmount: 3600, label: '充3000元', subLabel: '得3600元', tip: '赠送价值800元黑金会员/月卡' }
     ]
+  }
+}
+
+function defaultVoucherSettings() {
+  return {
+    title: '我的酒水券',
+    ruleName: '满5减1',
+    buyCount: 5,
+    freeCount: 1,
+    note: '适用于精酿、鸡尾酒和饮料类商品，点餐时自动抵扣。'
   }
 }
 
@@ -315,6 +340,7 @@ function createGuestMember(seed) {
     totalSpent: 0,
     consumptionCount: 0,
     gems: 0,
+    drinkVoucherCount: 0,
     invitePieces: 0,
     consultant: '',
     gender: '',
@@ -350,6 +376,7 @@ function normalizeMember(member) {
   next.totalSpent = Number(next.totalSpent || 0)
   next.consumptionCount = Number(next.consumptionCount || 0)
   next.gems = Number(next.gems || 0)
+  next.drinkVoucherCount = Number(next.drinkVoucherCount || 0)
   next.invitePieces = Number(next.invitePieces || 0)
   next.consultant = String(next.consultant || '').trim()
   next.gender = String(next.gender || '').trim()
@@ -524,6 +551,7 @@ function buildMemberFromWechat(identity, code) {
     totalSpent: Number(serverMember.totalSpent !== undefined ? serverMember.totalSpent : base.totalSpent || 0),
     consumptionCount: Number(serverMember.consumptionCount !== undefined ? serverMember.consumptionCount : base.consumptionCount || 0),
     gems: Number(serverMember.gems !== undefined ? serverMember.gems : base.gems || 0),
+    drinkVoucherCount: Number(serverMember.drinkVoucherCount !== undefined ? serverMember.drinkVoucherCount : base.drinkVoucherCount || 0),
     invitePieces: Number(serverMember.invitePieces !== undefined ? serverMember.invitePieces : base.invitePieces || 0)
   })
 }
@@ -782,6 +810,7 @@ function createOrderWithWechatPay(options = {}, callback) {
   }
   const store = getStore()
   const table = getTableContext()
+  const preview = buildCheckoutPreview(cart, getMember(), options)
   requestApi(
     '/api/wechat/pay/order',
     'POST',
@@ -790,11 +819,40 @@ function createOrderWithWechatPay(options = {}, callback) {
       tableNo: table && table.storeId === store.id ? table.tableNo : '',
       tableName: table && table.storeId === store.id ? table.tableName : '',
       mode: options.mode || '堂食',
-      items: cart.map((item) => Object.assign({}, item))
+      items: preview.items.map((item) => Object.assign({}, item)),
+      originalTotal: preview.originalTotal,
+      voucherDiscount: preview.voucherDiscount,
+      voucherCountUsed: preview.voucherCountUsed,
+      voucherRuleName: getVoucherSettings().ruleName || '',
+      balanceUsed: preview.balanceUsed,
+      payableBeforeBalance: preview.payableBeforeBalance,
+      total: preview.payableTotal,
+      useBalance: !!preview.useBalance,
+      useVoucher: !!preview.useVoucher
     },
     (payload) => {
-      if (!payload || !payload.payment) {
+      if (!payload || !payload.order) {
         if (callback) callback(null)
+        return
+      }
+      const finishPaidOrder = () => {
+        const order = Object.assign({}, payload.order, { status: payload.order.status || '已支付' })
+        const orders = getOrders()
+        if (!orders.find((item) => item.id === order.id)) {
+          orders.unshift(order)
+          saveOrders(orders)
+        }
+        syncPaidActivitySignups(cart, () => {
+          requestApi('/api/my/profile', 'GET', {}, (member) => {
+            if (member) saveMember(member)
+            clearCart()
+            wx.showToast({ title: '支付成功', icon: 'success' })
+            if (callback) callback(order)
+          })
+        })
+      }
+      if (payload.paid || !payload.payment) {
+        finishPaidOrder()
         return
       }
       requestWechatPayment(payload.payment, (paid) => {
@@ -809,9 +867,12 @@ function createOrderWithWechatPay(options = {}, callback) {
           saveOrders(orders)
         }
         syncPaidActivitySignups(cart, () => {
-          clearCart()
-          wx.showToast({ title: '支付成功', icon: 'success' })
-          if (callback) callback(order)
+          requestApi('/api/my/profile', 'GET', {}, (member) => {
+            if (member) saveMember(member)
+            clearCart()
+            wx.showToast({ title: '支付成功', icon: 'success' })
+            if (callback) callback(order)
+          })
         })
       })
     }
@@ -938,8 +999,42 @@ function merchantLogin(username, password, callback) {
   return null
 }
 
-function merchantLogout() {
+function clearMerchantSessionLocally() {
   wx.removeStorageSync(KEYS.merchantAuth)
+}
+
+function logoutUser(callback) {
+  const auth = wx.getStorageSync(KEYS.auth) || {}
+  if (!auth.token) {
+    clearUserSessionLocally()
+    if (callback) callback(true)
+    return
+  }
+  requestApi('/api/auth/logout', 'POST', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(false)
+      return
+    }
+    clearUserSessionLocally()
+    if (callback) callback(true)
+  })
+}
+
+function merchantLogout(callback) {
+  const session = wx.getStorageSync(KEYS.merchantAuth) || {}
+  if (!session.token) {
+    clearMerchantSessionLocally()
+    if (callback) callback(true)
+    return
+  }
+  requestMerchantApi('/api/merchant/logout', 'POST', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(false)
+      return
+    }
+    clearMerchantSessionLocally()
+    if (callback) callback(true)
+  })
 }
 
 function getMerchantSession() {
@@ -2120,19 +2215,140 @@ function clearCart() {
 }
 
 function getCartSummary(cart = getCart()) {
-  return cart.reduce(
-    (sum, item) => {
-      sum.count += Number(item.count || 0)
-      sum.total += Number(item.price || 0) * Number(item.count || 0)
-      return sum
-    },
-    { count: 0, total: 0 }
-  )
+  const preview = applyDrinkVoucherDiscount(cart, getMember())
+  return {
+    count: cart.reduce((sum, item) => sum + Number(item.count || 0), 0),
+    originalTotal: preview.originalTotal,
+    voucherDiscount: preview.voucherDiscount,
+    voucherCountUsed: preview.voucherCountUsed,
+    total: preview.payableTotal
+  }
+}
+
+function isVoucherEligibleItem(item) {
+  if (!item) return false
+  if (item.voucherEligible === false) return false
+  const categoryId = String(item.categoryId || '').trim()
+  return ['classic', 'special', 'craft-beer', 'drinks'].includes(categoryId)
+}
+
+function applyDrinkVoucherDiscount(cart, member = getMember()) {
+  return applyDrinkVoucherDiscountWithOptions(cart, member, {})
+}
+
+function applyDrinkVoucherDiscountWithOptions(cart, member = getMember(), options = {}) {
+  const source = Array.isArray(cart) ? cart : []
+  const settings = getVoucherSettings()
+  const useVoucher = options.useVoucher !== false
+  const available = Math.max(0, Number(member && member.drinkVoucherCount || 0))
+  const buyCount = Math.max(1, Number(settings.buyCount || 0))
+  const freeCount = Math.max(0, Number(settings.freeCount || 0))
+  const eligibleUnits = []
+  let originalTotal = 0
+
+  source.forEach((item, index) => {
+    const count = Math.max(0, Number(item && item.count || 0))
+    const price = Math.max(0, Number(item && item.price || 0))
+    originalTotal += price * count
+    if (!count || !price || !isVoucherEligibleItem(item)) return
+    for (let i = 0; i < count; i += 1) {
+      eligibleUnits.push({ index, price })
+    }
+  })
+
+  const voucherCountUsed = useVoucher ? Math.min(available, Math.floor(eligibleUnits.length / buyCount) * freeCount) : 0
+  const discountedCounts = new Map()
+  eligibleUnits
+    .slice()
+    .sort((a, b) => a.price - b.price || a.index - b.index)
+    .slice(0, voucherCountUsed)
+    .forEach((unit) => {
+      discountedCounts.set(unit.index, (discountedCounts.get(unit.index) || 0) + 1)
+    })
+
+  let voucherDiscount = 0
+  const items = []
+  source.forEach((item, index) => {
+    const count = Math.max(0, Number(item && item.count || 0))
+    const price = Math.max(0, Number(item && item.price || 0))
+    const subtotal = price * count
+    const discountedCount = discountedCounts.get(index) || 0
+    if (!count || !price || !isVoucherEligibleItem(item) || !discountedCount) {
+      items.push(Object.assign({}, item, {
+        subtotal,
+        payableSubtotal: subtotal,
+        originPrice: price,
+        voucherCountUsed: 0,
+        voucherDiscount: 0
+      }))
+      return
+    }
+    const result = []
+    const remainingCount = count - discountedCount
+    voucherDiscount += price * discountedCount
+    result.push(Object.assign({}, item, {
+      id: `${item.id || index}-voucher`,
+      count: discountedCount,
+      price: 0,
+      originPrice: price,
+      voucherCountUsed: discountedCount,
+      voucherDiscount: price * discountedCount,
+      subtotal: price * discountedCount,
+      payableSubtotal: 0
+    }))
+    if (remainingCount > 0) {
+      result.push(Object.assign({}, item, {
+        id: `${item.id || index}-cash`,
+        count: remainingCount,
+        price,
+        originPrice: price,
+        voucherCountUsed: 0,
+        voucherDiscount: 0,
+        subtotal: price * remainingCount,
+        payableSubtotal: price * remainingCount
+      }))
+    }
+    items.push.apply(items, result)
+  })
+
+  return {
+    items,
+    originalTotal,
+    voucherDiscount,
+    voucherCountUsed,
+    payableTotal: Math.max(0, originalTotal - voucherDiscount)
+  }
+}
+
+function buildCheckoutPreview(cart, member = getMember(), options = {}) {
+  const useVoucher = options.useVoucher !== false
+  const useBalance = options.useBalance !== false
+  const voucherPreview = applyDrinkVoucherDiscountWithOptions(cart, member, { useVoucher })
+  const balanceAvailable = Math.max(0, Number(member && member.balance || 0))
+  const balanceUsed = useBalance ? Math.min(balanceAvailable, voucherPreview.payableTotal) : 0
+  const payableTotal = Math.max(0, voucherPreview.payableTotal - balanceUsed)
+  return Object.assign({}, voucherPreview, {
+    useVoucher,
+    useBalance,
+    balanceAvailable,
+    balanceUsed,
+    payableBeforeBalance: voucherPreview.payableTotal,
+    payableTotal
+  })
 }
 
 function getRechargeSettings() {
   const stored = wx.getStorageSync(KEYS.rechargeSettings)
-  return stored && Array.isArray(stored.packages) && stored.packages.length ? stored : defaultRechargeSettings()
+  const next = stored && Array.isArray(stored.packages) && stored.packages.length
+    ? Object.assign({}, defaultRechargeSettings(), stored)
+    : defaultRechargeSettings()
+  next.packages = Array.isArray(next.packages)
+    ? next.packages.map((item) => Object.assign({}, item, {
+        payAmount: Number(item.payAmount || 0),
+        creditAmount: Number(item.creditAmount || 0)
+      }))
+    : defaultRechargeSettings().packages
+  return next
 }
 
 function fetchRechargeSettings(callback) {
@@ -2168,6 +2384,75 @@ function saveRechargeSettings(settings, callback) {
   if (requested) return getRechargeSettings()
   if (callback) callback(null, false)
   return next
+}
+
+function getVoucherSettings() {
+  const stored = wx.getStorageSync(KEYS.voucherSettings)
+  const next = Object.assign({}, defaultVoucherSettings(), stored || {})
+  next.buyCount = Math.max(1, Number(next.buyCount || 0))
+  next.freeCount = Math.max(0, Number(next.freeCount || 0))
+  next.title = String(next.title || '').trim() || defaultVoucherSettings().title
+  next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
+  next.note = String(next.note || '').trim()
+  return next
+}
+
+function fetchVoucherSettings(callback) {
+  requestMerchantApi('/api/merchant/voucher-settings', 'GET', {}, (payload) => {
+    if (payload) {
+      const next = Object.assign({}, defaultVoucherSettings(), payload)
+      next.buyCount = Math.max(1, Number(next.buyCount || 0))
+      next.freeCount = Math.max(0, Number(next.freeCount || 0))
+      wx.setStorageSync(KEYS.voucherSettings, next)
+      if (callback) callback(next)
+      return
+    }
+    if (callback) callback(null)
+  })
+}
+
+function saveVoucherSettings(settings, callback) {
+  const next = Object.assign({}, getVoucherSettings(), settings || {})
+  next.buyCount = Math.max(1, Number(next.buyCount || 0))
+  next.freeCount = Math.max(0, Number(next.freeCount || 0))
+  next.title = String(next.title || '').trim() || defaultVoucherSettings().title
+  next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
+  next.note = String(next.note || '').trim()
+  const requested = requestMerchantApi('/api/merchant/voucher-settings', 'POST', next, (payload) => {
+    if (payload) {
+      const saved = Object.assign({}, next, payload)
+      wx.setStorageSync(KEYS.voucherSettings, saved)
+      if (callback) callback(saved, true)
+      return
+    }
+    if (callback) callback(null, false)
+  })
+  if (requested) return next
+  if (callback) callback(null, false)
+  return next
+}
+
+function grantDrinkVoucher(memberKey, count, note = '', callback) {
+  const targetId = String(memberKey || '').trim()
+  const amount = Math.max(0, Number(count || 0))
+  if (!targetId || !amount) {
+    if (callback) callback(null, false)
+    return null
+  }
+  const requested = requestMerchantApi(`/api/merchant/members/${encodeURIComponent(targetId)}/vouchers`, 'POST', {
+    count: amount,
+    note: String(note || '').trim()
+  }, (payload) => {
+    if (payload && payload.member) {
+      syncMemberCache(payload.member)
+    }
+    if (callback) callback(payload, !!payload)
+  })
+  if (!requested) {
+    if (callback) callback(null, false)
+    return null
+  }
+  return true
 }
 
 function getRechargeRecords() {
@@ -2273,7 +2558,10 @@ function rechargeMemberWithPackage(pack, options = {}) {
   const member = getMember()
   const balanceBefore = Number(member.balance || 0)
   const balanceAfter = balanceBefore + creditAmount
-  const next = saveMember(Object.assign({}, member, { balance: balanceAfter }))
+  const next = saveMember(Object.assign({}, member, {
+    balance: balanceAfter,
+    drinkVoucherCount: Number(member.drinkVoucherCount || 0)
+  }))
   addRechargeRecord({
     type: 'recharge',
     memberId: next.id || '',
@@ -2364,7 +2652,7 @@ function createOrder(options = {}) {
   if (!cart.length) return null
   const store = getStore()
   const table = getTableContext()
-  const summary = getCartSummary(cart)
+  const summary = applyDrinkVoucherDiscount(cart, getMember())
   const order = {
     id: `DY${Date.now()}`,
     storeId: store.id,
@@ -2374,13 +2662,22 @@ function createOrder(options = {}) {
     mode: options.mode || '堂食',
     status: '待支付',
     createdAt: formatTime(new Date()),
-    items: cart.map((item) => Object.assign({}, item)),
-    total: summary.total
+    items: summary.items.map((item) => Object.assign({}, item)),
+    originalTotal: summary.originalTotal,
+    voucherDiscount: summary.voucherDiscount,
+    voucherCountUsed: summary.voucherCountUsed,
+    total: summary.payableTotal
   }
   const orders = getOrders()
   orders.unshift(order)
   saveOrders(orders)
-  recordConsumption(summary.total)
+  if (summary.voucherCountUsed) {
+    const member = getMember()
+    saveMember(Object.assign({}, member, {
+      drinkVoucherCount: Math.max(0, Number(member.drinkVoucherCount || 0) - Number(summary.voucherCountUsed || 0))
+    }))
+  }
+  recordConsumption(summary.payableTotal)
   clearCart()
   return order
 }
@@ -2442,6 +2739,9 @@ function buildPrintTemplate(order) {
     '----------------',
     ...(order.items || []).map((item) => `${item.name} x${item.count}  ¥${Number(item.price || 0) * Number(item.count || 0)}`),
     '----------------',
+    `原价：¥${order.originalTotal || order.total}`,
+    ...(Number(order.voucherDiscount || 0) > 0 ? [`酒水券抵扣：¥${order.voucherDiscount}`] : []),
+    ...(Number(order.balanceUsed || 0) > 0 ? [`储值卡抵扣：¥${order.balanceUsed}`] : []),
     `合计：¥${order.total}`,
     `状态：${order.status}`
   ].join('\n')
@@ -2711,8 +3011,8 @@ function adjustMemberPoints(memberKey, delta, reason, operator, callback) {
     memberKey = ''
   }
   const amount = Number(delta || 0)
-  const text = String(reason || '').trim()
-  if (!amount || !text) return null
+  const text = String(reason || '').trim() || '手动调整积分'
+  if (!amount) return null
   const member = memberKey ? null : getMember()
   const targetId = memberKey || (member && (member.id || member.openid || member.nickname))
   if (isMerchantContext() && targetId) {
@@ -2753,8 +3053,8 @@ function adjustMemberPoints(memberKey, delta, reason, operator, callback) {
 function adjustMemberPieces(memberKey, delta, reason, operator, callback) {
   if (!isLoggedIn() && !isMerchantContext()) return null
   const amount = Number(delta || 0)
-  const text = String(reason || '').trim()
-  if (!amount || !text) return null
+  const text = String(reason || '').trim() || '手动调整碎片'
+  if (!amount) return null
   const member = memberKey ? null : getMember()
   const targetId = memberKey || (member && (member.id || member.openid || member.nickname))
   if (isMerchantContext() && targetId) {
@@ -2888,12 +3188,26 @@ function getBoardGameReservations(storeId) {
 }
 
 function normalizeLeaderboardList(list) {
-  return (Array.isArray(list) ? list : []).map((item, index) => ({
+  const source = Array.isArray(list) ? list : []
+  const hasSortOrder = source.some((item) => item && item.sortOrder !== undefined && item.sortOrder !== null && String(item.sortOrder).trim() !== '')
+  const next = source.map((item, index) => ({
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
     score: Number(item.score || 0),
-    storeId: String(item.storeId || '').trim()
+    storeId: String(item.storeId || '').trim(),
+    sortOrder: hasSortOrder ? toSortOrder(item.sortOrder, index + 1) : index + 1
   }))
+  next.sort((a, b) => {
+    if (hasSortOrder) {
+      const orderDiff = Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+      if (orderDiff !== 0) return orderDiff
+    } else {
+      const scoreDiff = Number(b.score || 0) - Number(a.score || 0)
+      if (scoreDiff !== 0) return scoreDiff
+    }
+    return String(a.username || '').localeCompare(String(b.username || ''))
+  })
+  return next.map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
 }
 
 function normalizeLeaderboardBoards(payload) {
@@ -2926,10 +3240,11 @@ function getLeaderboardBoards() {
 
 function getLeaderboard(type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const list = rankLeaderboardList(boards[type] || boards.weekly)
   const scopedStoreId = String(storeId || '').trim()
-  if (!scopedStoreId) return list
-  return list.filter((item) => !item.storeId || item.storeId === scopedStoreId)
+  const list = scopedStoreId
+    ? (boards[type] || boards.weekly).filter((item) => !item.storeId || String(item.storeId || '').trim() === scopedStoreId)
+    : (boards[type] || boards.weekly)
+  return rankLeaderboardList(list)
 }
 
 function fetchPublicLeaderboard(callback, type = 'weekly') {
@@ -2971,15 +3286,18 @@ function fetchLeaderboard(callback, type = 'weekly') {
 
 function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const nextList = normalizeLeaderboardList(list)
+  const nextList = normalizeLeaderboardList(list).map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
+  let payloadList = nextList
   if (storeId) {
     const scopedId = String(storeId || '').trim()
     const merged = (boards[type] || []).filter((item) => String(item.storeId || '').trim() !== scopedId)
-    boards[type] = merged.concat(nextList.map((item) => Object.assign({}, item, { storeId: scopedId })))
+    payloadList = nextList.map((item) => Object.assign({}, item, { storeId: scopedId }))
+    boards[type] = merged.concat(payloadList)
   } else {
     boards[type] = nextList
+    payloadList = boards[type]
   }
-  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: boards[type], storeId: String(storeId || '').trim() }, (payload) => {
+  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: payloadList, storeId: String(storeId || '').trim() }, (payload) => {
     if (payload) {
       wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards(payload))
       if (callback) callback(getLeaderboard(type), true)
@@ -2995,21 +3313,24 @@ function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
 function addLeaderboardUser(record, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
   const scopedId = String(storeId || record.storeId || '').trim()
-  const list = (boards[type] || []).filter((item) => String(item.storeId || '').trim() !== scopedId)
+  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
   list.push({
     id: `${type}-rank-${Date.now()}`,
     username: record.username,
     score: Number(record.score || 0),
     storeId: scopedId
   })
-  list.sort((a, b) => b.score - a.score)
-  return saveLeaderboard(list, callback, type, scopedId)
+  const next = normalizeLeaderboardList(list)
+    .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+    .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
+  return saveLeaderboard(next, callback, type, scopedId)
 }
 
 function updateLeaderboardRank(id, direction, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
   const scopedId = String(storeId || '').trim()
-  const list = rankLeaderboardList((boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId))
+  const list = normalizeLeaderboardList((boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId))
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
   const index = list.findIndex((item) => item.id === id)
   const target = direction === 'up' ? index - 1 : index + 1
   if (index < 0 || target < 0 || target >= list.length) {
@@ -3028,8 +3349,10 @@ function adjustLeaderboardScore(id, delta, callback, type = 'weekly', storeId = 
   const boards = getLeaderboardBoards()
   const scopedId = String(storeId || '').trim()
   const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
-  const next = list.map((item) => (item.id === id ? Object.assign({}, item, { score: Number(item.score || 0) + amount }) : item))
-  next.sort((a, b) => b.score - a.score)
+  const next = normalizeLeaderboardList(list)
+    .map((item) => (item.id === id ? Object.assign({}, item, { score: Math.max(0, Number(item.score || 0) + amount) }) : item))
+    .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+    .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
   return saveLeaderboard(next, callback, type, scopedId)
 }
 
@@ -3198,14 +3521,19 @@ module.exports = {
   loginWithWeChat,
   loginWithPhoneNumber,
   ensureMemberAvatar,
+  logoutUser,
   getRechargeSettings,
   fetchRechargeSettings,
   saveRechargeSettings,
+  getVoucherSettings,
+  fetchVoucherSettings,
+  saveVoucherSettings,
   getRechargeRecords,
   fetchRechargeRecords,
   addRechargeRecord,
   adjustMemberBalance,
   rechargeMemberWithPackage,
+  buildCheckoutPreview,
   getGlobalSettings,
   fetchGlobalSettings,
   saveGlobalSettings,
@@ -3220,6 +3548,7 @@ module.exports = {
   cancelOrder,
   getStoreOrders,
   updateOrderStatus,
+  grantDrinkVoucher,
   printOrderBluetooth,
   printOrderCloud,
   getStorePrinter,
@@ -3254,5 +3583,6 @@ module.exports = {
   deleteLeaderboardUser,
   saveLeaderboard,
   getLeaderboardBoards,
+  merchantLogout,
   leaderboardTabs: LEADERBOARD_TABS
 }

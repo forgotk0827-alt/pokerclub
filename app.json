@@ -5,6 +5,7 @@
     "pages/activity/activity",
     "pages/activity-detail/activity-detail",
     "pages/cart/cart",
+    "pages/checkout/checkout",
     "pages/store-select/store-select",
     "pages/profile/profile",
     "pages/profile-signups/profile-signups",

@@ -28,7 +28,7 @@
 }
 
 .logout {
-  width: 88rpx;
+  width: 120rpx;
   height: 52rpx;
   border-radius: 8rpx;
   display: flex;
@@ -37,6 +37,7 @@
   background: rgba(255, 255, 255, 0.12);
   font-size: 24rpx;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .summary-grid {
@@ -644,4 +645,65 @@ input {
   color: #6b7280;
   font-size: 22rpx;
   line-height: 32rpx;
+}
+
+.member-picker-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  padding: 24rpx;
+  background: rgba(17, 24, 39, 0.58);
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.member-picker-dialog {
+  width: 100%;
+  max-height: 86vh;
+  padding: 22rpx;
+  border-radius: 8rpx;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  box-sizing: border-box;
+}
+
+.member-picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.member-picker-title {
+  color: #111827;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.member-picker-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 58vh;
+}
+
+.member-picker-item {
+  margin-top: 12rpx;
+  padding: 18rpx 16rpx;
+  border-radius: 8rpx;
+  background: #fff;
+  border: 1rpx solid transparent;
+}
+
+.member-picker-active {
+  border-color: #e25754;
+  background: #fff7f7;
+}
+
+.member-picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16rpx;
 }

@@ -30,10 +30,13 @@ const COLLECTION_KEYS = [
   'cellar',
   'inventory',
   'rechargeSettings',
+  'voucherSettings',
+  'voucherLogs',
   'rechargeRecords',
   'pointLogs',
   'globalSettings',
-  'leaderboard'
+  'leaderboard',
+  'authRevocations'
 ]
 
 let db = null
@@ -54,6 +57,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/health') return sendOk(res, { ok: true })
     if (req.method === 'POST' && pathname === '/api/wechat/login') return await handleWechatLogin(req, res)
     if (req.method === 'POST' && pathname === '/api/merchant/login') return await handleMerchantLogin(req, res)
+    if (req.method === 'POST' && pathname === '/api/auth/logout') return await handleAuthLogout(req, res)
+    if (req.method === 'POST' && pathname === '/api/merchant/logout') return await handleMerchantLogout(req, res)
     if (req.method === 'POST' && pathname === '/api/wechat/pay/notify') return await handleWechatPayNotify(req, res)
     if (req.method === 'GET' && pathname.startsWith('/api/uploads/')) return await handleUploadedFile(req, res, pathname)
     if (req.method === 'POST' && pathname === '/api/merchant/upload') return await handleMerchantUpload(req, res)
@@ -115,11 +120,14 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/inventory/:id/stock')) return await handleInventoryStock(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/recharge-settings') return sendOk(res, db.rechargeSettings)
       if (req.method === 'POST' && pathname === '/api/merchant/recharge-settings') return await handleRechargeSettings(req, res)
+      if (req.method === 'GET' && pathname === '/api/merchant/voucher-settings') return sendOk(res, db.voucherSettings || defaultVoucherSettings())
+      if (req.method === 'POST' && pathname === '/api/merchant/voucher-settings') return await handleVoucherSettings(req, res)
       if (req.method === 'GET' && pathname === '/api/merchant/recharge-records') return sendOk(res, scopedList(db.rechargeRecords, merchant))
       if (req.method === 'GET' && pathname === '/api/merchant/point-logs') return sendOk(res, scopedList(db.pointLogs, merchant))
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/balance')) return await handleAdjustBalance(req, res, pathname, merchant)
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/points')) return await handleAdjustPoints(req, res, pathname, merchant)
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/pieces')) return await handleAdjustPieces(req, res, pathname, merchant)
+      if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/vouchers')) return await handleGrantDrinkVoucher(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/global-settings') return sendOk(res, db.globalSettings)
       if (req.method === 'POST' && pathname === '/api/merchant/global-settings') return await handleGlobalSettings(req, res)
       if (req.method === 'GET' && pathname === '/api/merchant/leaderboard') return sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
@@ -159,22 +167,23 @@ async function handleWechatLogin(req, res) {
   let member = db.members.find((item) => item.openid === openid)
   if (!member && phoneValue) member = db.members.find((item) => samePhone(item.phone, phoneValue))
   if (!member) {
-    member = {
-      id: `MB${Date.now()}`,
-      openid,
-      unionid,
-      nickname: body.nickname || `微信用户${String(openid).slice(-4)}`,
-      avatarUrl: body.avatarUrl || '',
-      phone: phoneValue,
-      level: '普通会员',
-      balance: 0,
-      points: 0,
-      totalSpent: 0,
-      consumptionCount: 0,
-      gems: 0,
-      invitePieces: 0,
-      createdAt: now()
-    }
+      member = {
+        id: `MB${Date.now()}`,
+        openid,
+        unionid,
+        nickname: body.nickname || `微信用户${String(openid).slice(-4)}`,
+        avatarUrl: body.avatarUrl || '',
+        phone: phoneValue,
+        level: '普通会员',
+        balance: 0,
+        points: 0,
+        totalSpent: 0,
+        consumptionCount: 0,
+        gems: 0,
+        drinkVoucherCount: 0,
+        invitePieces: 0,
+        createdAt: now()
+      }
     db.members.unshift(member)
   } else {
     member.openid = member.openid || openid
@@ -207,6 +216,26 @@ async function handleMerchantLogin(req, res) {
     storeId: account.storeId,
     storeName: store ? store.shortName || store.name : '全部门店'
   })
+}
+
+async function handleAuthLogout(req, res) {
+  const auth = String(req.headers.authorization || '')
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+  if (!token) throw httpError(401, '请先登录')
+  decodeToken(token)
+  revokeToken(token, 'user')
+  await persist()
+  sendOk(res, { ok: true })
+}
+
+async function handleMerchantLogout(req, res) {
+  const auth = String(req.headers.authorization || '')
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+  if (!token) throw httpError(401, '请先登录')
+  decodeToken(token)
+  revokeToken(token, 'merchant')
+  await persist()
+  sendOk(res, { ok: true })
 }
 
 async function handleMerchantUpload(req, res) {
@@ -363,8 +392,14 @@ async function handleCreateOrderPayment(req, res, user) {
   if (!items.length) throw httpError(400, '订单商品不能为空')
   const store = db.stores.find((item) => item.id === body.storeId) || db.stores[0]
   const table = normalizeOrderTable(store, body)
-  const total = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.count || 0), 0)
-  if (total <= 0) throw httpError(400, '订单金额无效')
+  const originalTotal = Number(body.originalTotal || items.reduce((sum, item) => sum + Number(item.originPrice || item.price || 0) * Number(item.count || 0), 0))
+  const voucherDiscount = Math.max(0, Number(body.voucherDiscount || 0))
+  const voucherCountUsed = Math.max(0, Number(body.voucherCountUsed || 0))
+  const payableBeforeBalance = Math.max(0, Number(body.payableBeforeBalance || (originalTotal - voucherDiscount)))
+  const balanceAvailable = Number(user.member.balance || 0)
+  const balanceUsed = Math.max(0, Math.min(Number(body.balanceUsed || 0), balanceAvailable, payableBeforeBalance))
+  const total = Math.max(0, Number(body.total || (payableBeforeBalance - balanceUsed)))
+  if (originalTotal <= 0) throw httpError(400, '订单金额无效')
   const order = {
     id: `DY${Date.now()}`,
     memberId: user.member.id,
@@ -376,14 +411,41 @@ async function handleCreateOrderPayment(req, res, user) {
     mode: body.mode || '堂食',
     status: '待支付',
     payStatus: 'pending',
-    paymentType: 'wechat',
+    paymentType: balanceUsed > 0 ? (total > 0 ? 'mixed' : 'balance') : 'wechat',
     outTradeNo: `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`,
     items,
+    originalTotal,
+    voucherDiscount,
+    voucherCountUsed,
+    voucherRuleName: String(body.voucherRuleName || '').trim(),
+    balanceUsed,
+    payableBeforeBalance,
     total,
     createdAt: now()
   }
   db.orders.unshift(order)
+  if (balanceUsed > 0) {
+    user.member.balance = Math.max(0, balanceAvailable - balanceUsed)
+  }
   await persist()
+  if (total <= 0) {
+    order.payStatus = 'paid'
+    order.status = '已支付'
+    order.transactionId = `BALANCE${Date.now()}`
+    order.paidAt = now()
+    const member = db.members.find((item) => item.id === order.memberId)
+    if (member) {
+      member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
+      member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
+      member.consumptionCount = Number(member.consumptionCount || 0) + 1
+      member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) - Number(order.voucherCountUsed || 0))
+      member.level = levelBySpend(member.totalSpent, member.points)
+    }
+    syncOrderActivitySignups(order, member)
+    await persist()
+    sendOk(res, { order, payment: null, paid: true })
+    return
+  }
   const payment = await createWechatJsapiPayment({
     outTradeNo: order.outTradeNo,
     description: `破壳派酒吧订单 ${order.id}`,
@@ -807,6 +869,19 @@ async function handleRechargeSettings(req, res) {
   sendOk(res, db.rechargeSettings)
 }
 
+async function handleVoucherSettings(req, res) {
+  const body = await readJson(req)
+  const next = Object.assign({}, defaultVoucherSettings(), db.voucherSettings || {}, body)
+  next.buyCount = Math.max(1, Number(next.buyCount || 0))
+  next.freeCount = Math.max(0, Number(next.freeCount || 0))
+  next.title = String(next.title || '').trim() || defaultVoucherSettings().title
+  next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}减${next.freeCount}`
+  next.note = String(next.note || '').trim()
+  db.voucherSettings = next
+  await persist()
+  sendOk(res, db.voucherSettings)
+}
+
 async function handleAdjustBalance(req, res, pathname, merchant) {
   const { id } = params(pathname, '/api/merchant/members/:id/balance')
   const body = await readJson(req)
@@ -834,6 +909,33 @@ async function handleAdjustBalance(req, res, pathname, merchant) {
     createdAt: now()
   }
   db.rechargeRecords.unshift(record)
+  await persist()
+  sendOk(res, { member, record })
+}
+
+async function handleGrantDrinkVoucher(req, res, pathname, merchant) {
+  const { id } = params(pathname, '/api/merchant/members/:id/vouchers')
+  const body = await readJson(req)
+  const member = findMember(id)
+  ensureMerchantMemberAccess(merchant, member.id)
+  const count = Math.max(0, Number(body.count || 0))
+  if (!count) throw httpError(400, '赠送数量无效')
+  const storeId = isSuperMerchant(merchant) ? String(body.storeId || '').trim() : merchant.storeId
+  member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) + count)
+  const record = {
+    id: `VC${Date.now()}`,
+    type: 'voucher',
+    memberId: member.id,
+    nickname: member.nickname,
+    count,
+    note: String(body.note || '').trim() || '手动赠送酒水券',
+    storeId,
+    storeName: storeNameById(storeId),
+    operator: merchant.username,
+    createdAt: now()
+  }
+  db.voucherLogs = Array.isArray(db.voucherLogs) ? db.voucherLogs : []
+  db.voucherLogs.unshift(record)
   await persist()
   sendOk(res, { member, record })
 }
@@ -904,9 +1006,11 @@ async function handleSaveLeaderboard(req, res) {
   const type = LEADERBOARD_TYPES.includes(body.type) ? body.type : 'weekly'
   const storeId = String(body.storeId || '').trim()
   if (Array.isArray(body.list)) {
-    const nextList = normalizeLeaderboardList(body.list)
+    const nextList = normalizeLeaderboardList(body.list).map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
     db.leaderboard[type] = storeId
-      ? (db.leaderboard[type] || []).filter((item) => String(item.storeId || '').trim() !== storeId).concat(nextList.map((item) => Object.assign({}, item, { storeId })))
+      ? (db.leaderboard[type] || [])
+          .filter((item) => String(item.storeId || '').trim() !== storeId)
+          .concat(nextList.map((item) => Object.assign({}, item, { storeId })))
       : nextList
   } else if (body.boards && typeof body.boards === 'object') {
     db.leaderboard = normalizeLeaderboardBoards(body.boards)
@@ -1110,6 +1214,12 @@ function signToken(payload) {
 }
 
 function verifyToken(token) {
+  const payload = decodeToken(token)
+  if (isTokenRevoked(token)) throw httpError(401, 'Token 已失效')
+  return payload
+}
+
+function decodeToken(token) {
   const [body, sig] = String(token).split('.')
   if (!body || !sig) throw httpError(401, 'Token 无效')
   const expected = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('base64url')
@@ -1123,6 +1233,23 @@ function verifyToken(token) {
   } catch (error) {
     throw httpError(401, 'Token 无效')
   }
+}
+
+function isTokenRevoked(token) {
+  return Array.isArray(db && db.authRevocations) && db.authRevocations.some((item) => item && item.token === token)
+}
+
+function revokeToken(token, type) {
+  const value = String(token || '').trim()
+  if (!value) return false
+  db.authRevocations = Array.isArray(db.authRevocations) ? db.authRevocations : []
+  if (db.authRevocations.some((item) => item && item.token === value)) return true
+  db.authRevocations.unshift({
+    token: value,
+    type: String(type || '').trim(),
+    revokedAt: now()
+  })
+  return true
 }
 
 async function code2Session(code) {
@@ -1418,6 +1545,7 @@ async function applyWechatPaySuccess(transaction) {
         member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
         member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
         member.consumptionCount = Number(member.consumptionCount || 0) + 1
+        member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) - Number(order.voucherCountUsed || 0))
         member.level = levelBySpend(member.totalSpent, member.points)
       }
       changed = true
@@ -1662,10 +1790,13 @@ function createInitialDb() {
     cellar: [],
     inventory: defaultInventory(sourceData.products),
     rechargeSettings: defaultRechargeSettings(),
+    voucherSettings: defaultVoucherSettings(),
+    voucherLogs: [],
     rechargeRecords: [],
     pointLogs: [],
     globalSettings: defaultGlobalSettings(),
-    leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard)
+    leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
+    authRevocations: []
   }
 }
 
@@ -1724,10 +1855,13 @@ function normalizeDbShape(raw) {
       cellar: [],
       inventory: [],
       rechargeSettings: defaultRechargeSettings(),
+      voucherSettings: defaultVoucherSettings(),
+      voucherLogs: [],
       rechargeRecords: [],
       pointLogs: [],
       globalSettings: defaultGlobalSettings(),
-      leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard)
+      leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
+      authRevocations: []
     },
     raw || {}
   )
@@ -1738,10 +1872,36 @@ function normalizeDbShape(raw) {
   next.products = syncSeedList(next.products, sourceData.products, true, false)
   next.activities = syncSeedList(next.activities, normalizeActivities(sourceData.activities), true, false)
   next.inventory = syncInventoryList(next.inventory, next.products)
-  if (!next.rechargeSettings || !Array.isArray(next.rechargeSettings.packages)) next.rechargeSettings = defaultRechargeSettings()
+  const rechargeSettings = Object.assign({}, defaultRechargeSettings(), next.rechargeSettings || {})
+  rechargeSettings.packages = Array.isArray(rechargeSettings.packages)
+    ? rechargeSettings.packages.map((item) => Object.assign({}, item, {
+        payAmount: Number(item.payAmount || 0),
+        creditAmount: Number(item.creditAmount || 0)
+      }))
+    : defaultRechargeSettings().packages
+  next.rechargeSettings = rechargeSettings
+  const voucherSettings = Object.assign({}, defaultVoucherSettings(), next.voucherSettings || {})
+  voucherSettings.buyCount = Math.max(1, Number(voucherSettings.buyCount || 0))
+  voucherSettings.freeCount = Math.max(0, Number(voucherSettings.freeCount || 0))
+  voucherSettings.title = String(voucherSettings.title || '').trim() || defaultVoucherSettings().title
+  voucherSettings.ruleName = String(voucherSettings.ruleName || '').trim() || `${voucherSettings.buyCount}减${voucherSettings.freeCount}`
+  voucherSettings.note = String(voucherSettings.note || '').trim() || defaultVoucherSettings().note
+  next.voucherSettings = voucherSettings
+  next.voucherLogs = Array.isArray(next.voucherLogs) ? next.voucherLogs : []
   next.globalSettings = normalizeGlobalSettings(next.globalSettings)
   next.leaderboard = normalizeLeaderboardBoards(next.leaderboard)
-  ;(Array.isArray(next.members) ? next.members : []).forEach((member) => applyPhoneMemberId(next, member, member.phone))
+  next.authRevocations = normalizeAuthRevocations(next.authRevocations)
+  ;(Array.isArray(next.members) ? next.members : []).forEach((member) => {
+    if (!member) return
+    member.balance = Number(member.balance || 0)
+    member.points = Number(member.points || 0)
+    member.totalSpent = Number(member.totalSpent || 0)
+    member.consumptionCount = Number(member.consumptionCount || 0)
+    member.gems = Number(member.gems || 0)
+    member.invitePieces = Number(member.invitePieces || 0)
+    member.drinkVoucherCount = Number(member.drinkVoucherCount || 0)
+    applyPhoneMemberId(next, member, member.phone)
+  })
   return next
 }
 
@@ -1774,6 +1934,22 @@ function syncInventoryList(current, products) {
     if (!stockMap.has(product.id)) stockMap.set(product.id, 30 + index * 5)
   })
   return Array.from(stockMap.entries()).map(([id, stock]) => ({ id, stock }))
+}
+
+function normalizeAuthRevocations(list) {
+  const seen = new Set()
+  return (Array.isArray(list) ? list : [])
+    .filter((item) => item && item.token)
+    .map((item) => ({
+      token: String(item.token || '').trim(),
+      type: String(item.type || '').trim(),
+      revokedAt: String(item.revokedAt || now()).trim()
+    }))
+    .filter((item) => {
+      if (!item.token || seen.has(item.token)) return false
+      seen.add(item.token)
+      return true
+    })
 }
 
 async function persist() {
@@ -1862,6 +2038,16 @@ function defaultRechargeSettings() {
   }
 }
 
+function defaultVoucherSettings() {
+  return {
+    title: '我的酒水券',
+    ruleName: '满5减1',
+    buyCount: 5,
+    freeCount: 1,
+    note: '适用于精酿、鸡尾酒和饮料类商品，点餐时自动抵扣。'
+  }
+}
+
 function defaultGlobalSettings() {
   return {
     videoTitle: '门店视频专区',
@@ -1930,13 +2116,32 @@ function exportSummary(merchant) {
   ].join('\n')
 }
 
+function toSortOrder(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 function normalizeLeaderboardList(list) {
-  return (Array.isArray(list) ? list : []).map((item, index) => ({
+  const source = Array.isArray(list) ? list : []
+  const hasSortOrder = source.some((item) => item && item.sortOrder !== undefined && item.sortOrder !== null && String(item.sortOrder).trim() !== '')
+  const next = source.map((item, index) => ({
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
-    score: Number(item.score || 0),
-    storeId: String(item.storeId || '').trim()
+    score: Math.max(0, Number(item.score || 0)),
+    storeId: String(item.storeId || '').trim(),
+    sortOrder: hasSortOrder ? toSortOrder(item.sortOrder, index + 1) : index + 1
   }))
+  next.sort((a, b) => {
+    if (hasSortOrder) {
+      const orderDiff = Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+      if (orderDiff !== 0) return orderDiff
+    } else {
+      const scoreDiff = Number(b.score || 0) - Number(a.score || 0)
+      if (scoreDiff !== 0) return scoreDiff
+    }
+    return String(a.username || '').localeCompare(String(b.username || ''))
+  })
+  return next.map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
 }
 
 function normalizeLeaderboardBoards(payload) {
@@ -2002,7 +2207,7 @@ function samePhone(left, right) {
 function memberIdFromPhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '')
   if (digits.length < 4) return ''
-  return `会员${digits.slice(-4)}`
+  return digits.slice(-4)
 }
 
 function applyPhoneMemberId(targetDb, member, phone) {
@@ -2034,7 +2239,7 @@ function mergeMember(targetDb, from, to) {
     if (from[key]) to[key] = from[key]
   })
   if (!to.createdAt && from.createdAt) to.createdAt = from.createdAt
-  ;['balance', 'points', 'totalSpent', 'consumptionCount', 'gems', 'invitePieces'].forEach((key) => {
+  ;['balance', 'points', 'totalSpent', 'consumptionCount', 'gems', 'invitePieces', 'drinkVoucherCount'].forEach((key) => {
     to[key] = Number(to[key] || 0) + Number(from[key] || 0)
   })
   targetDb.members = (Array.isArray(targetDb.members) ? targetDb.members : []).filter((item) => item !== from)
@@ -2054,8 +2259,18 @@ function findMember(id) {
   const normalized = keyword.toLowerCase()
   if (!normalized) throw httpError(404, '会员不存在')
   const fields = ['id', 'openid', 'nickname', 'phone']
+  const digits = normalized.replace(/\D/g, '')
   const exact = db.members.find((item) => fields.some((field) => String(item[field] || '').trim().toLowerCase() === normalized))
   if (exact) return exact
+  const digitMatch = digits
+    ? db.members.filter((item) => {
+        const idDigits = String(item.id || '').replace(/\D/g, '')
+        const phoneDigits = String(item.phone || '').replace(/\D/g, '')
+        return idDigits === digits || phoneDigits.slice(-digits.length) === digits || String(item.id || '').trim().replace(/^会员/, '') === digits
+      })
+    : []
+  if (digitMatch.length === 1) return digitMatch[0]
+  if (digitMatch.length > 1) throw httpError(400, '匹配到多个会员，请输入完整会员ID')
   const fuzzy = db.members.filter((item) => fields.some((field) => {
     const value = String(item[field] || '').trim().toLowerCase()
     return value && value.indexOf(normalized) > -1

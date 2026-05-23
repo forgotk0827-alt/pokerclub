@@ -23,6 +23,7 @@ const emptyMenuForm = {
 
 const emptyActivityForm = {
   id: '',
+  storeId: '',
   title: '',
   type: '国际扑克',
   date: '',
@@ -68,7 +69,7 @@ Page({
     selectedStoreId: 'all',
     selectedStoreName: '全部门店',
     storeScopeOptions: [],
-    tabs: ['订单', '菜单管理', '活动管理', '充值', '数据管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '积分', '基础', '库存', '排行'],
+    tabs: ['订单', '菜单管理', '活动管理', '充值', '酒水券', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '积分', '基础', '库存', '排行'],
     activeTab: '订单',
     orderStatuses: ['全部', '待支付', '已确认', '已完成', '已取消'],
     activeStatus: '全部',
@@ -86,6 +87,8 @@ Page({
     categories: [],
     products: [],
     activities: [],
+    activityStoreOptions: [],
+    activityStoreIndex: 0,
     activityForm: Object.assign({}, emptyActivityForm),
     menuCategoryName: '',
     menuCategoryDraft: '',
@@ -93,7 +96,13 @@ Page({
     menuSortSaving: false,
     menuForm: Object.assign({}, emptyMenuForm),
     rechargeSettings: state.getRechargeSettings(),
+    voucherSettings: state.getVoucherSettings(),
     rechargeRecords: [],
+    voucherForm: {
+      memberKey: '',
+      count: '',
+      note: ''
+    },
     rechargeForm: {
       memberKey: '',
       delta: '',
@@ -102,6 +111,8 @@ Page({
     overview: {},
     allOrders: [],
     allMembers: [],
+    filteredMembers: [],
+    memberSearchKeyword: '',
     allCellar: [],
     allSignups: [],
     globalSettings: state.getGlobalSettings(),
@@ -136,7 +147,15 @@ Page({
     rankUsername: '',
     rankScore: '',
     rankDeltaScore: '',
-    lastReminderAt: 0
+    lastReminderAt: 0,
+    memberPickerVisible: false,
+    memberPickerTitle: '选择会员',
+    memberPickerHint: '先确认会员身份，再执行操作',
+    memberPickerCandidates: [],
+    memberPickerSelectedId: '',
+    memberPickerSelectedMember: null,
+    memberPickerSelectedName: '',
+    memberPickerConfirmText: '确认执行'
   },
   onShow() {
     state.requireMerchantLogin((session) => {
@@ -435,19 +454,23 @@ Page({
     }
     const memberKey = String(this.data.pointsMemberKey || '').trim()
     if (!memberKey) {
-      wx.showToast({ title: '请填写会员ID或昵称', icon: 'none' })
+      wx.showToast({ title: '请填写会员ID', icon: 'none' })
       return
     }
-    if (!String(this.data.pointsReason || '').trim()) {
-      wx.showToast({ title: '请填写操作原因', icon: 'none' })
-      return
-    }
-    state.adjustMemberPoints(memberKey, sign * amount, this.data.pointsReason, this.data.session.name, (payload) => {
-      if (!payload) return
-      this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
-      this.refreshPoints()
-      this.refreshDataManagement()
-      wx.showToast({ title: '积分已更新', icon: 'success' })
+    this.openMemberPicker({
+      memberKey,
+      title: '选择会员',
+      hint: '请先核对会员ID和昵称，再确认积分调整',
+      confirmText: '确认调整',
+      action: (member) => {
+        state.adjustMemberPoints(member.id, sign * amount, String(this.data.pointsReason || '').trim(), this.data.session.name, (payload) => {
+          if (!payload) return
+          this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
+          this.refreshPoints()
+          this.refreshDataManagement()
+          wx.showToast({ title: '积分已更新', icon: 'success' })
+        })
+      }
     })
   },
   addMemberPoints() {
@@ -461,19 +484,23 @@ Page({
     }
     const memberKey = String(this.data.pointsMemberKey || '').trim()
     if (!memberKey) {
-      wx.showToast({ title: '请填写会员ID或昵称', icon: 'none' })
+      wx.showToast({ title: '请填写会员ID', icon: 'none' })
       return
     }
-    if (!String(this.data.pointsReason || '').trim()) {
-      wx.showToast({ title: '请填写操作原因', icon: 'none' })
-      return
-    }
-    state.adjustMemberPieces(memberKey, amount, this.data.pointsReason, this.data.session.name, (payload) => {
-      if (!payload) return
-      this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
-      this.refreshPoints()
-      this.refreshDataManagement()
-      wx.showToast({ title: '碎片已更新', icon: 'success' })
+    this.openMemberPicker({
+      memberKey,
+      title: '选择会员',
+      hint: '请先核对会员ID和昵称，再确认碎片调整',
+      confirmText: '确认调整',
+      action: (member) => {
+        state.adjustMemberPieces(member.id, amount, String(this.data.pointsReason || '').trim(), this.data.session.name, (payload) => {
+          if (!payload) return
+          this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
+          this.refreshPoints()
+          this.refreshDataManagement()
+          wx.showToast({ title: '碎片已更新', icon: 'success' })
+        })
+      }
     })
   },
   refreshBasics() {
@@ -576,12 +603,42 @@ Page({
     })
   },
   refreshActivities() {
-    const render = (list) => this.setData({ activities: this.filterByActiveStore(list || state.getActivities()) })
+    const stores = state.getStores().map((item) => ({
+      id: item.id,
+      name: item.shortName || item.name
+    }))
+    const render = (list) => this.setData({
+      activityStoreOptions: stores,
+      activityStoreIndex: this.getActivityStoreIndex(this.data.activityForm.storeId, stores),
+      activities: this.filterByActiveStore(list || state.getActivities())
+    })
     render()
     state.fetchMerchantActivities(render)
   },
+  getActivityStoreIndex(storeId, options = this.data.activityStoreOptions) {
+    const scopedId = String(storeId || '').trim()
+    const index = (options || []).findIndex((item) => item.id === scopedId)
+    return index > -1 ? index : 0
+  },
+  getDefaultActivityStoreId() {
+    const options = this.data.activityStoreOptions.length ? this.data.activityStoreOptions : state.getStores().map((item) => ({
+      id: item.id,
+      name: item.shortName || item.name
+    }))
+    const scoped = this.activeStoreId()
+    if (scoped && scoped !== 'all' && options.some((item) => item.id === scoped)) return scoped
+    return (options[0] && options[0].id) || ''
+  },
   newActivity() {
-    this.setData({ activityForm: Object.assign({}, emptyActivityForm) })
+    const storeId = this.getDefaultActivityStoreId()
+    const store = state.getStores().find((item) => item.id === storeId)
+    this.setData({
+      activityForm: Object.assign({}, emptyActivityForm, {
+        storeId,
+        location: store ? (store.address || store.shortName || store.name || '') : ''
+      }),
+      activityStoreIndex: this.getActivityStoreIndex(storeId)
+    })
   },
   editActivity(event) {
     const activity = this.data.activities.find((item) => item.id === event.currentTarget.dataset.id)
@@ -590,6 +647,7 @@ Page({
     const deadline = this.splitDateTime(activity.deadlineAt || activity.deadline || '')
     this.setData({
       activityForm: Object.assign({}, emptyActivityForm, activity, {
+        storeId: activity.storeId || this.getDefaultActivityStoreId(),
         price: String(activity.price || 0),
         pointsPrice: String(activity.pointsPrice || 0),
         quota: String(activity.quota || 0),
@@ -601,7 +659,8 @@ Page({
         dateTime: date.dateTime,
         deadlineDate: deadline.dateDate,
         deadlineTime: deadline.dateTime
-      })
+      }),
+      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
   duplicateActivity(event) {
@@ -612,6 +671,7 @@ Page({
     this.setData({
       activityForm: Object.assign({}, emptyActivityForm, activity, {
         id: '',
+        storeId: activity.storeId || this.getDefaultActivityStoreId(),
         price: String(activity.price || 0),
         pointsPrice: String(activity.pointsPrice || 0),
         quota: String(activity.quota || 0),
@@ -623,12 +683,26 @@ Page({
         dateTime: date.dateTime,
         deadlineDate: deadline.dateDate,
         deadlineTime: deadline.dateTime
-      })
+      }),
+      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
   inputActivityField(event) {
     const field = event.currentTarget.dataset.field
     this.setData({ [`activityForm.${field}`]: event.detail.value })
+  },
+  selectActivityStore(event) {
+    const index = Number(event.detail.value || 0)
+    const option = this.data.activityStoreOptions[index] || this.data.activityStoreOptions[0]
+    if (!option) return
+    const store = state.getStores().find((item) => item.id === option.id) || {}
+    this.setData({
+      activityStoreIndex: index,
+      'activityForm.storeId': option.id,
+      'activityForm.location': store.address || store.shortName || store.name || '',
+      'activityForm.latitude': String(store.latitude || ''),
+      'activityForm.longitude': String(store.longitude || '')
+    })
   },
   selectActivityDateTime(event) {
     const prefix = event.currentTarget.dataset.prefix
@@ -738,18 +812,16 @@ Page({
       wx.showToast({ title: '请填写比赛名称', icon: 'none' })
       return
     }
+    const storeId = String(form.storeId || '').trim()
+    const store = state.getStores().find((item) => item.id === storeId)
+    if (!store) {
+      wx.showToast({ title: '请选择比赛门店', icon: 'none' })
+      return
+    }
     const date = this.composeDateTime(form.dateDate || '', form.dateTime || '') || String(form.date || '').trim()
     const deadline = this.composeDateTime(form.deadlineDate || '', form.deadlineTime || '') || String(form.deadline || '').trim()
     if (!date) {
       wx.showToast({ title: '请填写比赛时间', icon: 'none' })
-      return
-    }
-    if (!String(form.location || '').trim()) {
-      wx.showToast({ title: '请添加比赛地点', icon: 'none' })
-      return
-    }
-    if (this.isSuperAdmin() && !this.activeStoreId()) {
-      wx.showToast({ title: '请先选择活动所属门店', icon: 'none' })
       return
     }
     const joined = Number(form.joined || 0)
@@ -762,7 +834,9 @@ Page({
       type: String(form.type || '国际扑克').trim(),
       date,
       dayLabel: String(form.dayLabel || '').trim(),
-      location: String(form.location || '').trim(),
+      storeId,
+      storeName: store.shortName || store.name || '',
+      location: String(form.location || store.address || store.shortName || store.name || '').trim(),
       latitude: Number(form.latitude || 0),
       longitude: Number(form.longitude || 0),
       deadline,
@@ -776,7 +850,7 @@ Page({
       detailImage: form.detailImage || form.image || '/assets/activity-card.svg',
       environmentImage: form.environmentImage || '/assets/hero-bar.svg',
       resultImage: form.resultImage || '/assets/activity-card.svg',
-      storeId: this.activeStoreId() || (this.data.session ? this.data.session.storeId : '')
+      storeId
     })
     this.newActivity()
     this.refreshActivities()
@@ -785,14 +859,92 @@ Page({
   refreshRecharge() {
     this.setData({
       rechargeSettings: state.getRechargeSettings(),
+      voucherSettings: state.getVoucherSettings(),
       rechargeRecords: state.getRechargeRecords()
     })
     state.fetchRechargeSettings((settings) => {
       if (settings) this.setData({ rechargeSettings: settings })
     })
+    state.fetchVoucherSettings((settings) => {
+      if (settings) this.setData({ voucherSettings: settings })
+    })
     state.fetchRechargeRecords((records) => {
       this.setData({ rechargeRecords: records || state.getRechargeRecords() })
     })
+  },
+  getMemberCandidates(memberKey) {
+    const keyword = String(memberKey || '').trim().toLowerCase()
+    if (!keyword) return []
+    const digits = keyword.replace(/\D/g, '')
+    const list = (this.data.allMembers && this.data.allMembers.length ? this.data.allMembers : state.getMemberList()).filter((item) => {
+      const id = String(item.id || '').trim().toLowerCase()
+      const phoneDigits = String(item.phone || '').replace(/\D/g, '')
+      const idDigits = String(item.id || '').replace(/\D/g, '')
+      if (id === keyword) return true
+      if (digits && (idDigits === digits || String(item.id || '').trim().replace(/^会员/, '') === digits || phoneDigits.slice(-digits.length) === digits)) return true
+      return false
+    })
+    return list.sort((a, b) => String(a.nickname || '').localeCompare(String(b.nickname || '')))
+  },
+  openMemberPicker(options = {}) {
+    const memberKey = String(options.memberKey || '').trim()
+    const candidates = this.getMemberCandidates(memberKey)
+    if (!memberKey) {
+      wx.showToast({ title: '请填写会员ID', icon: 'none' })
+      return false
+    }
+    if (!candidates.length) {
+      wx.showToast({ title: '未找到匹配会员', icon: 'none' })
+      return false
+    }
+    this.pendingMemberAction = {
+      action: typeof options.action === 'function' ? options.action : null
+    }
+    this.setData({
+      memberPickerVisible: true,
+      memberPickerTitle: options.title || '选择会员',
+      memberPickerHint: options.hint || '请先核对会员身份',
+      memberPickerCandidates: candidates,
+      memberPickerSelectedId: candidates.length === 1 ? candidates[0].id : '',
+      memberPickerSelectedMember: candidates.length === 1 ? candidates[0] : null,
+      memberPickerSelectedName: candidates.length === 1 ? (candidates[0].nickname || candidates[0].id || '已选会员') : '',
+      memberPickerConfirmText: options.confirmText || '确认执行'
+    })
+    return true
+  },
+  selectMemberCandidate(event) {
+    const id = event.currentTarget.dataset.id
+    const selectedMember = this.data.memberPickerCandidates.find((item) => item.id === id) || null
+    this.setData({
+      memberPickerSelectedId: id,
+      memberPickerSelectedMember: selectedMember,
+      memberPickerSelectedName: selectedMember ? (selectedMember.nickname || selectedMember.id || '已选会员') : ''
+    })
+  },
+  closeMemberPicker() {
+    this.pendingMemberAction = null
+    this.setData({
+      memberPickerVisible: false,
+      memberPickerCandidates: [],
+      memberPickerSelectedId: '',
+      memberPickerSelectedMember: null,
+      memberPickerSelectedName: ''
+    })
+  },
+  confirmMemberPicker() {
+    const selectedId = String(this.data.memberPickerSelectedId || '').trim()
+    const member = this.data.memberPickerCandidates.find((item) => item.id === selectedId)
+    if (!member) {
+      wx.showToast({ title: '请先选择会员', icon: 'none' })
+      return
+    }
+    const action = this.pendingMemberAction && this.pendingMemberAction.action
+    if (!action) {
+      this.closeMemberPicker()
+      return
+    }
+    this.closeMemberPicker()
+    action(member)
   },
   refreshDataManagement() {
     state.fetchMerchantStores((stores) => {
@@ -817,6 +969,7 @@ Page({
         stores: this.filterStores(state.getStores()),
         allOrders: orders,
         allMembers: state.getMemberList(),
+        filteredMembers: this.filterMembers(state.getMemberList()),
         allCellar: cellar,
         allSignups: signups
       })
@@ -853,6 +1006,25 @@ Page({
   },
   refreshGlobalSettings() {
     this.setData({ globalSettings: state.getGlobalSettings() })
+  },
+  filterMembers(list) {
+    const keyword = String(this.data.memberSearchKeyword || '').trim().toLowerCase()
+    const source = Array.isArray(list) ? list : []
+    if (!keyword) return source
+    return source.filter((item) => {
+      const values = [item.id, item.nickname, item.phone, item.openid]
+        .map((value) => String(value || '').trim().toLowerCase())
+      return values.some((value) => value && value.indexOf(keyword) > -1)
+    })
+  },
+  inputMemberSearch(event) {
+    this.setData({
+      memberSearchKeyword: event.detail.value,
+      filteredMembers: this.filterMembers(state.getMemberList())
+    })
+  },
+  refreshMemberManagement() {
+    this.refreshDataManagement()
   },
   splitDateTime(value) {
     const text = String(value || '').trim()
@@ -1163,6 +1335,57 @@ Page({
     )
     this.setData({ rechargeSettings: next })
   },
+  inputVoucherSetting(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`voucherSettings.${field}`]: event.detail.value })
+  },
+  saveVoucherSettings() {
+    const settings = this.data.voucherSettings
+    const next = state.saveVoucherSettings(
+      {
+        title: String(settings.title || '').trim(),
+        ruleName: String(settings.ruleName || '').trim(),
+        buyCount: Number(settings.buyCount || 0),
+        freeCount: Number(settings.freeCount || 0),
+        note: String(settings.note || '').trim()
+      },
+      (saved) => {
+        if (!saved) return
+        this.setData({ voucherSettings: saved })
+        wx.showToast({ title: '酒水券规则已保存', icon: 'success' })
+      }
+    )
+    this.setData({ voucherSettings: next })
+  },
+  inputVoucherForm(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`voucherForm.${field}`]: event.detail.value })
+  },
+  grantDrinkVoucher() {
+    const memberKey = String(this.data.voucherForm.memberKey || '').trim()
+    const count = Number(this.data.voucherForm.count || 0)
+    const note = String(this.data.voucherForm.note || '').trim()
+    if (!memberKey || !count) {
+      wx.showToast({ title: '请填写会员和数量', icon: 'none' })
+      return
+    }
+    this.openMemberPicker({
+      memberKey,
+      title: '选择会员',
+      hint: '请先核对会员ID和昵称，再确认酒水券赠送',
+      confirmText: '确认赠送',
+      action: (member) => {
+        state.grantDrinkVoucher(member.id, count, note, (payload) => {
+          if (!payload) return
+          this.setData({
+            voucherForm: { memberKey: '', count: '', note: '' }
+          })
+          wx.showToast({ title: '酒水券已赠送', icon: 'success' })
+          this.refreshDataManagement()
+        })
+      }
+    })
+  },
   inputRechargeForm(event) {
     const field = event.currentTarget.dataset.field
     this.setData({ [`rechargeForm.${field}`]: event.detail.value })
@@ -1172,26 +1395,34 @@ Page({
     const delta = Number(this.data.rechargeForm.delta || 0)
     const note = String(this.data.rechargeForm.note || '').trim()
     if (!key) {
-      wx.showToast({ title: '请填写会员ID或昵称', icon: 'none' })
+      wx.showToast({ title: '请填写会员ID', icon: 'none' })
       return
     }
     if (!delta) {
       wx.showToast({ title: '请输入调整金额', icon: 'none' })
       return
     }
-    state.adjustMemberBalance(key, delta, {
-      operator: this.data.session.name,
-      note: note || '手动调整余额',
-      storeId: this.activeStoreId()
-    }, (payload) => {
-      if (!payload) return
-      this.setData({
-        rechargeForm: { memberKey: '', delta: '', note: '' }
-      })
-      this.refreshRecharge()
-      this.refreshPoints()
-      this.refreshDataManagement()
-      wx.showToast({ title: '余额已调整', icon: 'success' })
+    this.openMemberPicker({
+      memberKey: key,
+      title: '选择会员',
+      hint: '请先核对会员ID和昵称，再确认余额调整',
+      confirmText: '确认调整',
+      action: (member) => {
+        state.adjustMemberBalance(member.id, delta, {
+          operator: this.data.session.name,
+          note: note || '手动调整余额',
+          storeId: this.activeStoreId()
+        }, (payload) => {
+          if (!payload) return
+          this.setData({
+            rechargeForm: { memberKey: '', delta: '', note: '' }
+          })
+          this.refreshRecharge()
+          this.refreshPoints()
+          this.refreshDataManagement()
+          wx.showToast({ title: '余额已调整', icon: 'success' })
+        })
+      }
     })
   },
   exportStats() {
@@ -1432,8 +1663,8 @@ Page({
     const username = String(this.data.rankUsername || '').trim()
     const scoreText = String(this.data.rankScore || '').trim()
     const score = Number(scoreText)
-    if (!username || !scoreText || Number.isNaN(score)) {
-      wx.showToast({ title: '请填写用户名和分数', icon: 'none' })
+    if (!username || !scoreText || Number.isNaN(score) || score <= 0) {
+      wx.showToast({ title: '请填写正数分值', icon: 'none' })
       return
     }
     state.addLeaderboardUser({ username, score, storeId: this.activeStoreId() }, () => {
@@ -1489,7 +1720,17 @@ Page({
     }, this.data.activeRankType || 'weekly', this.activeStoreId())
   },
   logout() {
-    state.merchantLogout()
-    wx.redirectTo({ url: '/pages/merchant-login/merchant-login' })
+    wx.showModal({
+      title: '退出登录',
+      content: '确认退出当前商家账号？',
+      confirmText: '确认退出',
+      success: (res) => {
+        if (!res.confirm) return
+        state.merchantLogout((ok) => {
+          if (!ok) return
+          wx.reLaunch({ url: '/pages/merchant-login/merchant-login' })
+        })
+      }
+    })
   }
 })

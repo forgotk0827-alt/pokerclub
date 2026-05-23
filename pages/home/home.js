@@ -5,7 +5,11 @@ Page({
     store: null,
     globalSettings: null,
     featured: [],
-    leaderboard: [],
+    leaderboardTabs: state.leaderboardTabs,
+    activeRankType: 'weekly',
+    weeklyLeaderboard: [],
+    monthlyLeaderboard: [],
+    yearlyLeaderboard: [],
     avatarList: ['客', '客', '客', '客', '客'],
     cartSummary: { count: 0, total: 0 }
   },
@@ -16,7 +20,7 @@ Page({
           state.fetchPublicLeaderboard(() => {
             this.setData({ globalSettings })
             this.loadHome()
-          }, 'yearly')
+          }, 'weekly')
         })
       })
     })
@@ -28,8 +32,15 @@ Page({
     this.setData({
       store,
       featured: storeProducts.filter((item) => item.categoryId === 'packages' && item.sale).slice(0, 3),
-      leaderboard: state.getLeaderboard('yearly', store.id).slice(0, 3),
       cartSummary: state.getCartSummary()
+    }, () => this.loadLeaderboardPreview())
+  },
+  loadLeaderboardPreview() {
+    const store = state.getStore()
+    this.setData({
+      weeklyLeaderboard: state.getLeaderboard('weekly', store.id).slice(0, 3),
+      monthlyLeaderboard: state.getLeaderboard('monthly', store.id).slice(0, 3),
+      yearlyLeaderboard: state.getLeaderboard('yearly', store.id).slice(0, 3)
     })
   },
   switchStore() {
@@ -64,16 +75,16 @@ Page({
     wx.reLaunch({ url: event.currentTarget.dataset.url })
   },
   goActivity() {
-    wx.navigateTo({ url: '/pages/leaderboard/leaderboard' })
+    wx.navigateTo({ url: '/pages/activity/activity' })
+  },
+  goRecharge() {
+    wx.navigateTo({ url: '/pages/profile-points/profile-points?tab=points' })
   },
   goLeaderboard() {
     wx.navigateTo({ url: '/pages/leaderboard/leaderboard' })
   },
   goVideos() {
     wx.navigateTo({ url: '/pages/videos/videos' })
-  },
-  goJoinUs() {
-    wx.navigateTo({ url: '/pages/join-us/join-us' })
   },
   showPartner() {
     if (!state.requireLogin('查看共享合伙人', () => this.showPartner())) {
@@ -86,14 +97,10 @@ Page({
     })
   },
   showCoupon() {
-    if (!state.requireLogin('查看优惠券', () => this.showCoupon())) {
+    if (!state.requireLogin('进入活动报名', () => this.showCoupon())) {
       return
     }
-    wx.showModal({
-      title: '优惠券',
-      content: '当前暂无可用优惠券，后续可接入后台券包。',
-      showCancel: false
-    })
+    wx.navigateTo({ url: '/pages/activity/activity' })
   },
   addCart(event) {
     const product = state.getProducts().find((item) => {

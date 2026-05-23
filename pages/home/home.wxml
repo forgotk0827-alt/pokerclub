@@ -37,6 +37,16 @@
       </view>
       <text>扫码点餐</text>
     </button>
+    <button class="quick-item" bindtap="showCoupon">
+      <view class="quick-icon icon-ticket">
+        <view class="ticket-pin left"></view>
+        <view class="ticket-pin right"></view>
+        <view class="ticket-line"></view>
+        <view class="ticket-line short"></view>
+        <view class="ticket-line"></view>
+      </view>
+      <text>活动报名</text>
+    </button>
     <button class="quick-item" bindtap="goLeaderboard">
       <view class="quick-icon icon-ticket">
         <view class="ticket-pin left"></view>
@@ -57,17 +67,7 @@
       </view>
       <text>精彩呈现</text>
     </button>
-    <button class="quick-item" bindtap="goJoinUs">
-      <view class="quick-icon icon-partner">
-        <view class="partner-head">
-          <view class="partner-eye"></view>
-          <view class="partner-eye"></view>
-        </view>
-        <view class="partner-body"></view>
-      </view>
-      <text>加入我们</text>
-    </button>
-    <button class="quick-item" bindtap="showCoupon">
+    <button class="quick-item" bindtap="goRecharge">
       <view class="quick-icon icon-ticket">
         <view class="ticket-pin left"></view>
         <view class="ticket-pin right"></view>
@@ -75,7 +75,7 @@
         <view class="ticket-line short"></view>
         <view class="ticket-line"></view>
       </view>
-      <text>优惠券</text>
+      <text>我的背包</text>
     </button>
   </view>
 
@@ -99,36 +99,45 @@
     <view class="section-name">排行榜</view>
     <view class="section-more" bindtap="goLeaderboard">更多</view>
   </view>
-  <view class="home-activity-list">
-    <view class="home-activity-card" wx:for="{{leaderboard}}" wx:key="id" bindtap="goLeaderboard">
-      <view class="home-activity-top">
-        <view class="home-activity-title">{{item.username}}</view>
-        <view class="home-activity-link">查看详情</view>
-      </view>
-      <view class="home-activity-body">
-        <image class="home-activity-img" src="/assets/activity-card.svg" mode="aspectFill" />
-        <view class="home-activity-main">
-          <view class="home-meta-line">
-            <text class="home-meta-icon">•</text>
-            <text class="line-clamp">年度榜第 {{item.rank}} 名</text>
-          </view>
-          <view class="home-meta-line">
-            <text class="home-meta-icon">◎</text>
-            <text class="line-clamp">分数 {{item.score}}</text>
-          </view>
-          <view class="home-meta-line muted">
-            <text class="home-meta-icon">•</text>
-            <text class="line-clamp">点击进入完整排行榜</text>
+  <view class="home-rank-grid">
+    <view class="home-rank-column">
+      <view class="home-rank-col-title">周榜</view>
+      <view class="home-rank-card" wx:for="{{weeklyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
+        <view class="home-rank-top">
+          <view class="home-rank-badge">{{index + 1}}</view>
+          <view class="home-rank-main">
+            <view class="home-rank-name">{{item.username}}</view>
+            <view class="home-rank-score">{{item.score}} 分</view>
           </view>
         </view>
-        <view class="home-activity-price">{{item.score}}</view>
       </view>
-      <view class="home-join-row">
-        <view class="home-avatars">
-          <view wx:for="{{avatarList}}" wx:key="*this" class="home-avatar">{{item}}</view>
+      <view wx:if="{{!weeklyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
+    </view>
+    <view class="home-rank-column">
+      <view class="home-rank-col-title">月榜</view>
+      <view class="home-rank-card" wx:for="{{monthlyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
+        <view class="home-rank-top">
+          <view class="home-rank-badge">{{index + 1}}</view>
+          <view class="home-rank-main">
+            <view class="home-rank-name">{{item.username}}</view>
+            <view class="home-rank-score">{{item.score}} 分</view>
+          </view>
         </view>
-        <view class="home-quota"><text>{{item.rank}}</text>名</view>
       </view>
+      <view wx:if="{{!monthlyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
+    </view>
+    <view class="home-rank-column">
+      <view class="home-rank-col-title">年度榜</view>
+      <view class="home-rank-card" wx:for="{{yearlyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
+        <view class="home-rank-top">
+          <view class="home-rank-badge">{{index + 1}}</view>
+          <view class="home-rank-main">
+            <view class="home-rank-name">{{item.username}}</view>
+            <view class="home-rank-score">{{item.score}} 分</view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{!yearlyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
     </view>
   </view>
 </scroll-view>

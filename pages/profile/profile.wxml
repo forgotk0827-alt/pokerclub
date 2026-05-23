@@ -19,17 +19,16 @@
     </view>
   </view>
 
-  <view class="vip-banner">
-    <view class="vip-text">开通会员享专属特权</view>
-    <button class="vip-btn" bindtap="openVip">立即开通</button>
+  <view class="balance-card" bindtap="goRecharge">
+    <view class="balance-top">
+      <view class="balance-label">储值卡余额</view>
+      <view class="balance-link">去充值</view>
+    </view>
+    <view class="balance-num">{{member.balance}}</view>
+    <view class="balance-tip">点餐时可优先抵扣储值余额与酒水券</view>
   </view>
 
   <view class="stats">
-    <view class="stat" bindtap="goRecharge">
-      <text class="stat-num">{{member.balance}}</text>
-      <text class="stat-label">储值卡余额</text>
-    </view>
-    <view class="split"></view>
     <view class="stat" bindtap="goPoints">
       <text class="stat-num">{{member.points}}</text>
       <text class="stat-label">我的积分</text>
@@ -38,6 +37,11 @@
     <view class="stat" bindtap="goFragments">
       <text class="stat-num">{{member.gems || member.invitePieces || 0}}</text>
       <text class="stat-label">我的碎片</text>
+    </view>
+    <view class="split"></view>
+    <view class="stat" bindtap="goVoucher">
+      <text class="stat-num">{{member.drinkVoucherCount || 0}}</text>
+      <text class="stat-label">我的酒水券</text>
     </view>
   </view>
 
@@ -89,6 +93,10 @@
       <view class="menu-item" bindtap="goAbout">
         <view class="menu-symbol about-symbol"></view>
         <text>关于</text>
+      </view>
+      <view class="menu-item logout-item" bindtap="logout">
+        <view class="menu-symbol logout-symbol"></view>
+        <text>退出登录</text>
       </view>
     </view>
   </view>

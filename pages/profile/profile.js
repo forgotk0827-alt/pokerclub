@@ -246,6 +246,11 @@ Page({
       wx.navigateTo({ url: '/pages/profile-points/profile-points?tab=fragments' })
     })
   },
+  goVoucher() {
+    state.requireLogin('查看酒水券', () => {
+      wx.navigateTo({ url: '/pages/profile-points/profile-points?tab=voucher' })
+    })
+  },
   goRecharge() {
     state.requireLogin('查看储值账户', () => {
       wx.navigateTo({ url: '/pages/recharge/recharge' })
@@ -279,5 +284,19 @@ Page({
   },
   goAbout() {
     wx.navigateTo({ url: '/pages/profile-about/profile-about' })
+  },
+  logout() {
+    wx.showModal({
+      title: '退出登录',
+      content: '确认退出当前账号？',
+      confirmText: '确认退出',
+      success: (res) => {
+        if (!res.confirm) return
+        state.logoutUser((ok) => {
+          if (!ok) return
+          wx.reLaunch({ url: '/pages/profile/profile?login=1' })
+        })
+      }
+    })
   }
 })

@@ -3,10 +3,11 @@ const state = require('../../utils/state')
 Page({
   data: {
     member: {},
-    activeTab: 'points'
+    activeTab: 'points',
+    voucherSummary: {}
   },
   onLoad(options) {
-    this.setData({ activeTab: options && options.tab === 'fragments' ? 'fragments' : 'points' })
+    this.setData({ activeTab: options && ['fragments', 'voucher'].includes(options.tab) ? options.tab : 'points' })
   },
   onShow() {
     if (!state.requireLogin('查看积分', () => this.refreshMemberFromServer())) {
@@ -17,10 +18,33 @@ Page({
   },
   refreshMemberFromServer() {
     state.fetchMyProfile((member) => {
-      this.setData({ member: member || state.getMember() })
+      const nextMember = member || state.getMember()
+      this.setData({
+        member: nextMember,
+        voucherSummary: this.buildVoucherSummary(nextMember)
+      })
     })
   },
   switchTab(event) {
-    this.setData({ activeTab: event.currentTarget.dataset.key || 'points' })
+    const activeTab = event.currentTarget.dataset.key || 'points'
+    this.setData({ activeTab }, () => {
+      if (activeTab === 'voucher') {
+        this.setData({ voucherSummary: this.buildVoucherSummary(this.data.member) })
+      }
+    })
+  },
+  buildVoucherSummary(member) {
+    const settings = state.getVoucherSettings()
+    const count = Number(member && member.drinkVoucherCount || 0)
+    return {
+      count,
+      title: settings.title || '我的酒水券',
+      ruleName: settings.ruleName || '满5减1',
+      note: settings.note || '适用于精酿、鸡尾酒和饮料类商品',
+      expireText: '长期有效'
+    }
+  },
+  goUseVoucher() {
+    wx.navigateTo({ url: '/pages/menu/menu' })
   }
 })

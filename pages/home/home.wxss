@@ -422,6 +422,95 @@
   line-height: 36rpx;
 }
 
+.home-rank-card {
+  margin-bottom: 22rpx;
+  padding: 26rpx 22rpx;
+  border-radius: 18rpx;
+  background: #241633;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.home-rank-top {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.home-rank-badge {
+  flex: 0 0 54rpx;
+  width: 54rpx;
+  height: 54rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #8b5cf6;
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.home-rank-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.home-rank-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 30rpx;
+  line-height: 38rpx;
+  font-weight: 900;
+}
+
+.home-rank-score {
+  margin-top: 6rpx;
+  color: #d8b4fe;
+  font-size: 24rpx;
+  line-height: 32rpx;
+  font-weight: 800;
+}
+
+.home-rank-link {
+  color: #d8b4fe;
+  font-size: 26rpx;
+  line-height: 34rpx;
+  font-weight: 800;
+}
+
+.home-rank-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  padding: 0 22rpx 24rpx;
+}
+
+.home-rank-column {
+  min-width: 0;
+}
+
+.home-rank-col-title {
+  margin-bottom: 14rpx;
+  color: #fff;
+  font-size: 28rpx;
+  line-height: 36rpx;
+  font-weight: 900;
+}
+
+.home-rank-column .home-rank-card {
+  margin-bottom: 14rpx;
+  padding: 18rpx 16rpx;
+}
+
+.home-rank-empty {
+  padding: 18rpx 0 6rpx;
+  color: #8f86a1;
+  font-size: 24rpx;
+  line-height: 32rpx;
+}
+
 .home-activity-list {
   padding: 0 22rpx 24rpx;
 }

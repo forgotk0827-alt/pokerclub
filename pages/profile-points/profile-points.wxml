@@ -1,11 +1,27 @@
-<topbar title="{{activeTab === 'points' ? '我的积分' : '我的碎片'}}" showBack="{{true}}" />
+<topbar title="{{activeTab === 'points' ? '我的积分' : (activeTab === 'fragments' ? '我的碎片' : '我的酒水券')}}" showBack="{{true}}" />
 <view class="points-page">
   <view class="tab-row">
     <view class="tab {{activeTab === 'points' ? 'tab-active' : ''}}" data-key="points" bindtap="switchTab">积分</view>
     <view class="tab {{activeTab === 'fragments' ? 'tab-active' : ''}}" data-key="fragments" bindtap="switchTab">碎片</view>
+    <view class="tab {{activeTab === 'voucher' ? 'tab-active' : ''}}" data-key="voucher" bindtap="switchTab">酒水券</view>
   </view>
-  <view class="points-card">
-    <view class="points-num">{{activeTab === 'points' ? member.points : (member.gems || member.invitePieces || 0)}}</view>
+  <view wx:if="{{activeTab === 'voucher'}}" class="voucher-card">
+    <view class="voucher-left">
+      <view class="voucher-count">{{voucherSummary.count}}</view>
+      <view class="voucher-unit">张</view>
+    </view>
+    <view class="voucher-mid">
+      <view class="voucher-title">{{voucherSummary.title}}</view>
+      <view class="voucher-rule">{{voucherSummary.ruleName}}</view>
+      <view class="voucher-note">{{voucherSummary.note}}</view>
+      <view class="voucher-expire">{{voucherSummary.expireText}}</view>
+    </view>
+    <view class="voucher-action" bindtap="goUseVoucher">去使用</view>
+  </view>
+  <view wx:else class="points-card">
+    <view class="points-num">
+      {{activeTab === 'points' ? member.points : (member.gems || member.invitePieces || 0)}}
+    </view>
     <view class="points-label">{{activeTab === 'points' ? '积分余额' : '碎片余额'}}</view>
   </view>
 </view>

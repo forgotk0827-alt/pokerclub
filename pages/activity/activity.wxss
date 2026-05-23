@@ -2,6 +2,43 @@
   padding-bottom: 150rpx;
 }
 
+.store-switch {
+  margin: 20rpx 20rpx 16rpx;
+  padding: 22rpx 20rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  color: #111827;
+}
+
+.store-switch-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.store-switch-label {
+  color: #6b7280;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
+.store-switch-name {
+  margin-top: 6rpx;
+  color: #111827;
+  font-size: 30rpx;
+  line-height: 38rpx;
+  font-weight: 900;
+}
+
+.store-switch-arrow {
+  flex: 0 0 32rpx;
+  color: #9ca3af;
+  font-size: 56rpx;
+  line-height: 1;
+}
+
 .date-band {
   height: 168rpx;
   display: flex;
@@ -98,7 +135,7 @@
 }
 
 .activity-list {
-  height: calc(100vh - 514rpx);
+  height: calc(100vh - 628rpx);
   background: #050807;
 }
 

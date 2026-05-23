@@ -5,7 +5,7 @@
       <view class="shop-name">{{session.storeName}}</view>
       <view class="shop-sub">{{session.name}} · 新订单自动监听中</view>
     </view>
-    <view class="logout" bindtap="logout">退出</view>
+    <view class="logout" bindtap="logout">退出登录</view>
   </view>
 
   <picker wx:if="{{session.role === 'super_admin'}}" mode="selector" range="{{storeScopeOptions}}" range-key="name" bindchange="selectStoreScope">
@@ -43,6 +43,12 @@
       </view>
       <view class="muted-line">{{item.storeName}} · {{item.tableName || '未指定桌号'}} · {{item.createdAt}} · {{item.mode}} · ¥{{item.total}}</view>
       <view class="goods" wx:for="{{item.items}}" wx:for-item="goods" wx:key="id">{{goods.name}} · ¥{{goods.price}} x{{goods.count}}</view>
+      <view class="muted-line" wx:if="{{item.originalTotal || item.voucherDiscount || item.balanceUsed}}">
+        原价 ¥{{item.originalTotal || item.total}}
+        <text wx:if="{{item.voucherDiscount}}"> · 酒水券抵扣 ¥{{item.voucherDiscount}}</text>
+        <text wx:if="{{item.balanceUsed}}"> · 储值卡抵扣 ¥{{item.balanceUsed}}</text>
+        <text> · 实付 ¥{{item.total}}</text>
+      </view>
       <view class="action-row">
         <view class="ghost-action" data-id="{{item.id}}" bindtap="reprint">打印</view>
         <view class="ghost-action" data-id="{{item.id}}" bindtap="cancelOrder">取消</view>
@@ -110,12 +116,15 @@
   </view>
 
   <view wx:elif="{{activeTab === '活动管理'}}" class="panel">
-    <view class="menu-editor">
+      <view class="menu-editor">
       <view class="editor-title">{{activityForm.id ? '编辑活动' : '新增活动'}}</view>
       <view class="form-grid">
         <input value="{{activityForm.title}}" placeholder="比赛名称" data-field="title" bindinput="inputActivityField" />
-        <input value="{{activityForm.location}}" placeholder="比赛地点" data-field="location" bindinput="inputActivityField" />
+        <picker mode="selector" range="{{activityStoreOptions}}" range-key="name" value="{{activityStoreIndex}}" bindchange="selectActivityStore">
+          <view class="picker-input">{{(activityStoreOptions[activityStoreIndex] && activityStoreOptions[activityStoreIndex].name) || '请选择比赛门店'}}</view>
+        </picker>
       </view>
+      <view class="muted-line">比赛地点：{{activityForm.location || '请选择门店后自动带出'}}</view>
       <view class="form-grid date-time-grid">
         <picker mode="date" value="{{activityForm.dateDate}}" data-prefix="date" data-part="date" bindchange="selectActivityDateTime">
           <view class="picker-input">{{activityForm.dateDate || '比赛日期'}}</view>
@@ -189,7 +198,7 @@
     <view class="menu-editor">
       <view class="editor-title">手动调整余额</view>
       <view class="recharge-setting-grid">
-        <input value="{{rechargeForm.memberKey}}" placeholder="会员ID或昵称" data-field="memberKey" bindinput="inputRechargeForm" />
+        <input value="{{rechargeForm.memberKey}}" placeholder="会员ID" data-field="memberKey" bindinput="inputRechargeForm" />
         <input value="{{rechargeForm.delta}}" type="digit" placeholder="调整金额" data-field="delta" bindinput="inputRechargeForm" />
       </view>
       <input class="desc-input" value="{{rechargeForm.note}}" placeholder="调整备注" data-field="note" bindinput="inputRechargeForm" />
@@ -208,6 +217,34 @@
       <view class="muted-line">{{item.createdAt}} · {{item.operator}}</view>
       <view class="muted-line">支付 ¥{{item.payAmount}} · 到账 {{item.creditAmount}} · 余额 {{item.balanceBefore}} → {{item.balanceAfter}}</view>
       <view class="muted-line" wx:if="{{item.note}}">{{item.note}}</view>
+    </view>
+  </view>
+
+  <view wx:elif="{{activeTab === '酒水券'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">酒水券管理</view>
+      <view class="recharge-setting-grid">
+        <input value="{{voucherSettings.title}}" placeholder="模块标题" data-field="title" bindinput="inputVoucherSetting" />
+        <input value="{{voucherSettings.ruleName}}" placeholder="规则名称" data-field="ruleName" bindinput="inputVoucherSetting" />
+      </view>
+      <view class="recharge-setting-grid">
+        <input value="{{voucherSettings.buyCount}}" type="digit" placeholder="满几张" data-field="buyCount" bindinput="inputVoucherSetting" />
+        <input value="{{voucherSettings.freeCount}}" type="digit" placeholder="减几张" data-field="freeCount" bindinput="inputVoucherSetting" />
+      </view>
+      <input class="desc-input" value="{{voucherSettings.note}}" placeholder="酒水券说明" data-field="note" bindinput="inputVoucherSetting" />
+      <view class="muted-line">适用于精酿、鸡尾酒和饮料类商品，可直接赠送给指定会员。</view>
+      <view class="recharge-setting-grid">
+        <input value="{{voucherForm.memberKey}}" placeholder="会员ID" data-field="memberKey" bindinput="inputVoucherForm" />
+        <input value="{{voucherForm.count}}" type="digit" placeholder="赠送数量" data-field="count" bindinput="inputVoucherForm" />
+      </view>
+      <input class="desc-input" value="{{voucherForm.note}}" placeholder="赠送备注" data-field="note" bindinput="inputVoucherForm" />
+      <view class="dual-actions">
+        <view class="ghost-action" bindtap="refreshRecharge">刷新设置</view>
+        <view class="solid-action" bindtap="saveVoucherSettings">保存规则</view>
+      </view>
+      <view class="dual-actions">
+        <view class="solid-action" bindtap="grantDrinkVoucher">赠送酒水券</view>
+      </view>
     </view>
   </view>
 
@@ -264,6 +301,74 @@
         <view class="tag">{{item.status}}</view>
       </view>
       <view class="muted-line">{{item.storeName}} · {{item.quantity}} · 到期 {{item.expireAt}}</view>
+    </view>
+  </view>
+
+  <view wx:elif="{{activeTab === '会员管理'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">会员管理</view>
+      <view class="form-grid">
+        <input value="{{memberSearchKeyword}}" placeholder="搜索会员ID / 昵称 / 手机号" bindinput="inputMemberSearch" />
+        <view class="ghost-action" bindtap="refreshMemberManagement">刷新会员</view>
+      </view>
+      <view class="muted-line">可查看余额、积分、碎片和酒水券，也可以打开详情查看消费、报名和存酒记录。</view>
+    </view>
+    <view wx:if="{{!filteredMembers.length}}" class="empty small">暂无会员数据</view>
+    <view class="member-pick-list">
+      <view class="member-pick" wx:for="{{filteredMembers}}" wx:for-item="item" wx:key="id" data-id="{{item.id}}" bindtap="selectMember">
+        <view>
+          <view class="item-title">{{item.nickname || item.id}}</view>
+          <view class="muted-line">余额 ¥{{item.balance || 0}} · 积分 {{item.points || 0}} · 碎片 {{item.invitePieces || 0}} · 酒水券 {{item.drinkVoucherCount || 0}}</view>
+          <view class="muted-line">会员ID {{item.id}} · 手机号 {{item.phone || '未绑定'}}</view>
+        </view>
+        <view class="ghost-action mini-action">详情</view>
+      </view>
+    </view>
+    <view wx:if="{{memberDetailVisible}}" class="member-detail-mask" bindtap="closeMemberDetail">
+      <view class="member-detail-dialog" catchtap="noop">
+        <view class="card-top">
+          <view>
+            <view class="item-title">{{selectedMember.nickname || '会员详情'}}</view>
+            <view class="muted-line">会员ID {{selectedMember.id || '-'}} · {{selectedMember.phone || '未绑定手机号'}}</view>
+          </view>
+          <view class="ghost-action mini-action" bindtap="closeMemberDetail">关闭</view>
+        </view>
+        <view class="points-num">{{selectedMember.balance || 0}} 余额 · {{selectedMember.points || 0}} 积分 · {{selectedMember.invitePieces || 0}} 碎片 · {{selectedMember.drinkVoucherCount || 0}} 酒水券</view>
+        <view class="muted-line">消费 {{selectedMember.orders.length || 0}} · 报名 {{selectedMember.signups.length || 0}} · 存酒 {{selectedMember.cellar.length || 0}}</view>
+        <scroll-view scroll-y class="member-detail-scroll">
+          <view class="detail-block">
+            <view class="sub-title">积分流水</view>
+            <view class="log-row" wx:for="{{selectedMember.logs}}" wx:for-item="item" wx:key="id">
+              <view>{{item.type === 'pieces' ? '碎片' : '积分'}} {{item.delta > 0 ? '+' : ''}}{{item.delta}}</view>
+              <text>{{item.reason}} · {{item.createdAt}}</text>
+            </view>
+          </view>
+          <view class="detail-block">
+            <view class="sub-title">消费记录</view>
+            <view class="muted-line" wx:if="{{!selectedMember.orders.length}}">暂无消费记录</view>
+            <view class="detail-item" wx:for="{{selectedMember.orders}}" wx:for-item="item" wx:key="id">
+              <view>{{item.id}} · {{item.status}}</view>
+              <text>{{item.createdAt}} · ¥{{item.total}}</text>
+            </view>
+          </view>
+          <view class="detail-block">
+            <view class="sub-title">报名记录</view>
+            <view class="muted-line" wx:if="{{!selectedMember.signups.length}}">暂无报名记录</view>
+            <view class="detail-item" wx:for="{{selectedMember.signups}}" wx:for-item="item" wx:key="id">
+              <view>{{item.title}}</view>
+              <text>{{item.date}} · {{item.status}}</text>
+            </view>
+          </view>
+          <view class="detail-block">
+            <view class="sub-title">存酒记录</view>
+            <view class="muted-line" wx:if="{{!selectedMember.cellar.length}}">暂无存酒记录</view>
+            <view class="detail-item" wx:for="{{selectedMember.cellar}}" wx:for-item="item" wx:key="id">
+              <view>{{item.wineName}}</view>
+              <text>{{item.quantity}} · {{item.status}} · {{item.expireAt}}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
     </view>
   </view>
 
@@ -396,8 +501,7 @@
     <view class="menu-editor">
       <view class="editor-title">会员积分与碎片</view>
       <view class="form-grid">
-        <input value="{{pointsMemberKey}}" placeholder="会员ID / 昵称 / 手机号" bindinput="inputPointsMemberKey" />
-        <input value="{{pointsReason}}" placeholder="操作原因" bindinput="inputPointsReason" />
+        <input value="{{pointsMemberKey}}" placeholder="会员ID" bindinput="inputPointsMemberKey" />
       </view>
       <view class="form-grid">
         <input value="{{pointsDelta}}" type="number" placeholder="数量" bindinput="inputPointsDelta" />
@@ -537,7 +641,7 @@
       </view>
       <view wx:if="{{activeRankType === 'yearly'}}" class="rank-form">
         <input value="{{rankDeltaScore}}" type="number" placeholder="增减分数" bindinput="inputRankDeltaScore" />
-        <view class="solid-action" bindtap="addRankScore">增加分数</view>
+        <view class="solid-action" bindtap="addRankScore">调整分数</view>
         <view class="ghost-action danger" bindtap="deleteRankUser">删除</view>
       </view>
       <view wx:if="{{selectedRankUser}}" class="selected-member">
@@ -557,6 +661,35 @@
       </view>
       <view wx:if="{{activeRankType === 'yearly'}}" class="move" data-id="{{item.id}}" data-direction="up" catchtap="moveRank">↑</view>
       <view wx:if="{{activeRankType === 'yearly'}}" class="move" data-id="{{item.id}}" data-direction="down" catchtap="moveRank">↓</view>
+    </view>
+  </view>
+
+  <view wx:if="{{memberPickerVisible}}" class="member-picker-mask" bindtap="closeMemberPicker">
+    <view class="member-picker-dialog" catchtap="noop">
+      <view class="member-picker-head">
+        <view>
+          <view class="member-picker-title">{{memberPickerTitle}}</view>
+          <view class="muted-line">{{memberPickerHint}}</view>
+        </view>
+        <view class="ghost-action mini-action" bindtap="closeMemberPicker">关闭</view>
+      </view>
+      <view wx:if="{{memberPickerSelectedId}}" class="selected-member">
+        <view>
+          <view class="item-title">{{memberPickerSelectedName}}</view>
+          <view class="muted-line">会员ID {{memberPickerSelectedId}}</view>
+        </view>
+        <view class="tag">已选中</view>
+      </view>
+      <scroll-view scroll-y class="member-picker-list">
+        <view class="member-picker-item {{memberPickerSelectedId === item.id ? 'member-picker-active' : ''}}" wx:for="{{memberPickerCandidates}}" wx:for-item="item" wx:key="id" data-id="{{item.id}}" bindtap="selectMemberCandidate">
+          <view class="item-title">{{item.nickname || '未命名会员'}}</view>
+          <view class="muted-line">会员ID {{item.id}} · 手机号 {{item.phone || '未绑定'}} · 余额 {{item.balance || 0}} · 积分 {{item.points || 0}} · 酒水券 {{item.drinkVoucherCount || 0}}</view>
+        </view>
+      </scroll-view>
+      <view class="member-picker-actions">
+        <view class="ghost-action" bindtap="closeMemberPicker">取消</view>
+        <view class="solid-action" bindtap="confirmMemberPicker">{{memberPickerConfirmText}}</view>
+      </view>
     </view>
   </view>
 </view>

@@ -162,6 +162,13 @@
   font-weight: 900;
 }
 
+.pay-sub {
+  margin-right: 18rpx;
+  color: #d8b4fe;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
 .pay-amount {
   color: #ef5b58;
   margin-left: 10rpx;

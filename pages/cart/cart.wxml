@@ -35,10 +35,11 @@
 
   <view class="checkout-bar">
     <view class="pay-info">
-      <text>应付:</text>
+      <text>券后预估:</text>
       <text class="pay-amount">¥{{summary.total}}元</text>
     </view>
-    <button class="checkout-btn" bindtap="checkout">立即下单</button>
+    <view wx:if="{{summary.voucherDiscount}}" class="pay-sub">酒水券抵扣 ¥{{summary.voucherDiscount}}</view>
+    <button class="checkout-btn" bindtap="checkout">去结算</button>
   </view>
 </view>
 <main-tabbar active="cart" />

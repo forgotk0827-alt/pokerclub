@@ -1,0 +1,154 @@
+.checkout-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 168rpx;
+  background:
+    linear-gradient(180deg, #2d1b46 0%, #120a1f 360rpx),
+    #120a1f;
+  color: #fff;
+}
+
+.checkout-hero,
+.summary-card,
+.method-card,
+.detail-card,
+.items-card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+  border-radius: 8rpx;
+  background: #241633;
+  border: 1rpx solid rgba(216, 180, 254, 0.14);
+  box-shadow: 0 16rpx 36rpx rgba(24, 11, 39, 0.28);
+}
+
+.checkout-hero {
+  background: linear-gradient(135deg, #3b1b5f, #1b102b);
+}
+
+.hero-title,
+.detail-title,
+.method-title {
+  font-size: 32rpx;
+  line-height: 42rpx;
+  font-weight: 900;
+}
+
+.hero-sub,
+.method-desc,
+.method-tip {
+  margin-top: 10rpx;
+  color: #c6b8dc;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.summary-row,
+.detail-row,
+.method-top,
+.footer-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-row,
+.detail-row {
+  min-height: 56rpx;
+  color: #f4ecff;
+  font-size: 26rpx;
+}
+
+.summary-line {
+  height: 1rpx;
+  margin: 8rpx 0;
+  background: rgba(216, 180, 254, 0.18);
+}
+
+.sub-green {
+  color: #a7f3d0;
+}
+
+.total-row,
+.strong {
+  font-weight: 900;
+}
+
+.total-amount,
+.footer-amount {
+  color: #f0c15a;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.method-card {
+  padding-bottom: 22rpx;
+}
+
+.method-top {
+  gap: 20rpx;
+}
+
+.method-title {
+  font-size: 28rpx;
+}
+
+.method-tip {
+  margin-top: 14rpx;
+}
+
+.detail-card,
+.items-card {
+  background: #1f1330;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 54rpx;
+  color: #d8b4fe;
+  font-size: 25rpx;
+}
+
+.item-name {
+  min-width: 0;
+  flex: 1;
+  margin-right: 18rpx;
+}
+
+.item-price {
+  flex: 0 0 auto;
+  color: #f4ecff;
+}
+
+.checkout-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  background: #1b102b;
+  border-top: 1rpx solid rgba(216, 180, 254, 0.16);
+}
+
+.footer-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.footer-label {
+  color: #c6b8dc;
+  font-size: 25rpx;
+}
+
+.pay-btn {
+  width: 250rpx;
+  height: 92rpx;
+  border-radius: 8rpx;
+  background: #8b5cf6;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 900;
+}

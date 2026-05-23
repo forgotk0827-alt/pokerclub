@@ -224,6 +224,7 @@ const member = {
   balance: 0,
   points: 0,
   gems: 0,
+  drinkVoucherCount: 0,
   invitePieces: 0,
   consultant: '专属顾问-程经理'
 }

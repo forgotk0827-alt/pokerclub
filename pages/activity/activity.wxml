@@ -1,5 +1,13 @@
 <topbar title="活动报名" />
 <view class="page activity-page">
+  <view class="store-switch" bindtap="switchStore">
+    <view class="store-switch-main">
+      <view class="store-switch-label">当前门店</view>
+      <view class="store-switch-name">{{selectedStoreName || '请选择门店'}}</view>
+    </view>
+    <view class="store-switch-arrow">›</view>
+  </view>
+
   <view class="date-band">
     <view wx:for="{{dates}}" wx:key="key" class="date-item" data-key="{{item.key}}" bindtap="selectDay">
       <view class="date-pill {{activeDay === item.key ? 'date-active' : ''}} {{item.key === 'all' ? 'date-pill-all' : ''}}">
