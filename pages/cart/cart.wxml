@@ -21,6 +21,10 @@
             <text class="cart-price" wx:else>¥{{item.price}}.00</text>
             <text class="cart-unit">x{{item.count}}</text>
           </view>
+          <view class="pay-switch" wx:if="{{item.points}}">
+            <view class="pay-option {{item.payType !== 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="cash" bindtap="switchPayType">现金</view>
+            <view class="pay-option {{item.payType === 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="points" bindtap="switchPayType">{{item.points}}积分</view>
+          </view>
         </view>
         <view class="stepper">
           <view class="step-btn" data-id="{{item.cartKey || item.id}}" data-delta="-1" bindtap="changeCount">-</view>

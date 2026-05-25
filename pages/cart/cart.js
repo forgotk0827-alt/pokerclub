@@ -38,6 +38,16 @@ Page({
       })
     })
   },
+  switchPayType(event) {
+    const { id, payType } = event.currentTarget.dataset
+    state.requireLogin('切换支付方式', () => {
+      const cart = state.updateCartItemPayType(id, payType)
+      this.setData({
+        cart,
+        summary: state.getCartSummary(cart)
+      })
+    })
+  },
   clearCart() {
     state.requireLogin('清空购物车', () => {
       if (!this.data.cart.length) {

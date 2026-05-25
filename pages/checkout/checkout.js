@@ -78,6 +78,11 @@ Page({
   toggleVoucher(event) {
     this.setData({ useVoucher: !!event.detail.value }, () => this.rebuildPreview())
   },
+  switchPayType(event) {
+    const { id, payType } = event.currentTarget.dataset
+    const cart = state.updateCartItemPayType(id, payType)
+    this.setData({ cart }, () => this.rebuildPreview())
+  },
   submitOrder() {
     if (this.data.paying) return
     if (!this.data.cart.length) {

@@ -1513,7 +1513,24 @@ function getCart() {
   if (!isLoggedIn()) {
     return []
   }
-  return wx.getStorageSync(KEYS.cart) || []
+  const cart = wx.getStorageSync(KEYS.cart) || []
+  const products = getProducts()
+  let changed = false
+  const hydrated = cart.map((item) => {
+    const product = products.find((entry) => entry.id === item.id)
+    const points = Number(item.points || (product && product.points) || 0)
+    const payType = item.payType === 'points' && points > 0 ? 'points' : 'cash'
+    const cartKey = item.cartKey || `${item.id}::${payType}`
+    if (points !== Number(item.points || 0) || payType !== item.payType || cartKey !== item.cartKey) changed = true
+    return Object.assign({}, item, {
+      price: Number(item.price || (product && product.price) || 0),
+      points,
+      payType,
+      cartKey
+    })
+  })
+  if (changed) wx.setStorageSync(KEYS.cart, hydrated)
+  return hydrated
 }
 
 function saveCart(cart) {
@@ -2248,6 +2265,36 @@ function updateCartItem(id, delta) {
     .filter((item) => item.count > 0)
   saveCart(next)
   return next
+}
+
+function updateCartItemPayType(id, payType) {
+  if (!isLoggedIn()) {
+    return getCart()
+  }
+  const products = getProducts()
+  const changed = getCart().map((item) => {
+    if ((item.cartKey || item.id) !== id) return item
+    const product = products.find((entry) => entry.id === item.id)
+    const points = Number(item.points || (product && product.points) || 0)
+    const nextPayType = payType === 'points' && points > 0 ? 'points' : 'cash'
+    return Object.assign({}, item, {
+      points,
+      payType: nextPayType,
+      cartKey: `${item.id}::${nextPayType}`
+    })
+  })
+  const merged = []
+  changed.forEach((item) => {
+    const key = item.cartKey || `${item.id}::${item.payType || 'cash'}`
+    const index = merged.findIndex((entry) => (entry.cartKey || entry.id) === key)
+    if (index > -1) {
+      merged[index] = Object.assign({}, merged[index], { count: Number(merged[index].count || 0) + Number(item.count || 0) })
+    } else {
+      merged.push(Object.assign({}, item, { cartKey: key }))
+    }
+  })
+  saveCart(merged)
+  return getCart()
 }
 
 function clearCart() {
@@ -3496,6 +3543,7 @@ module.exports = {
   getCart,
   addToCart,
   updateCartItem,
+  updateCartItemPayType,
   clearCart,
   getCartSummary,
   getProducts,
