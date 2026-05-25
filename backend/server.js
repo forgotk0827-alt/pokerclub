@@ -330,11 +330,38 @@ async function handleUpdateProfile(req, res, user) {
 
 async function handleCreateOrder(req, res, user) {
   const body = await readJson(req)
-  const items = Array.isArray(body.items) ? body.items : []
+  const sourceItems = Array.isArray(body.items) ? body.items : []
+  let cashTotal = 0
+  let pointsUsed = 0
+  const items = sourceItems.map((item) => {
+    const count = Math.max(0, Number(item.count || 0))
+    const price = Math.max(0, Number(item.originPrice || item.price || 0))
+    const points = Math.max(0, Number(item.originPoints || item.points || 0))
+    const payType = item.payType === 'points' && points > 0 ? 'points' : 'cash'
+    const originSubtotal = price * count
+    const subtotal = payType === 'points' ? 0 : originSubtotal
+    const pointsSubtotal = payType === 'points' ? points * count : 0
+    cashTotal += subtotal
+    pointsUsed += pointsSubtotal
+    return Object.assign({}, item, {
+      count,
+      price,
+      points,
+      payType,
+      originPrice: price,
+      originPoints: points,
+      originSubtotal,
+      subtotal,
+      payableSubtotal: subtotal,
+      pointsSubtotal
+    })
+  }).filter((item) => item.count > 0)
   if (!items.length) throw httpError(400, '订单商品不能为空')
   const store = db.stores.find((item) => item.id === body.storeId) || db.stores[0]
   const table = normalizeOrderTable(store, body)
-  const total = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.count || 0), 0)
+  const total = cashTotal
+  const pointsAvailable = Number(user.member.points || 0)
+  if (pointsUsed > pointsAvailable) throw httpError(400, '积分不足')
   const order = {
     id: `DY${Date.now()}`,
     memberId: user.member.id,
@@ -346,12 +373,28 @@ async function handleCreateOrder(req, res, user) {
     mode: body.mode || '堂食',
     status: '待支付',
     items,
+    originalTotal: items.reduce((sum, item) => sum + Number(item.originSubtotal || 0), 0),
+    cashTotal,
+    pointsUsed,
     total,
     createdAt: now()
   }
   db.orders.unshift(order)
+  if (pointsUsed > 0) {
+    db.pointLogs.unshift({
+      id: `PT${Date.now()}`,
+      memberId: user.member.id,
+      nickname: user.member.nickname,
+      delta: -pointsUsed,
+      reason: `订单积分兑换 ${order.id}`,
+      storeId: store.id,
+      storeName: store.shortName || store.name,
+      operator: '系统',
+      createdAt: now()
+    })
+  }
   user.member.totalSpent = Number(user.member.totalSpent || 0) + total
-  user.member.points = Number(user.member.points || 0) + Math.floor(total)
+  user.member.points = Math.max(0, Number(user.member.points || 0) - pointsUsed) + Math.floor(total)
   user.member.consumptionCount = Number(user.member.consumptionCount || 0) + 1
   user.member.level = levelBySpend(user.member.totalSpent, user.member.points)
   await persist()
@@ -393,17 +436,47 @@ async function handleRecharge(req, res, user) {
 
 async function handleCreateOrderPayment(req, res, user) {
   const body = await readJson(req)
-  const items = Array.isArray(body.items) ? body.items : []
+  const sourceItems = Array.isArray(body.items) ? body.items : []
+  let cashTotal = 0
+  let pointsUsed = 0
+  const items = sourceItems.map((item) => {
+    const count = Math.max(0, Number(item.count || 0))
+    const price = Math.max(0, Number(item.originPrice || item.price || 0))
+    const points = Math.max(0, Number(item.originPoints || item.points || 0))
+    const payType = item.payType === 'points' && points > 0 ? 'points' : 'cash'
+    const originSubtotal = price * count
+    const subtotal = payType === 'points' ? 0 : originSubtotal
+    const pointsSubtotal = payType === 'points' ? points * count : 0
+    cashTotal += subtotal
+    pointsUsed += pointsSubtotal
+    return Object.assign({}, item, {
+      count,
+      price,
+      points,
+      payType,
+      originPrice: price,
+      originPoints: points,
+      originSubtotal,
+      subtotal,
+      payableSubtotal: subtotal,
+      pointsSubtotal
+    })
+  }).filter((item) => item.count > 0)
   if (!items.length) throw httpError(400, '订单商品不能为空')
   const store = db.stores.find((item) => item.id === body.storeId) || db.stores[0]
   const table = normalizeOrderTable(store, body)
   const originalTotal = Number(body.originalTotal || items.reduce((sum, item) => sum + Number(item.originPrice || item.price || 0) * Number(item.count || 0), 0))
   const voucherDiscount = 0
   const voucherCountUsed = 0
-  const payableBeforeBalance = Math.max(0, Number(body.payableBeforeBalance || (originalTotal - voucherDiscount)))
+  const payableBeforeBalance = cashTotal
   const balanceAvailable = Number(user.member.balance || 0)
   const balanceUsed = Math.max(0, Math.min(Number(body.balanceUsed || 0), balanceAvailable, payableBeforeBalance))
-  const total = Math.max(0, Number(body.total || (payableBeforeBalance - balanceUsed)))
+  const total = Math.max(0, payableBeforeBalance - balanceUsed)
+  const pointsAvailable = Number(user.member.points || 0)
+  if (pointsUsed > pointsAvailable) throw httpError(400, '积分不足')
+  const paymentType = total > 0
+    ? (balanceUsed > 0 || pointsUsed > 0 ? 'mixed' : 'wechat')
+    : (pointsUsed > 0 ? (balanceUsed > 0 ? 'points_balance' : 'points') : 'balance')
   if (originalTotal <= 0) throw httpError(400, '订单金额无效')
   const order = {
     id: `DY${Date.now()}`,
@@ -416,10 +489,13 @@ async function handleCreateOrderPayment(req, res, user) {
     mode: body.mode || '堂食',
     status: '待支付',
     payStatus: 'pending',
-    paymentType: balanceUsed > 0 ? (total > 0 ? 'mixed' : 'balance') : 'wechat',
+    paymentType,
     outTradeNo: `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`,
     items,
     originalTotal,
+    cashTotal,
+    pointsUsed,
+    pointsDeducted: false,
     voucherDiscount,
     voucherCountUsed,
     voucherRuleName: String(body.voucherRuleName || '').trim(),
@@ -431,6 +507,22 @@ async function handleCreateOrderPayment(req, res, user) {
   db.orders.unshift(order)
   if (balanceUsed > 0) {
     user.member.balance = Math.max(0, balanceAvailable - balanceUsed)
+  }
+  if (pointsUsed > 0) {
+    user.member.points = Math.max(0, pointsAvailable - pointsUsed)
+    user.member.level = levelBySpend(user.member.totalSpent || 0, user.member.points)
+    order.pointsDeducted = true
+    db.pointLogs.unshift({
+      id: `PT${Date.now()}`,
+      memberId: user.member.id,
+      nickname: user.member.nickname,
+      delta: -pointsUsed,
+      reason: `订单积分兑换 ${order.id}`,
+      storeId: store.id,
+      storeName: store.shortName || store.name,
+      operator: '系统',
+      createdAt: now()
+    })
   }
   await persist()
   if (total <= 0) {

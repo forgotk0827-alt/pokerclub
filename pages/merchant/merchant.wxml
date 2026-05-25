@@ -42,11 +42,14 @@
         <view class="tag">{{item.status}}</view>
       </view>
       <view class="muted-line">{{item.storeName}} · {{item.tableName || '未指定桌号'}} · {{item.createdAt}} · {{item.mode}} · ¥{{item.total}}</view>
-      <view class="goods" wx:for="{{item.items}}" wx:for-item="goods" wx:key="id">{{goods.name}} · ¥{{goods.price}} x{{goods.count}}</view>
-      <view class="muted-line" wx:if="{{item.originalTotal || item.voucherDiscount || item.balanceUsed}}">
+      <view class="goods" wx:for="{{item.items}}" wx:for-item="goods" wx:key="id">
+        {{goods.name}} · <text wx:if="{{goods.payType === 'points'}}">{{goods.points || goods.originPoints || 0}}积分</text><text wx:else>¥{{goods.price}}</text> x{{goods.count}}
+      </view>
+      <view class="muted-line" wx:if="{{item.originalTotal || item.voucherDiscount || item.balanceUsed || item.pointsUsed}}">
         原价 ¥{{item.originalTotal || item.total}}
         <text wx:if="{{item.voucherDiscount}}"> · 酒水券抵扣 ¥{{item.voucherDiscount}}</text>
         <text wx:if="{{item.balanceUsed}}"> · 储值卡抵扣 ¥{{item.balanceUsed}}</text>
+        <text wx:if="{{item.pointsUsed}}"> · 积分 {{item.pointsUsed}}</text>
         <text> · 实付 ¥{{item.total}}</text>
       </view>
       <view class="action-row">

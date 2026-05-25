@@ -95,6 +95,10 @@
   margin-top: 14rpx;
 }
 
+.warning {
+  color: #fca5a5;
+}
+
 .detail-card,
 .items-card {
   background: #1f1330;
@@ -151,4 +155,8 @@
   color: #fff;
   font-size: 30rpx;
   font-weight: 900;
+}
+
+.pay-btn[disabled] {
+  opacity: 0.55;
 }

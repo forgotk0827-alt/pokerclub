@@ -7,8 +7,12 @@
 
   <view class="summary-card">
     <view class="summary-row">
-      <text>商品原价</text>
-      <text>¥{{preview.originalTotal}}</text>
+      <text>商品现金价</text>
+      <text>¥{{preview.cashTotal}}</text>
+    </view>
+    <view class="summary-row" wx:if="{{preview.pointsUsed}}">
+      <text>积分支付</text>
+      <text>{{preview.pointsUsed}}积分</text>
     </view>
     <view class="summary-row" wx:if="{{useBalance}}">
       <text>储值卡抵扣</text>
@@ -16,7 +20,7 @@
     </view>
     <view class="summary-line"></view>
     <view class="summary-row total-row">
-      <text>最终支付</text>
+      <text>最终现金支付</text>
       <text class="total-amount">¥{{preview.payableTotal}}</text>
     </view>
   </view>
@@ -35,6 +39,17 @@
   <view class="method-card">
     <view class="method-top">
       <view>
+        <view class="method-title">积分</view>
+        <view class="method-desc">可用 {{member.points || 0}} 积分 · 本单使用 {{preview.pointsUsed || 0}} 积分</view>
+      </view>
+    </view>
+    <view class="method-tip" wx:if="{{preview.pointsUsed}}">积分兑换按菜品设置的积分价格扣减，和酒水券无关。</view>
+    <view class="method-tip warning" wx:if="{{!preview.pointsEnough}}">当前积分不足，请返回购物车改用现金支付。</view>
+  </view>
+
+  <view class="method-card">
+    <view class="method-top">
+      <view>
         <view class="method-title">酒水券</view>
         <view class="method-desc">{{member.drinkVoucherCount || 0}} 张 · {{voucherSettings.ruleName}}</view>
       </view>
@@ -45,8 +60,12 @@
   <view class="detail-card">
     <view class="detail-title">支付明细</view>
     <view class="detail-row">
-      <text>原价</text>
-      <text>¥{{preview.originalTotal}}</text>
+      <text>商品现金价</text>
+      <text>¥{{preview.cashTotal}}</text>
+    </view>
+    <view class="detail-row" wx:if="{{preview.pointsUsed}}">
+      <text>积分支付</text>
+      <text>{{preview.pointsUsed}}积分</text>
     </view>
     <view class="detail-row" wx:if="{{preview.voucherDiscount}}">
       <text>酒水券</text>
@@ -64,9 +83,10 @@
 
   <view class="items-card">
     <view class="detail-title">商品清单</view>
-    <view class="item-row" wx:for="{{cart}}" wx:key="id">
+    <view class="item-row" wx:for="{{cart}}" wx:key="cartKey">
       <text class="item-name">{{item.name}} x{{item.count}}</text>
-      <text class="item-price">¥{{item.price}}.00</text>
+      <text class="item-price" wx:if="{{item.payType === 'points'}}">{{item.points || 0}}积分</text>
+      <text class="item-price" wx:else>¥{{item.price}}.00</text>
     </view>
   </view>
 
@@ -75,6 +95,6 @@
       <text class="footer-label">实付</text>
       <text class="footer-amount">¥{{preview.payableTotal}}</text>
     </view>
-    <button class="pay-btn" bindtap="submitOrder" loading="{{paying}}">确认支付</button>
+    <button class="pay-btn" disabled="{{!preview.pointsEnough}}" bindtap="submitOrder" loading="{{paying}}">确认支付</button>
   </view>
 </scroll-view>

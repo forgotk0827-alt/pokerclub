@@ -840,6 +840,10 @@ function createOrderWithWechatPay(options = {}, callback) {
   const store = getStore()
   const table = getTableContext()
   const preview = buildCheckoutPreview(cart, getMember(), options)
+  if (!preview.pointsEnough) {
+    wx.showToast({ title: '积分不足', icon: 'none' })
+    return false
+  }
   requestApi(
     '/api/wechat/pay/order',
     'POST',
@@ -850,6 +854,8 @@ function createOrderWithWechatPay(options = {}, callback) {
       mode: options.mode || '堂食',
       items: preview.items.map((item) => Object.assign({}, item)),
       originalTotal: preview.originalTotal,
+      cashTotal: preview.cashTotal,
+      pointsUsed: preview.pointsUsed,
       voucherDiscount: preview.voucherDiscount,
       voucherCountUsed: preview.voucherCountUsed,
       voucherRuleName: getVoucherSettings().ruleName || '',
@@ -2203,19 +2209,27 @@ function openActivityLocation(activity) {
   return true
 }
 
-function addToCart(product, count = 1) {
+function addToCart(product, count = 1, options = {}) {
   if (!isLoggedIn()) {
     return getCart()
   }
   const cart = getCart()
-  const index = cart.findIndex((item) => item.id === product.id)
+  const payType = options.payType === 'points' && Number(product.points || 0) > 0 ? 'points' : 'cash'
+  const cartKey = `${product.id}::${payType}`
+  const index = cart.findIndex((item) => (item.cartKey || `${item.id}::${item.payType || 'cash'}`) === cartKey)
   if (index > -1) {
     cart[index].count += count
+    cart[index].payType = payType
+    cart[index].cartKey = cartKey
+    cart[index].points = Number(product.points || 0)
   } else {
     cart.push({
       id: product.id,
+      cartKey,
       name: product.name,
       price: Number(product.price || 0),
+      points: Number(product.points || 0),
+      payType,
       image: product.image,
       categoryId: product.categoryId || 'activity',
       count
@@ -2230,7 +2244,7 @@ function updateCartItem(id, delta) {
     return getCart()
   }
   const next = getCart()
-    .map((item) => (item.id === id ? Object.assign({}, item, { count: item.count + delta }) : item))
+    .map((item) => ((item.cartKey || item.id) === id ? Object.assign({}, item, { count: item.count + delta }) : item))
     .filter((item) => item.count > 0)
   saveCart(next)
   return next
@@ -2248,6 +2262,8 @@ function getCartSummary(cart = getCart()) {
   return {
     count: cart.reduce((sum, item) => sum + Number(item.count || 0), 0),
     originalTotal: preview.originalTotal,
+    cashTotal: preview.cashTotal,
+    pointsUsed: preview.pointsUsed,
     voucherDiscount: preview.voucherDiscount,
     voucherCountUsed: preview.voucherCountUsed,
     total: preview.payableTotal
@@ -2268,15 +2284,29 @@ function applyDrinkVoucherDiscount(cart, member = getMember()) {
 function applyDrinkVoucherDiscountWithOptions(cart, member = getMember(), options = {}) {
   const source = Array.isArray(cart) ? cart : []
   let originalTotal = 0
+  let cashTotal = 0
+  let pointsUsed = 0
   const items = source.map((item) => {
     const count = Math.max(0, Number(item && item.count || 0))
     const price = Math.max(0, Number(item && item.price || 0))
-    const subtotal = price * count
-    originalTotal += subtotal
+    const points = Math.max(0, Number(item && item.points || 0))
+    const payType = item && item.payType === 'points' && points > 0 ? 'points' : 'cash'
+    const subtotal = payType === 'points' ? 0 : price * count
+    const originSubtotal = price * count
+    const pointsSubtotal = payType === 'points' ? points * count : 0
+    cashTotal += subtotal
+    pointsUsed += pointsSubtotal
+    originalTotal += originSubtotal
     return Object.assign({}, item, {
+      payType,
+      cartKey: item.cartKey || `${item.id}::${payType}`,
+      points,
       subtotal,
+      originSubtotal,
+      pointsSubtotal,
       payableSubtotal: subtotal,
       originPrice: price,
+      originPoints: points,
       voucherCountUsed: 0,
       voucherDiscount: 0
     })
@@ -2284,9 +2314,11 @@ function applyDrinkVoucherDiscountWithOptions(cart, member = getMember(), option
   return {
     items,
     originalTotal,
+    cashTotal,
+    pointsUsed,
     voucherDiscount: 0,
     voucherCountUsed: 0,
-    payableTotal: originalTotal
+    payableTotal: cashTotal
   }
 }
 
@@ -2301,6 +2333,8 @@ function buildCheckoutPreview(cart, member = getMember(), options = {}) {
     useVoucher,
     useBalance,
     balanceAvailable,
+    pointsAvailable: Math.max(0, Number(member && member.points || 0)),
+    pointsEnough: Math.max(0, Number(member && member.points || 0)) >= Number(voucherPreview.pointsUsed || 0),
     balanceUsed,
     payableBeforeBalance: voucherPreview.payableTotal,
     payableTotal
@@ -2641,7 +2675,11 @@ function createOrder(options = {}) {
   if (!cart.length) return null
   const store = getStore()
   const table = getTableContext()
-  const summary = applyDrinkVoucherDiscount(cart, getMember())
+  const summary = buildCheckoutPreview(cart, getMember(), options)
+  if (!summary.pointsEnough) {
+    wx.showToast({ title: '积分不足', icon: 'none' })
+    return null
+  }
   const order = {
     id: `DY${Date.now()}`,
     storeId: store.id,
@@ -2653,6 +2691,8 @@ function createOrder(options = {}) {
     createdAt: formatTime(new Date()),
     items: summary.items.map((item) => Object.assign({}, item)),
     originalTotal: summary.originalTotal,
+    cashTotal: summary.cashTotal,
+    pointsUsed: summary.pointsUsed,
     voucherDiscount: summary.voucherDiscount,
     voucherCountUsed: summary.voucherCountUsed,
     total: summary.payableTotal
@@ -2660,10 +2700,10 @@ function createOrder(options = {}) {
   const orders = getOrders()
   orders.unshift(order)
   saveOrders(orders)
-  if (summary.voucherCountUsed) {
+  if (summary.pointsUsed) {
     const member = getMember()
     saveMember(Object.assign({}, member, {
-      drinkVoucherCount: Math.max(0, Number(member.drinkVoucherCount || 0) - Number(summary.voucherCountUsed || 0))
+      points: Math.max(0, Number(member.points || 0) - Number(summary.pointsUsed || 0))
     }))
   }
   recordConsumption(summary.payableTotal)

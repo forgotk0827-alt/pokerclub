@@ -45,7 +45,8 @@
                   <view wx:if="{{product.points}}" class="points"><text>{{product.points}}</text> 积分兑换</view>
                   <view class="menu-price">¥{{product.price}}.00/<text>{{product.unit}}</text></view>
                 </view>
-                <view class="menu-add {{!product.sale ? 'disabled' : ''}}" data-id="{{product.id}}" bindtap="addCart" aria-label="加入购物车">
+                <view class="point-add {{!product.sale ? 'disabled' : ''}}" wx:if="{{product.points}}" data-id="{{product.id}}" data-pay-type="points" bindtap="addCart">积分</view>
+                <view class="menu-add {{!product.sale ? 'disabled' : ''}}" data-id="{{product.id}}" data-pay-type="cash" bindtap="addCart" aria-label="加入购物车">
                   <view class="plus-line plus-h"></view>
                   <view class="plus-line plus-v"></view>
                 </view>
