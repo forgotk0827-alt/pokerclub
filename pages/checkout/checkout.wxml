@@ -2,7 +2,7 @@
 <scroll-view scroll-y class="page checkout-page">
   <view class="checkout-hero">
     <view class="hero-title">结算中转页</view>
-    <view class="hero-sub">储值卡可在线抵扣，酒水券到店消费后由门店确认使用</view>
+    <view class="hero-sub">储值卡可在线抵扣，剩余金额进入微信支付</view>
   </view>
 
   <view class="summary-card">
@@ -42,19 +42,11 @@
         <view class="method-title">积分</view>
         <view class="method-desc">可用 {{member.points || 0}} 积分 · 本单使用 {{preview.pointsUsed || 0}} 积分</view>
       </view>
+      <switch checked="{{usePoints}}" disabled="{{!hasPointItems}}" color="#8b5cf6" bindchange="togglePoints" />
     </view>
-    <view class="method-tip" wx:if="{{preview.pointsUsed}}">积分兑换按菜品设置的积分价格扣减，和酒水券无关。</view>
+    <view class="method-tip" wx:if="{{preview.pointsUsed}}">积分兑换按菜品设置的积分价格扣减。</view>
+    <view class="method-tip" wx:if="{{!hasPointItems}}">本单商品暂未设置积分兑换价。</view>
     <view class="method-tip warning" wx:if="{{!preview.pointsEnough}}">当前积分不足，请返回购物车改用现金支付。</view>
-  </view>
-
-  <view class="method-card">
-    <view class="method-top">
-      <view>
-        <view class="method-title">酒水券</view>
-        <view class="method-desc">{{member.drinkVoucherCount || 0}} 张 · {{voucherSettings.ruleName}}</view>
-      </view>
-    </view>
-    <view class="method-tip">{{voucherSettings.note}}</view>
   </view>
 
   <view class="detail-card">
@@ -66,10 +58,6 @@
     <view class="detail-row" wx:if="{{preview.pointsUsed}}">
       <text>积分支付</text>
       <text>{{preview.pointsUsed}}积分</text>
-    </view>
-    <view class="detail-row" wx:if="{{preview.voucherDiscount}}">
-      <text>酒水券</text>
-      <text>-¥{{preview.voucherDiscount}}</text>
     </view>
     <view class="detail-row" wx:if="{{preview.balanceUsed}}">
       <text>储值卡</text>
@@ -86,10 +74,6 @@
     <view class="item-row checkout-item-row" wx:for="{{cart}}" wx:key="cartKey">
       <view class="item-main">
         <text class="item-name">{{item.name}} x{{item.count}}</text>
-        <view class="pay-switch" wx:if="{{item.points}}">
-          <view class="pay-option {{item.payType !== 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="cash" bindtap="switchPayType">现金</view>
-          <view class="pay-option {{item.payType === 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="points" bindtap="switchPayType">{{item.points}}积分</view>
-        </view>
       </view>
       <view class="item-price" wx:if="{{item.payType === 'points'}}">{{item.points || 0}}积分</view>
       <view class="item-price" wx:else>¥{{item.price}}.00</view>

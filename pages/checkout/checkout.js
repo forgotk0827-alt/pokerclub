@@ -4,7 +4,6 @@ Page({
   data: {
     cart: [],
     member: {},
-    voucherSettings: state.getVoucherSettings(),
     preview: {
       originalTotal: 0,
       voucherDiscount: 0,
@@ -16,6 +15,8 @@ Page({
       pointsEnough: true
     },
     useBalance: true,
+    usePoints: false,
+    hasPointItems: false,
     useVoucher: false,
     paying: false
   },
@@ -40,7 +41,7 @@ Page({
     state.fetchProducts(() => this.refresh())
   },
   refresh() {
-    const cart = state.getCart()
+    const cart = this.data.usePoints ? state.getCart() : state.resetCartPayTypes('cash')
     const member = state.getMember()
     if (!cart.length) {
       this.setData({ cart, member, preview: {
@@ -57,11 +58,14 @@ Page({
       return
     }
     const useBalance = Number(member.balance || 0) > 0
+    const hasPointItems = cart.some((item) => Number(item.points || 0) > 0)
+    const usePoints = cart.some((item) => item.payType === 'points')
     this.setData({
       cart,
       member,
-      voucherSettings: state.getVoucherSettings(),
       useBalance,
+      usePoints,
+      hasPointItems,
       useVoucher: false
     }, () => this.rebuildPreview())
   },
@@ -75,13 +79,17 @@ Page({
   toggleBalance(event) {
     this.setData({ useBalance: !!event.detail.value }, () => this.rebuildPreview())
   },
+  togglePoints(event) {
+    const usePoints = !!event.detail.value
+    const cart = state.resetCartPayTypes(usePoints ? 'points' : 'cash')
+    this.setData({
+      cart,
+      usePoints,
+      hasPointItems: cart.some((item) => Number(item.points || 0) > 0)
+    }, () => this.rebuildPreview())
+  },
   toggleVoucher(event) {
     this.setData({ useVoucher: !!event.detail.value }, () => this.rebuildPreview())
-  },
-  switchPayType(event) {
-    const { id, payType } = event.currentTarget.dataset
-    const cart = state.updateCartItemPayType(id, payType)
-    this.setData({ cart }, () => this.rebuildPreview())
   },
   submitOrder() {
     if (this.data.paying) return

@@ -135,34 +135,6 @@
   color: #f4ecff;
 }
 
-.pay-switch {
-  margin-top: 12rpx;
-  display: flex;
-  width: 240rpx;
-  height: 52rpx;
-  padding: 4rpx;
-  border-radius: 8rpx;
-  background: #180f25;
-  border: 1rpx solid rgba(216, 180, 254, 0.18);
-}
-
-.pay-option {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6rpx;
-  color: #c6b8dc;
-  font-size: 22rpx;
-  font-weight: 800;
-}
-
-.pay-option-active {
-  background: #8b5cf6;
-  color: #fff;
-}
-
 .checkout-footer {
   position: fixed;
   left: 0;
