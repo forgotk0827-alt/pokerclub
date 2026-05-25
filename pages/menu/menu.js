@@ -102,7 +102,7 @@ Page({
       return
     }
     state.requireLogin('加入购物车', () => {
-      const cart = state.addToCart(product, 1, { payType: event.currentTarget.dataset.payType || 'cash' })
+      const cart = state.addToCart(product)
       this.setData({ cartSummary: state.getCartSummary(cart) })
     })
   },

@@ -20,7 +20,7 @@ Page({
     this.refresh()
   },
   refresh() {
-    const cart = state.getCart()
+    const cart = state.resetCartPayTypes ? state.resetCartPayTypes('cash') : state.getCart()
     this.setData({
       cart,
       store: state.getStore(),
@@ -32,16 +32,6 @@ Page({
     const { id, delta } = event.currentTarget.dataset
     state.requireLogin('修改购物车', () => {
       const cart = state.updateCartItem(id, Number(delta))
-      this.setData({
-        cart,
-        summary: state.getCartSummary(cart)
-      })
-    })
-  },
-  switchPayType(event) {
-    const { id, payType } = event.currentTarget.dataset
-    state.requireLogin('切换支付方式', () => {
-      const cart = state.updateCartItemPayType(id, payType)
       this.setData({
         cart,
         summary: state.getCartSummary(cart)

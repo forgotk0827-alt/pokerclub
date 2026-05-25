@@ -2297,6 +2297,25 @@ function updateCartItemPayType(id, payType) {
   return getCart()
 }
 
+function resetCartPayTypes(payType = 'cash') {
+  if (!isLoggedIn()) {
+    return getCart()
+  }
+  const products = getProducts()
+  const next = getCart().map((item) => {
+    const product = products.find((entry) => entry.id === item.id)
+    const points = Number(item.points || (product && product.points) || 0)
+    const nextPayType = payType === 'points' && points > 0 ? 'points' : 'cash'
+    return Object.assign({}, item, {
+      points,
+      payType: nextPayType,
+      cartKey: `${item.id}::${nextPayType}`
+    })
+  })
+  saveCart(next)
+  return getCart()
+}
+
 function clearCart() {
   if (!isLoggedIn()) {
     return getCart()
@@ -3544,6 +3563,7 @@ module.exports = {
   addToCart,
   updateCartItem,
   updateCartItemPayType,
+  resetCartPayTypes,
   clearCart,
   getCartSummary,
   getProducts,

@@ -299,23 +299,6 @@
   background: #ef5b58;
 }
 
-.point-add {
-  position: absolute;
-  right: 70rpx;
-  bottom: 20rpx;
-  min-width: 76rpx;
-  height: 48rpx;
-  padding: 0 16rpx;
-  border-radius: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(239, 91, 88, 0.12);
-  color: #ef5b58;
-  font-size: 22rpx;
-  font-weight: 900;
-}
-
 .plus-line {
   position: absolute;
   border-radius: 2rpx;

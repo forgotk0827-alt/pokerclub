@@ -17,13 +17,8 @@
           <view class="cart-name">{{item.name}}</view>
           <view class="cart-desc">{{item.desc}}</view>
           <view class="cart-meta">
-            <text class="cart-price" wx:if="{{item.payType === 'points'}}">{{item.points || 0}}积分</text>
-            <text class="cart-price" wx:else>¥{{item.price}}.00</text>
+            <text class="cart-price">¥{{item.price}}.00</text>
             <text class="cart-unit">x{{item.count}}</text>
-          </view>
-          <view class="pay-switch" wx:if="{{item.points}}">
-            <view class="pay-option {{item.payType !== 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="cash" bindtap="switchPayType">现金</view>
-            <view class="pay-option {{item.payType === 'points' ? 'pay-option-active' : ''}}" data-id="{{item.cartKey || item.id}}" data-pay-type="points" bindtap="switchPayType">{{item.points}}积分</view>
           </view>
         </view>
         <view class="stepper">
@@ -44,7 +39,6 @@
       <text class="pay-amount">¥{{summary.total}}元</text>
     </view>
     <view wx:if="{{summary.voucherDiscount}}" class="pay-sub">酒水券抵扣 ¥{{summary.voucherDiscount}}</view>
-    <view wx:if="{{summary.pointsUsed}}" class="pay-sub">积分支付 {{summary.pointsUsed}} 积分</view>
     <button class="checkout-btn" bindtap="checkout">去结算</button>
   </view>
 </view>
