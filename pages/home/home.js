@@ -7,9 +7,7 @@ Page({
     featured: [],
     leaderboardTabs: state.leaderboardTabs,
     activeRankType: 'weekly',
-    weeklyLeaderboard: [],
-    monthlyLeaderboard: [],
-    yearlyLeaderboard: [],
+    leaderboardList: [],
     avatarList: ['客', '客', '客', '客', '客'],
     cartSummary: { count: 0, total: 0 }
   },
@@ -36,12 +34,13 @@ Page({
     }, () => this.loadLeaderboardPreview())
   },
   loadLeaderboardPreview() {
-    const store = state.getStore()
     this.setData({
-      weeklyLeaderboard: state.getLeaderboard('weekly', store.id).slice(0, 3),
-      monthlyLeaderboard: state.getLeaderboard('monthly', store.id).slice(0, 3),
-      yearlyLeaderboard: state.getLeaderboard('yearly', store.id).slice(0, 3)
+      leaderboardList: state.getLeaderboard(this.data.activeRankType).slice(0, 5)
     })
+  },
+  switchRankType(event) {
+    const type = event.currentTarget.dataset.type || 'weekly'
+    this.setData({ activeRankType: type, leaderboardList: [] }, () => this.loadLeaderboardPreview())
   },
   switchStore() {
     wx.navigateTo({ url: '/pages/store-select/store-select' })

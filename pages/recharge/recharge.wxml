@@ -14,9 +14,7 @@
     </view>
     <scroll-view scroll-x class="package-row" enable-flex>
       <view wx:for="{{settings.packages}}" wx:key="id" class="package-card {{!useCustomRecharge && selectedIndex === index ? 'package-active' : ''}}" data-index="{{index}}" bindtap="selectPackage">
-        <view wx:if="{{item.tip}}" class="package-tip">{{item.tip}}</view>
         <view class="package-pay">{{item.label}}</view>
-        <view class="package-credit">{{item.subLabel}}</view>
       </view>
     </scroll-view>
   </view>
@@ -30,7 +28,7 @@
       <view class="custom-currency">¥</view>
       <input value="{{customPayAmount}}" type="number" placeholder="输入充值金额" bindinput="inputCustomPayAmount" />
     </view>
-    <view class="custom-note">自定义充值金额会直接作为本次充值金额使用。</view>
+    <view class="custom-note">自定义充值按统一规则赠券：满1000送5张，满3000送20张，满9000送80张。</view>
   </view>
 
   <view class="recharge-bar">

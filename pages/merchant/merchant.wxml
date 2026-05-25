@@ -186,6 +186,7 @@
           <input value="{{item.subLabel}}" placeholder="副标题" data-index="{{index}}" data-field="subLabel" bindinput="inputRechargePackage" />
           <input value="{{item.payAmount}}" type="digit" placeholder="支付金额" data-index="{{index}}" data-field="payAmount" bindinput="inputRechargePackage" />
           <input value="{{item.creditAmount}}" type="digit" placeholder="到账金额" data-index="{{index}}" data-field="creditAmount" bindinput="inputRechargePackage" />
+          <input value="{{item.voucherCount}}" type="number" placeholder="赠券张数" data-index="{{index}}" data-field="voucherCount" bindinput="inputRechargePackage" />
         </view>
         <input class="desc-input" value="{{item.tip}}" placeholder="赠送说明" data-index="{{index}}" data-field="tip" bindinput="inputRechargePackage" />
       </view>
@@ -217,34 +218,6 @@
       <view class="muted-line">{{item.createdAt}} · {{item.operator}}</view>
       <view class="muted-line">支付 ¥{{item.payAmount}} · 到账 {{item.creditAmount}} · 余额 {{item.balanceBefore}} → {{item.balanceAfter}}</view>
       <view class="muted-line" wx:if="{{item.note}}">{{item.note}}</view>
-    </view>
-  </view>
-
-  <view wx:elif="{{activeTab === '酒水券'}}" class="panel">
-    <view class="menu-editor">
-      <view class="editor-title">酒水券管理</view>
-      <view class="recharge-setting-grid">
-        <input value="{{voucherSettings.title}}" placeholder="模块标题" data-field="title" bindinput="inputVoucherSetting" />
-        <input value="{{voucherSettings.ruleName}}" placeholder="规则名称" data-field="ruleName" bindinput="inputVoucherSetting" />
-      </view>
-      <view class="recharge-setting-grid">
-        <input value="{{voucherSettings.buyCount}}" type="digit" placeholder="满几张" data-field="buyCount" bindinput="inputVoucherSetting" />
-        <input value="{{voucherSettings.freeCount}}" type="digit" placeholder="减几张" data-field="freeCount" bindinput="inputVoucherSetting" />
-      </view>
-      <input class="desc-input" value="{{voucherSettings.note}}" placeholder="酒水券说明" data-field="note" bindinput="inputVoucherSetting" />
-      <view class="muted-line">适用于精酿、鸡尾酒和饮料类商品，可直接赠送给指定会员。</view>
-      <view class="recharge-setting-grid">
-        <input value="{{voucherForm.memberKey}}" placeholder="会员ID" data-field="memberKey" bindinput="inputVoucherForm" />
-        <input value="{{voucherForm.count}}" type="digit" placeholder="赠送数量" data-field="count" bindinput="inputVoucherForm" />
-      </view>
-      <input class="desc-input" value="{{voucherForm.note}}" placeholder="赠送备注" data-field="note" bindinput="inputVoucherForm" />
-      <view class="dual-actions">
-        <view class="ghost-action" bindtap="refreshRecharge">刷新设置</view>
-        <view class="solid-action" bindtap="saveVoucherSettings">保存规则</view>
-      </view>
-      <view class="dual-actions">
-        <view class="solid-action" bindtap="grantDrinkVoucher">赠送酒水券</view>
-      </view>
     </view>
   </view>
 
@@ -312,6 +285,29 @@
         <view class="ghost-action" bindtap="refreshMemberManagement">刷新会员</view>
       </view>
       <view class="muted-line">可查看余额、积分、碎片和酒水券，也可以打开详情查看消费、报名和存酒记录。</view>
+      <view class="sub-title">积分与碎片调整</view>
+      <view class="form-grid">
+        <input value="{{pointsMemberKey}}" placeholder="会员ID / 手机号" bindinput="inputPointsMemberKey" />
+        <input value="{{pointsDelta}}" type="number" placeholder="调整数量" bindinput="inputPointsDelta" />
+      </view>
+      <input class="desc-input" value="{{pointsReason}}" placeholder="调整备注" bindinput="inputPointsReason" />
+      <view class="action-row">
+        <view class="solid-action" bindtap="addMemberPoints">加积分</view>
+        <view class="ghost-action danger" bindtap="deductMemberPoints">减积分</view>
+        <view class="solid-action dark" bindtap="addMemberPieces">加碎片</view>
+        <view class="ghost-action danger" bindtap="deductMemberPieces">减碎片</view>
+      </view>
+      <view class="sub-title">酒水券调整</view>
+      <view class="muted-line">储值后自动进入背包；到店消费后由工作人员确认，再在这里增加或扣减客户酒水券。</view>
+      <view class="form-grid">
+        <input value="{{voucherForm.memberKey}}" placeholder="会员ID / 手机号" data-field="memberKey" bindinput="inputVoucherForm" />
+        <input value="{{voucherForm.count}}" type="number" placeholder="数量" data-field="count" bindinput="inputVoucherForm" />
+      </view>
+      <input class="desc-input" value="{{voucherForm.note}}" placeholder="调整备注" data-field="note" bindinput="inputVoucherForm" />
+      <view class="dual-actions">
+        <view class="solid-action" bindtap="grantDrinkVoucher">增加酒水券</view>
+        <view class="ghost-action danger" bindtap="deductDrinkVoucher">扣减酒水券</view>
+      </view>
     </view>
     <view wx:if="{{!filteredMembers.length}}" class="empty small">暂无会员数据</view>
     <view class="member-pick-list">
@@ -334,13 +330,30 @@
           <view class="ghost-action mini-action" bindtap="closeMemberDetail">关闭</view>
         </view>
         <view class="points-num">{{selectedMember.balance || 0}} 余额 · {{selectedMember.points || 0}} 积分 · {{selectedMember.invitePieces || 0}} 碎片 · {{selectedMember.drinkVoucherCount || 0}} 酒水券</view>
-        <view class="muted-line">消费 {{selectedMember.orders.length || 0}} · 报名 {{selectedMember.signups.length || 0}} · 存酒 {{selectedMember.cellar.length || 0}}</view>
+        <view class="muted-line">消费 {{selectedMember.orders.length || 0}} · 报名 {{selectedMember.signups.length || 0}} · 存酒 {{selectedMember.cellar.length || 0}} · 充值 {{selectedMember.rechargeRecords.length || 0}} · 酒水券流水 {{selectedMember.voucherLogs.length || 0}}</view>
         <scroll-view scroll-y class="member-detail-scroll">
           <view class="detail-block">
-            <view class="sub-title">积分流水</view>
+            <view class="sub-title">积分/碎片流水</view>
+            <view class="muted-line" wx:if="{{!selectedMember.logs.length}}">暂无积分/碎片流水</view>
             <view class="log-row" wx:for="{{selectedMember.logs}}" wx:for-item="item" wx:key="id">
               <view>{{item.type === 'pieces' ? '碎片' : '积分'}} {{item.delta > 0 ? '+' : ''}}{{item.delta}}</view>
               <text>{{item.reason}} · {{item.createdAt}}</text>
+            </view>
+          </view>
+          <view class="detail-block">
+            <view class="sub-title">酒水券流水</view>
+            <view class="muted-line" wx:if="{{!selectedMember.voucherLogs.length}}">暂无酒水券流水</view>
+            <view class="detail-item" wx:for="{{selectedMember.voucherLogs}}" wx:for-item="item" wx:key="id">
+              <view>酒水券 {{item.count > 0 ? '+' : ''}}{{item.count}}</view>
+              <text>{{item.note}} · {{item.operator || '系统'}} · {{item.createdAt}}</text>
+            </view>
+          </view>
+          <view class="detail-block">
+            <view class="sub-title">充值记录</view>
+            <view class="muted-line" wx:if="{{!selectedMember.rechargeRecords.length}}">暂无充值记录</view>
+            <view class="detail-item" wx:for="{{selectedMember.rechargeRecords}}" wx:for-item="item" wx:key="id">
+              <view>{{item.packageLabel || item.type || '充值'}} · {{item.status || item.payStatus || '已记录'}}</view>
+              <text>{{item.createdAt}} · 支付 ¥{{item.payAmount || 0}} · 到账 ¥{{item.creditAmount || 0}} · 赠券 {{item.voucherCount || 0}}</text>
             </view>
           </view>
           <view class="detail-block">
@@ -497,82 +510,6 @@
     </view>
   </view>
 
-  <view wx:elif="{{activeTab === '积分'}}" class="panel">
-    <view class="menu-editor">
-      <view class="editor-title">会员积分与碎片</view>
-      <view class="form-grid">
-        <input value="{{pointsMemberKey}}" placeholder="会员ID" bindinput="inputPointsMemberKey" />
-      </view>
-      <view class="form-grid">
-        <input value="{{pointsDelta}}" type="number" placeholder="数量" bindinput="inputPointsDelta" />
-        <view class="ghost-action" bindtap="refreshPoints">刷新会员</view>
-      </view>
-      <view class="dual-actions">
-        <view class="solid-action" bindtap="addMemberPoints">增加积分</view>
-        <view class="ghost-action danger" bindtap="addMemberPieces">增加碎片</view>
-      </view>
-    </view>
-
-    <view class="sub-title">会员列表</view>
-    <view wx:if="{{!allMembers.length}}" class="empty small">暂无会员数据</view>
-    <view class="member-pick-list">
-      <view class="member-pick" wx:for="{{allMembers}}" wx:for-item="item" wx:key="id" data-id="{{item.id}}" bindtap="selectMember">
-        <view>
-          <view class="item-title">{{item.nickname || item.id}}</view>
-          <view class="muted-line">会员ID {{item.id}} · 积分 {{item.points || 0}} · 碎片 {{item.invitePieces || 0}}</view>
-        </view>
-        <view class="ghost-action mini-action">详情</view>
-      </view>
-    </view>
-
-    <view wx:if="{{memberDetailVisible}}" class="member-detail-mask" bindtap="closeMemberDetail">
-      <view class="member-detail-dialog" catchtap="noop">
-        <view class="card-top">
-          <view>
-            <view class="item-title">{{selectedMember.nickname || '会员详情'}}</view>
-            <view class="muted-line">会员ID {{selectedMember.id || '-'}} · {{selectedMember.phone || '未绑定手机号'}}</view>
-          </view>
-          <view class="ghost-action mini-action" bindtap="closeMemberDetail">关闭</view>
-        </view>
-        <view class="points-num">{{selectedMember.points || 0}} 积分 · {{selectedMember.invitePieces || 0}} 碎片</view>
-        <view class="muted-line">消费 {{selectedMember.orders.length || 0}} · 报名 {{selectedMember.signups.length || 0}} · 存酒 {{selectedMember.cellar.length || 0}}</view>
-        <scroll-view scroll-y class="member-detail-scroll">
-          <view class="detail-block">
-            <view class="sub-title">积分流水</view>
-            <view class="log-row" wx:for="{{selectedMember.logs}}" wx:for-item="item" wx:key="id">
-              <view>{{item.type === 'pieces' ? '碎片' : '积分'}} {{item.delta > 0 ? '+' : ''}}{{item.delta}}</view>
-              <text>{{item.reason}} · {{item.createdAt}}</text>
-            </view>
-          </view>
-          <view class="detail-block">
-            <view class="sub-title">消费记录</view>
-            <view class="muted-line" wx:if="{{!selectedMember.orders.length}}">暂无消费记录</view>
-            <view class="detail-item" wx:for="{{selectedMember.orders}}" wx:for-item="item" wx:key="id">
-              <view>{{item.id}} · {{item.status}}</view>
-              <text>{{item.createdAt}} · ¥{{item.total}}</text>
-            </view>
-          </view>
-          <view class="detail-block">
-            <view class="sub-title">报名记录</view>
-            <view class="muted-line" wx:if="{{!selectedMember.signups.length}}">暂无报名记录</view>
-            <view class="detail-item" wx:for="{{selectedMember.signups}}" wx:for-item="item" wx:key="id">
-              <view>{{item.title}}</view>
-              <text>{{item.date}} · {{item.status}}</text>
-            </view>
-          </view>
-          <view class="detail-block">
-            <view class="sub-title">存酒记录</view>
-            <view class="muted-line" wx:if="{{!selectedMember.cellar.length}}">暂无存酒记录</view>
-            <view class="detail-item" wx:for="{{selectedMember.cellar}}" wx:for-item="item" wx:key="id">
-              <view>{{item.wineName}}</view>
-              <text>{{item.quantity}} · {{item.status}} · {{item.expireAt}}</text>
-            </view>
-          </view>
-        </scroll-view>
-      </view>
-    </view>
-  </view>
-
   <view wx:elif="{{activeTab === '基础'}}" class="panel">
     <view class="sub-title">存酒申请</view>
     <view wx:if="{{!cellar.length}}" class="empty small">暂无存酒</view>
@@ -630,19 +567,23 @@
   <view wx:elif="{{activeTab === '排行'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">排行榜</view>
-      <view class="muted-line">当前门店：{{selectedStoreName}}</view>
+      <view class="muted-line">全门店统一展示。周榜不清零，月榜每月1号12点清零；小型比赛冠军+3分，亚军+2分。</view>
       <view class="rank-tabs">
         <view class="rank-tab {{activeRankType === item.key ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:for-item="item" wx:key="key" data-type="{{item.key}}" bindtap="selectRankType">{{item.label}}</view>
       </view>
-      <view wx:if="{{activeRankType === 'yearly'}}" class="rank-form">
+      <view class="rank-form">
         <input value="{{rankUsername}}" placeholder="用户名" bindinput="inputRankUsername" />
         <input value="{{rankScore}}" type="number" placeholder="分数" bindinput="inputRankScore" />
         <view class="solid-action" bindtap="addRankUser">新增</view>
       </view>
-      <view wx:if="{{activeRankType === 'yearly'}}" class="rank-form">
+      <view class="rank-form">
         <input value="{{rankDeltaScore}}" type="number" placeholder="增减分数" bindinput="inputRankDeltaScore" />
         <view class="solid-action" bindtap="addRankScore">调整分数</view>
         <view class="ghost-action danger" bindtap="deleteRankUser">删除</view>
+      </view>
+      <view class="dual-actions">
+        <view class="solid-action" data-score="3" bindtap="addRankAwardScore">冠军 +3</view>
+        <view class="solid-action dark" data-score="2" bindtap="addRankAwardScore">亚军 +2</view>
       </view>
       <view wx:if="{{selectedRankUser}}" class="selected-member">
         <view>
@@ -659,8 +600,8 @@
         <view class="item-title">{{item.username}}</view>
         <view class="muted-line">{{item.score}} 分</view>
       </view>
-      <view wx:if="{{activeRankType === 'yearly'}}" class="move" data-id="{{item.id}}" data-direction="up" catchtap="moveRank">↑</view>
-      <view wx:if="{{activeRankType === 'yearly'}}" class="move" data-id="{{item.id}}" data-direction="down" catchtap="moveRank">↓</view>
+      <view class="move" data-id="{{item.id}}" data-direction="up" catchtap="moveRank">↑</view>
+      <view class="move" data-id="{{item.id}}" data-direction="down" catchtap="moveRank">↓</view>
     </view>
   </view>
 

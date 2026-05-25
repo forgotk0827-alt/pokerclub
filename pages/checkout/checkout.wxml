@@ -2,17 +2,13 @@
 <scroll-view scroll-y class="page checkout-page">
   <view class="checkout-hero">
     <view class="hero-title">结算中转页</view>
-    <view class="hero-sub">勾选储值卡和酒水券后，系统会自动算出最终支付金额</view>
+    <view class="hero-sub">储值卡可在线抵扣，酒水券到店消费后由门店确认使用</view>
   </view>
 
   <view class="summary-card">
     <view class="summary-row">
       <text>商品原价</text>
       <text>¥{{preview.originalTotal}}</text>
-    </view>
-    <view class="summary-row" wx:if="{{useVoucher}}">
-      <text>酒水券抵扣</text>
-      <text class="sub-green">-¥{{preview.voucherDiscount}}</text>
     </view>
     <view class="summary-row" wx:if="{{useBalance}}">
       <text>储值卡抵扣</text>
@@ -42,7 +38,6 @@
         <view class="method-title">酒水券</view>
         <view class="method-desc">{{member.drinkVoucherCount || 0}} 张 · {{voucherSettings.ruleName}}</view>
       </view>
-      <switch checked="{{useVoucher}}" disabled="{{!(member.drinkVoucherCount > 0)}}" color="#8b5cf6" bindchange="toggleVoucher" />
     </view>
     <view class="method-tip">{{voucherSettings.note}}</view>
   </view>

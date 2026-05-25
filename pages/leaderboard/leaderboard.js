@@ -17,9 +17,8 @@ Page({
   refresh() {
     const type = this.data.activeType
     state.fetchStores(() => {
-      const storeId = state.getStore().id
       state.fetchPublicLeaderboard(() => {
-        this.setData({ list: state.getLeaderboard(type, storeId) })
+        this.setData({ list: state.getLeaderboard(type) })
       }, type)
     })
   }

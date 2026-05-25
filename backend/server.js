@@ -70,7 +70,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && match(pathname, '/api/activities/:id')) return await handleGetActivity(req, res, pathname)
     if (req.method === 'GET' && pathname === '/api/recharge-settings') return sendOk(res, db.rechargeSettings)
     if (req.method === 'GET' && pathname === '/api/global-settings') return sendOk(res, db.globalSettings)
-    if (req.method === 'GET' && pathname === '/api/leaderboard') return sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
+    if (req.method === 'GET' && pathname === '/api/leaderboard') return await handleGetLeaderboard(req, res, url)
 
     if (pathname.startsWith('/api/my/') || pathname === '/api/orders' || pathname === '/api/recharge' || pathname === '/api/cellar' || pathname.startsWith('/api/cellar/') || pathname === '/api/signups' || pathname.startsWith('/api/wechat/pay/')) {
       const user = requireUser(req)
@@ -123,6 +123,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/api/merchant/voucher-settings') return sendOk(res, db.voucherSettings || defaultVoucherSettings())
       if (req.method === 'POST' && pathname === '/api/merchant/voucher-settings') return await handleVoucherSettings(req, res)
       if (req.method === 'GET' && pathname === '/api/merchant/recharge-records') return sendOk(res, scopedList(db.rechargeRecords, merchant))
+      if (req.method === 'GET' && pathname === '/api/merchant/voucher-logs') return sendOk(res, scopedList(db.voucherLogs, merchant))
       if (req.method === 'GET' && pathname === '/api/merchant/point-logs') return sendOk(res, scopedList(db.pointLogs, merchant))
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/balance')) return await handleAdjustBalance(req, res, pathname, merchant)
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/points')) return await handleAdjustPoints(req, res, pathname, merchant)
@@ -130,7 +131,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && match(pathname, '/api/merchant/members/:id/vouchers')) return await handleGrantDrinkVoucher(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/global-settings') return sendOk(res, db.globalSettings)
       if (req.method === 'POST' && pathname === '/api/merchant/global-settings') return await handleGlobalSettings(req, res)
-      if (req.method === 'GET' && pathname === '/api/merchant/leaderboard') return sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
+      if (req.method === 'GET' && pathname === '/api/merchant/leaderboard') return await handleGetLeaderboard(req, res, url)
       if (req.method === 'POST' && pathname === '/api/merchant/leaderboard') return await handleSaveLeaderboard(req, res)
     }
 
@@ -362,10 +363,12 @@ async function handleRecharge(req, res, user) {
   const pack = db.rechargeSettings.packages.find((item) => item.id === body.packageId) || body.package || {}
   const payAmount = Number(pack.payAmount || body.payAmount || 0)
   const creditAmount = Number(pack.creditAmount || body.creditAmount || 0)
+  const voucherCount = voucherCountForRecharge(pack, payAmount)
   if (!payAmount || !creditAmount) throw httpError(400, '充值金额无效')
   const before = Number(user.member.balance || 0)
   const after = before + creditAmount
   user.member.balance = after
+  user.member.drinkVoucherCount = Math.max(0, Number(user.member.drinkVoucherCount || 0) + voucherCount)
   const record = {
     id: `RC${Date.now()}`,
     type: 'recharge',
@@ -375,6 +378,7 @@ async function handleRecharge(req, res, user) {
     packageLabel: pack.label || '',
     payAmount,
     creditAmount,
+    voucherCount,
     balanceBefore: before,
     balanceAfter: after,
     operator: '微信支付',
@@ -382,6 +386,7 @@ async function handleRecharge(req, res, user) {
     createdAt: now()
   }
   db.rechargeRecords.unshift(record)
+  if (voucherCount) addVoucherLog(user.member, voucherCount, '储值充值自动发放酒水券', '系统')
   await persist()
   sendOk(res, { member: user.member, record })
 }
@@ -393,8 +398,8 @@ async function handleCreateOrderPayment(req, res, user) {
   const store = db.stores.find((item) => item.id === body.storeId) || db.stores[0]
   const table = normalizeOrderTable(store, body)
   const originalTotal = Number(body.originalTotal || items.reduce((sum, item) => sum + Number(item.originPrice || item.price || 0) * Number(item.count || 0), 0))
-  const voucherDiscount = Math.max(0, Number(body.voucherDiscount || 0))
-  const voucherCountUsed = Math.max(0, Number(body.voucherCountUsed || 0))
+  const voucherDiscount = 0
+  const voucherCountUsed = 0
   const payableBeforeBalance = Math.max(0, Number(body.payableBeforeBalance || (originalTotal - voucherDiscount)))
   const balanceAvailable = Number(user.member.balance || 0)
   const balanceUsed = Math.max(0, Math.min(Number(body.balanceUsed || 0), balanceAvailable, payableBeforeBalance))
@@ -461,6 +466,7 @@ async function handleCreateRechargePayment(req, res, user) {
   const pack = db.rechargeSettings.packages.find((item) => item.id === body.packageId) || body.package || {}
   const payAmount = Number(pack.payAmount || body.payAmount || 0)
   const creditAmount = Number(pack.creditAmount || body.creditAmount || 0)
+  const voucherCount = voucherCountForRecharge(pack, payAmount)
   if (!payAmount || !creditAmount) throw httpError(400, '充值金额无效')
   const before = Number(user.member.balance || 0)
   const record = {
@@ -476,6 +482,7 @@ async function handleCreateRechargePayment(req, res, user) {
     packageLabel: pack.label || '',
     payAmount,
     creditAmount,
+    voucherCount,
     balanceBefore: before,
     balanceAfter: before,
     operator: '微信支付',
@@ -865,6 +872,7 @@ async function handleInventoryStock(req, res, pathname, merchant) {
 async function handleRechargeSettings(req, res) {
   const body = await readJson(req)
   db.rechargeSettings = Object.assign({}, db.rechargeSettings, body)
+  db.rechargeSettings.packages = normalizeRechargePackages(db.rechargeSettings.packages)
   await persist()
   sendOk(res, db.rechargeSettings)
 }
@@ -876,7 +884,7 @@ async function handleVoucherSettings(req, res) {
   next.freeCount = Math.max(0, Number(next.freeCount || 0))
   next.title = String(next.title || '').trim() || defaultVoucherSettings().title
   next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}减${next.freeCount}`
-  next.note = String(next.note || '').trim()
+  next.note = normalizeVoucherNote(next.note)
   db.voucherSettings = next
   await persist()
   sendOk(res, db.voucherSettings)
@@ -918,24 +926,11 @@ async function handleGrantDrinkVoucher(req, res, pathname, merchant) {
   const body = await readJson(req)
   const member = findMember(id)
   ensureMerchantMemberAccess(merchant, member.id)
-  const count = Math.max(0, Number(body.count || 0))
-  if (!count) throw httpError(400, '赠送数量无效')
+  const count = Number(body.count || 0)
+  if (!count) throw httpError(400, '调整数量无效')
   const storeId = isSuperMerchant(merchant) ? String(body.storeId || '').trim() : merchant.storeId
   member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) + count)
-  const record = {
-    id: `VC${Date.now()}`,
-    type: 'voucher',
-    memberId: member.id,
-    nickname: member.nickname,
-    count,
-    note: String(body.note || '').trim() || '手动赠送酒水券',
-    storeId,
-    storeName: storeNameById(storeId),
-    operator: merchant.username,
-    createdAt: now()
-  }
-  db.voucherLogs = Array.isArray(db.voucherLogs) ? db.voucherLogs : []
-  db.voucherLogs.unshift(record)
+  const record = addVoucherLog(member, count, String(body.note || '').trim() || '手动调整酒水券', merchant.username, storeId)
   await persist()
   sendOk(res, { member, record })
 }
@@ -1004,23 +999,23 @@ async function handleSaveLeaderboard(req, res) {
   const body = await readJson(req)
   db.leaderboard = normalizeLeaderboardBoards(db.leaderboard)
   const type = LEADERBOARD_TYPES.includes(body.type) ? body.type : 'weekly'
-  const storeId = String(body.storeId || '').trim()
   if (Array.isArray(body.list)) {
     const nextList = normalizeLeaderboardList(body.list).map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-    db.leaderboard[type] = storeId
-      ? (db.leaderboard[type] || [])
-          .filter((item) => String(item.storeId || '').trim() !== storeId)
-          .concat(nextList.map((item) => Object.assign({}, item, { storeId })))
-      : nextList
+    db.leaderboard[type] = nextList
   } else if (body.boards && typeof body.boards === 'object') {
     db.leaderboard = normalizeLeaderboardBoards(body.boards)
   } else {
-    const next = upsert(db.leaderboard[type], body, { id: `${type}-rank-${Date.now()}`, username: '', score: 0, storeId })
-    if (storeId && next) next.storeId = storeId
+    upsert(db.leaderboard[type], body, { id: `${type}-rank-${Date.now()}`, username: '', score: 0 })
   }
-  db.leaderboard = normalizeLeaderboardBoards(db.leaderboard)
+  syncLeaderboardState(true)
   await persist()
   sendOk(res, rankedLeaderboard())
+}
+
+async function handleGetLeaderboard(req, res, url) {
+  const changed = syncLeaderboardState(false)
+  if (changed) await persist()
+  sendOk(res, rankedLeaderboard(url.searchParams.get('type')))
 }
 
 function requireUser(req) {
@@ -1102,7 +1097,7 @@ function storeNameById(storeId) {
 
 function memberStoreIds(memberId) {
   const ids = new Set()
-  ;[db.orders, db.signups, db.cellar, db.rechargeRecords, db.pointLogs].forEach((list) => {
+  ;[db.orders, db.signups, db.cellar, db.rechargeRecords, db.pointLogs, db.voucherLogs].forEach((list) => {
     ;(list || []).forEach((item) => {
       if (item.memberId === memberId && item.storeId) ids.add(item.storeId)
     })
@@ -1197,6 +1192,7 @@ function scopedMembers(merchant) {
   scopedList(db.cellar, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
   scopedList(db.rechargeRecords, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
   scopedList(db.pointLogs, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
+  scopedList(db.voucherLogs, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
   return db.members.filter((item) => memberIds.has(item.id))
 }
 
@@ -1557,7 +1553,12 @@ async function applyWechatPaySuccess(transaction) {
     const member = db.members.find((item) => item.id === record.memberId)
     const before = member ? Number(member.balance || 0) : Number(record.balanceBefore || 0)
     const after = before + Number(record.creditAmount || 0)
-    if (member) member.balance = after
+    const voucherCount = Math.max(0, Number(record.voucherCount || 0))
+    if (member) {
+      member.balance = after
+      member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) + voucherCount)
+      if (voucherCount) addVoucherLog(member, voucherCount, '储值充值自动发放酒水券', '系统')
+    }
     record.payStatus = 'paid'
     record.status = '已支付'
     record.transactionId = transactionId
@@ -1796,6 +1797,7 @@ function createInitialDb() {
     pointLogs: [],
     globalSettings: defaultGlobalSettings(),
     leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
+    leaderboardMeta: {},
     authRevocations: []
   }
 }
@@ -1861,6 +1863,7 @@ function normalizeDbShape(raw) {
       pointLogs: [],
       globalSettings: defaultGlobalSettings(),
       leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
+      leaderboardMeta: {},
       authRevocations: []
     },
     raw || {}
@@ -1873,23 +1876,19 @@ function normalizeDbShape(raw) {
   next.activities = syncSeedList(next.activities, normalizeActivities(sourceData.activities), true, false)
   next.inventory = syncInventoryList(next.inventory, next.products)
   const rechargeSettings = Object.assign({}, defaultRechargeSettings(), next.rechargeSettings || {})
-  rechargeSettings.packages = Array.isArray(rechargeSettings.packages)
-    ? rechargeSettings.packages.map((item) => Object.assign({}, item, {
-        payAmount: Number(item.payAmount || 0),
-        creditAmount: Number(item.creditAmount || 0)
-      }))
-    : defaultRechargeSettings().packages
+  rechargeSettings.packages = normalizeRechargePackages(rechargeSettings.packages)
   next.rechargeSettings = rechargeSettings
   const voucherSettings = Object.assign({}, defaultVoucherSettings(), next.voucherSettings || {})
   voucherSettings.buyCount = Math.max(1, Number(voucherSettings.buyCount || 0))
   voucherSettings.freeCount = Math.max(0, Number(voucherSettings.freeCount || 0))
   voucherSettings.title = String(voucherSettings.title || '').trim() || defaultVoucherSettings().title
   voucherSettings.ruleName = String(voucherSettings.ruleName || '').trim() || `${voucherSettings.buyCount}减${voucherSettings.freeCount}`
-  voucherSettings.note = String(voucherSettings.note || '').trim() || defaultVoucherSettings().note
+  voucherSettings.note = normalizeVoucherNote(voucherSettings.note)
   next.voucherSettings = voucherSettings
   next.voucherLogs = Array.isArray(next.voucherLogs) ? next.voucherLogs : []
   next.globalSettings = normalizeGlobalSettings(next.globalSettings)
   next.leaderboard = normalizeLeaderboardBoards(next.leaderboard)
+  next.leaderboardMeta = next.leaderboardMeta && typeof next.leaderboardMeta === 'object' ? next.leaderboardMeta : {}
   next.authRevocations = normalizeAuthRevocations(next.authRevocations)
   ;(Array.isArray(next.members) ? next.members : []).forEach((member) => {
     if (!member) return
@@ -2028,12 +2027,12 @@ function inferStoreByActivity(activity) {
 function defaultRechargeSettings() {
   return {
     title: '储值账户',
-    note: '一经充值，概不退回，不兑现',
+    note: '充值1000元送5张酒水券，充值3000元送20张，充值9000元送80张；各门店统一执行。',
     paymentLabel: '微信支付',
     packages: [
-      { id: 'pkg-999', payAmount: 999, creditAmount: 1200, label: '充999元', subLabel: '得1200元', tip: '' },
-      { id: 'pkg-2000', payAmount: 2000, creditAmount: 2400, label: '充2000元', subLabel: '得2400元', tip: '' },
-      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3600, label: '充3000元', subLabel: '得3600元', tip: '赠送价值800元黑金会员/月卡' }
+      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '', tip: '' },
+      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '', tip: '' },
+      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '', tip: '' }
     ]
   }
 }
@@ -2041,11 +2040,58 @@ function defaultRechargeSettings() {
 function defaultVoucherSettings() {
   return {
     title: '我的酒水券',
-    ruleName: '满5减1',
-    buyCount: 5,
-    freeCount: 1,
-    note: '适用于精酿、鸡尾酒和饮料类商品，点餐时自动抵扣。'
+    ruleName: '到店消费后每次可用1张',
+    buyCount: 1,
+    freeCount: 0,
+    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。'
   }
+}
+
+function normalizeVoucherNote(note) {
+  const text = String(note || '').trim()
+  const defaultNote = defaultVoucherSettings().note
+  if (!text || text.includes('酒水券自动进入背包') || text.includes('商家工作人员确认')) return defaultNote
+  return text
+}
+
+function voucherCountForRecharge(pack = {}, payAmount = 0) {
+  const explicit = Number(pack.voucherCount || 0)
+  if (explicit > 0) return explicit
+  const amount = Number(payAmount || pack.payAmount || 0)
+  if (amount >= 9000) return 80
+  if (amount >= 3000) return 20
+  if (amount >= 1000) return 5
+  return 0
+}
+
+function normalizeRechargePackages(packages) {
+  const source = Array.isArray(packages) ? packages : []
+  const hasOldDefault = source.some((item) => ['pkg-999', 'pkg-2000'].includes(String(item && item.id || '')))
+  const usable = source.filter((item) => Number(item && item.payAmount || 0) > 0 && Number(item && item.creditAmount || 0) > 0)
+  const list = hasOldDefault || !usable.length ? defaultRechargeSettings().packages : usable
+  return list.map((item) => Object.assign({}, item, {
+    payAmount: Number(item.payAmount || 0),
+    creditAmount: Number(item.creditAmount || 0),
+    voucherCount: voucherCountForRecharge(item, item.payAmount)
+  }))
+}
+
+function addVoucherLog(member, count, note = '', operator = '系统', storeId = '') {
+  const record = {
+    id: `VC${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    type: 'voucher',
+    memberId: member.id,
+    nickname: member.nickname,
+    count,
+    note: String(note || '').trim() || '酒水券调整',
+    storeId,
+    storeName: storeNameById(storeId),
+    operator,
+    createdAt: now()
+  }
+  db.voucherLogs = Array.isArray(db.voucherLogs) ? db.voucherLogs : []
+  db.voucherLogs.unshift(record)
+  return record
 }
 
 function defaultGlobalSettings() {
@@ -2128,6 +2174,8 @@ function normalizeLeaderboardList(list) {
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
     score: Math.max(0, Number(item.score || 0)),
+    memberId: String(item.memberId || '').trim(),
+    source: String(item.source || '').trim(),
     storeId: String(item.storeId || '').trim(),
     sortOrder: hasSortOrder ? toSortOrder(item.sortOrder, index + 1) : index + 1
   }))
@@ -2164,6 +2212,109 @@ function normalizeLeaderboardBoards(payload) {
 function rankLeaderboardList(list) {
   return normalizeLeaderboardList(list)
     .map((item, index) => Object.assign({}, item, { rank: index + 1 }))
+}
+
+function dateKey(date) {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function addDays(date, days) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function leaderboardPeriodKey(type, date = new Date()) {
+  const current = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+  if (type === 'weekly') {
+    const day = current.getUTCDay()
+    const sundayOffset = -day
+    const sunday = addDays(current, sundayOffset)
+    sunday.setUTCHours(12, 0, 0, 0)
+    const period = current >= sunday ? sunday : addDays(sunday, -7)
+    return `${dateKey(period)}T12`
+  }
+  if (type === 'monthly') {
+    const year = current.getUTCFullYear()
+    const month = current.getUTCMonth()
+    const cutoff = new Date(Date.UTC(year, month, 1, 12, 0, 0, 0))
+    const period = current >= cutoff ? cutoff : new Date(Date.UTC(year, month - 1, 1, 12, 0, 0, 0))
+    return `${period.getUTCFullYear()}-${String(period.getUTCMonth() + 1).padStart(2, '0')}-01T12`
+  }
+  if (type === 'yearly') {
+    const yearNow = current.getUTCFullYear()
+    const cutoff = new Date(Date.UTC(yearNow, 11, 31, 0, 0, 0, 0))
+    const year = current >= cutoff ? yearNow : yearNow - 1
+    return `${year}-12-31T00`
+  }
+  return dateKey(current)
+}
+
+function memberLeaderboardName(member) {
+  return String(member.nickname || member.phone || member.id || member.openid || '未命名会员').trim()
+}
+
+function memberLeaderboardId(member) {
+  return `member-rank-${String(member.id || member.openid || member.phone || '').trim()}`
+}
+
+function syncLeaderboardMemberNames(list) {
+  const next = normalizeLeaderboardList(list)
+  const memberList = Array.isArray(db.members) ? db.members : []
+  memberList
+    .filter((member) => member && !member.isGuest && (member.id || member.openid || member.phone))
+    .forEach((member) => {
+      const memberId = String(member.id || member.openid || member.phone || '').trim()
+      const username = memberLeaderboardName(member)
+      if (!memberId) return
+      const id = memberLeaderboardId(member)
+      const index = next.findIndex((item) => {
+        const keys = [item.memberId, item.id, item.username].map((value) => String(value || '').trim())
+        return keys.includes(memberId) || keys.includes(id) || keys.includes(username)
+      })
+      if (index > -1) {
+        next[index] = Object.assign({}, next[index], {
+          id: next[index].id || id,
+          memberId,
+          username,
+          source: next[index].source || 'member',
+          storeId: ''
+        })
+      }
+    })
+  return normalizeLeaderboardList(next)
+}
+
+function syncLeaderboardState(force = false) {
+  const previous = JSON.stringify({
+    leaderboard: db.leaderboard,
+    resetKeys: db.leaderboardMeta && db.leaderboardMeta.resetKeys
+  })
+  db.leaderboard = normalizeLeaderboardBoards(db.leaderboard)
+  db.leaderboardMeta = db.leaderboardMeta && typeof db.leaderboardMeta === 'object' ? db.leaderboardMeta : {}
+  db.leaderboardMeta.resetKeys = db.leaderboardMeta.resetKeys && typeof db.leaderboardMeta.resetKeys === 'object' ? db.leaderboardMeta.resetKeys : {}
+  LEADERBOARD_TYPES.forEach((type) => {
+    const key = leaderboardPeriodKey(type)
+    const lastKey = db.leaderboardMeta.resetKeys[type]
+    if (!lastKey) {
+      db.leaderboardMeta.resetKeys[type] = key
+    } else if (lastKey !== key && type === 'monthly') {
+      db.leaderboard[type] = []
+      db.leaderboardMeta.resetKeys[type] = key
+    } else if (lastKey !== key) {
+      db.leaderboardMeta.resetKeys[type] = key
+    }
+    db.leaderboard[type] = syncLeaderboardMemberNames(db.leaderboard[type])
+  })
+  const changed = force || previous !== JSON.stringify({
+    leaderboard: db.leaderboard,
+    resetKeys: db.leaderboardMeta.resetKeys
+  })
+  if (changed) db.leaderboardMeta.updatedAt = now()
+  return changed
 }
 
 function rankedLeaderboard(type) {

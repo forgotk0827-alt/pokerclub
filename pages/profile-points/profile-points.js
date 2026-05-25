@@ -39,12 +39,12 @@ Page({
     return {
       count,
       title: settings.title || '我的酒水券',
-      ruleName: settings.ruleName || '满5减1',
-      note: settings.note || '适用于精酿、鸡尾酒和饮料类商品',
+      ruleName: settings.ruleName || '到店消费后每次可用1张',
+      note: settings.note || '可兑换一瓶啤酒或一箱啤酒，由门店自行决定。',
       expireText: '长期有效'
     }
   },
   goUseVoucher() {
-    wx.navigateTo({ url: '/pages/menu/menu' })
+    wx.showToast({ title: '到店消费后请联系工作人员核销', icon: 'none' })
   }
 })

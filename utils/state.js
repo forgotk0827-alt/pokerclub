@@ -237,12 +237,12 @@ function clearUserSessionLocally() {
 function defaultRechargeSettings() {
   return {
     title: '储值账户',
-    note: '一经充值，概不退回，不兑现',
+    note: '充值1000元送5张酒水券，充值3000元送20张，充值9000元送80张；各门店统一执行。',
     paymentLabel: '微信支付',
     packages: [
-      { id: 'pkg-999', payAmount: 999, creditAmount: 1200, label: '充999元', subLabel: '得1200元', tip: '' },
-      { id: 'pkg-2000', payAmount: 2000, creditAmount: 2400, label: '充2000元', subLabel: '得2400元', tip: '' },
-      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3600, label: '充3000元', subLabel: '得3600元', tip: '赠送价值800元黑金会员/月卡' }
+      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '', tip: '' },
+      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '', tip: '' },
+      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '', tip: '' }
     ]
   }
 }
@@ -250,11 +250,40 @@ function defaultRechargeSettings() {
 function defaultVoucherSettings() {
   return {
     title: '我的酒水券',
-    ruleName: '满5减1',
-    buyCount: 5,
-    freeCount: 1,
-    note: '适用于精酿、鸡尾酒和饮料类商品，点餐时自动抵扣。'
+    ruleName: '到店消费后每次可用1张',
+    buyCount: 1,
+    freeCount: 0,
+    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。'
   }
+}
+
+function normalizeVoucherNote(note) {
+  const text = String(note || '').trim()
+  const defaultNote = defaultVoucherSettings().note
+  if (!text || text.indexOf('酒水券自动进入背包') > -1 || text.indexOf('商家工作人员确认') > -1) return defaultNote
+  return text
+}
+
+function voucherCountForRecharge(pack = {}, payAmount = 0) {
+  const explicit = Number(pack.voucherCount || 0)
+  if (explicit > 0) return explicit
+  const amount = Number(payAmount || pack.payAmount || 0)
+  if (amount >= 9000) return 80
+  if (amount >= 3000) return 20
+  if (amount >= 1000) return 5
+  return 0
+}
+
+function normalizeRechargePackages(packages) {
+  const source = Array.isArray(packages) ? packages : []
+  const hasOldDefault = source.some((item) => ['pkg-999', 'pkg-2000'].includes(String(item && item.id || '')))
+  const usable = source.filter((item) => Number(item && item.payAmount || 0) > 0 && Number(item && item.creditAmount || 0) > 0)
+  const list = hasOldDefault || !usable.length ? defaultRechargeSettings().packages : usable
+  return list.map((item) => Object.assign({}, item, {
+    payAmount: Number(item.payAmount || 0),
+    creditAmount: Number(item.creditAmount || 0),
+    voucherCount: voucherCountForRecharge(item, item.payAmount)
+  }))
 }
 
 function defaultPrintTemplate() {
@@ -2238,85 +2267,26 @@ function applyDrinkVoucherDiscount(cart, member = getMember()) {
 
 function applyDrinkVoucherDiscountWithOptions(cart, member = getMember(), options = {}) {
   const source = Array.isArray(cart) ? cart : []
-  const settings = getVoucherSettings()
-  const useVoucher = options.useVoucher !== false
-  const available = Math.max(0, Number(member && member.drinkVoucherCount || 0))
-  const buyCount = Math.max(1, Number(settings.buyCount || 0))
-  const freeCount = Math.max(0, Number(settings.freeCount || 0))
-  const eligibleUnits = []
   let originalTotal = 0
-
-  source.forEach((item, index) => {
-    const count = Math.max(0, Number(item && item.count || 0))
-    const price = Math.max(0, Number(item && item.price || 0))
-    originalTotal += price * count
-    if (!count || !price || !isVoucherEligibleItem(item)) return
-    for (let i = 0; i < count; i += 1) {
-      eligibleUnits.push({ index, price })
-    }
-  })
-
-  const voucherCountUsed = useVoucher ? Math.min(available, Math.floor(eligibleUnits.length / buyCount) * freeCount) : 0
-  const discountedCounts = new Map()
-  eligibleUnits
-    .slice()
-    .sort((a, b) => a.price - b.price || a.index - b.index)
-    .slice(0, voucherCountUsed)
-    .forEach((unit) => {
-      discountedCounts.set(unit.index, (discountedCounts.get(unit.index) || 0) + 1)
-    })
-
-  let voucherDiscount = 0
-  const items = []
-  source.forEach((item, index) => {
+  const items = source.map((item) => {
     const count = Math.max(0, Number(item && item.count || 0))
     const price = Math.max(0, Number(item && item.price || 0))
     const subtotal = price * count
-    const discountedCount = discountedCounts.get(index) || 0
-    if (!count || !price || !isVoucherEligibleItem(item) || !discountedCount) {
-      items.push(Object.assign({}, item, {
-        subtotal,
-        payableSubtotal: subtotal,
-        originPrice: price,
-        voucherCountUsed: 0,
-        voucherDiscount: 0
-      }))
-      return
-    }
-    const result = []
-    const remainingCount = count - discountedCount
-    voucherDiscount += price * discountedCount
-    result.push(Object.assign({}, item, {
-      id: `${item.id || index}-voucher`,
-      count: discountedCount,
-      price: 0,
+    originalTotal += subtotal
+    return Object.assign({}, item, {
+      subtotal,
+      payableSubtotal: subtotal,
       originPrice: price,
-      voucherCountUsed: discountedCount,
-      voucherDiscount: price * discountedCount,
-      subtotal: price * discountedCount,
-      payableSubtotal: 0
-    }))
-    if (remainingCount > 0) {
-      result.push(Object.assign({}, item, {
-        id: `${item.id || index}-cash`,
-        count: remainingCount,
-        price,
-        originPrice: price,
-        voucherCountUsed: 0,
-        voucherDiscount: 0,
-        subtotal: price * remainingCount,
-        payableSubtotal: price * remainingCount
-      }))
-    }
-    items.push.apply(items, result)
+      voucherCountUsed: 0,
+      voucherDiscount: 0
+    })
   })
-
   return {
     items,
     originalTotal,
-    voucherDiscount,
-    voucherCountUsed,
-    payableTotal: Math.max(0, originalTotal - voucherDiscount)
+    voucherDiscount: 0,
+    voucherCountUsed: 0,
+    payableTotal: originalTotal
   }
 }
 
@@ -2342,12 +2312,7 @@ function getRechargeSettings() {
   const next = stored && Array.isArray(stored.packages) && stored.packages.length
     ? Object.assign({}, defaultRechargeSettings(), stored)
     : defaultRechargeSettings()
-  next.packages = Array.isArray(next.packages)
-    ? next.packages.map((item) => Object.assign({}, item, {
-        payAmount: Number(item.payAmount || 0),
-        creditAmount: Number(item.creditAmount || 0)
-      }))
-    : defaultRechargeSettings().packages
+  next.packages = normalizeRechargePackages(next.packages)
   return next
 }
 
@@ -2358,7 +2323,7 @@ function fetchRechargeSettings(callback) {
       return
     }
     const next = Object.assign({}, defaultRechargeSettings(), payload)
-    next.packages = Array.isArray(next.packages) && next.packages.length ? next.packages : defaultRechargeSettings().packages
+    next.packages = normalizeRechargePackages(next.packages)
     wx.setStorageSync(KEYS.rechargeSettings, next)
     if (callback) callback(next)
   }
@@ -2371,7 +2336,7 @@ function fetchRechargeSettings(callback) {
 
 function saveRechargeSettings(settings, callback) {
   const next = Object.assign({}, getRechargeSettings(), settings || {})
-  next.packages = Array.isArray(next.packages) && next.packages.length ? next.packages : defaultRechargeSettings().packages
+  next.packages = normalizeRechargePackages(next.packages)
   const requested = requestMerchantApi('/api/merchant/recharge-settings', 'POST', next, (payload) => {
     if (payload) {
       const saved = Object.assign({}, next, payload)
@@ -2393,7 +2358,7 @@ function getVoucherSettings() {
   next.freeCount = Math.max(0, Number(next.freeCount || 0))
   next.title = String(next.title || '').trim() || defaultVoucherSettings().title
   next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
-  next.note = String(next.note || '').trim()
+  next.note = normalizeVoucherNote(next.note)
   return next
 }
 
@@ -2403,6 +2368,7 @@ function fetchVoucherSettings(callback) {
       const next = Object.assign({}, defaultVoucherSettings(), payload)
       next.buyCount = Math.max(1, Number(next.buyCount || 0))
       next.freeCount = Math.max(0, Number(next.freeCount || 0))
+      next.note = normalizeVoucherNote(next.note)
       wx.setStorageSync(KEYS.voucherSettings, next)
       if (callback) callback(next)
       return
@@ -2417,7 +2383,7 @@ function saveVoucherSettings(settings, callback) {
   next.freeCount = Math.max(0, Number(next.freeCount || 0))
   next.title = String(next.title || '').trim() || defaultVoucherSettings().title
   next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
-  next.note = String(next.note || '').trim()
+  next.note = normalizeVoucherNote(next.note)
   const requested = requestMerchantApi('/api/merchant/voucher-settings', 'POST', next, (payload) => {
     if (payload) {
       const saved = Object.assign({}, next, payload)
@@ -2434,7 +2400,7 @@ function saveVoucherSettings(settings, callback) {
 
 function grantDrinkVoucher(memberKey, count, note = '', callback) {
   const targetId = String(memberKey || '').trim()
-  const amount = Math.max(0, Number(count || 0))
+  const amount = Number(count || 0)
   if (!targetId || !amount) {
     if (callback) callback(null, false)
     return null
@@ -2445,6 +2411,11 @@ function grantDrinkVoucher(memberKey, count, note = '', callback) {
   }, (payload) => {
     if (payload && payload.member) {
       syncMemberCache(payload.member)
+    }
+    if (payload && payload.record) {
+      const logs = getVoucherLogs()
+      logs.unshift(payload.record)
+      saveVoucherLogs(logs)
     }
     if (callback) callback(payload, !!payload)
   })
@@ -2469,6 +2440,22 @@ function saveRechargeRecords(records) {
 
 function fetchRechargeRecords(callback) {
   fetchMerchantList('/api/merchant/recharge-records', getRechargeRecords, saveRechargeRecords, callback)
+}
+
+function getVoucherLogs() {
+  if (!canReadPrivateData()) {
+    return []
+  }
+  return wx.getStorageSync(KEYS.voucherLogs) || []
+}
+
+function saveVoucherLogs(records) {
+  wx.setStorageSync(KEYS.voucherLogs, records)
+  return getVoucherLogs()
+}
+
+function fetchVoucherLogs(callback) {
+  fetchMerchantList('/api/merchant/voucher-logs', getVoucherLogs, saveVoucherLogs, callback)
 }
 
 function addRechargeRecord(record) {
@@ -2558,9 +2545,10 @@ function rechargeMemberWithPackage(pack, options = {}) {
   const member = getMember()
   const balanceBefore = Number(member.balance || 0)
   const balanceAfter = balanceBefore + creditAmount
+  const voucherCount = voucherCountForRecharge(packageItem, payAmount)
   const next = saveMember(Object.assign({}, member, {
     balance: balanceAfter,
-    drinkVoucherCount: Number(member.drinkVoucherCount || 0)
+    drinkVoucherCount: Math.max(0, Number(member.drinkVoucherCount || 0) + voucherCount)
   }))
   addRechargeRecord({
     type: 'recharge',
@@ -2570,6 +2558,7 @@ function rechargeMemberWithPackage(pack, options = {}) {
     packageLabel: packageItem.label || '',
     payAmount,
     creditAmount,
+    voucherCount,
     balanceBefore,
     balanceAfter,
     operator: options.operator || '微信支付',
@@ -3194,6 +3183,8 @@ function normalizeLeaderboardList(list) {
     id: item.id || `rank-${Date.now()}-${index}`,
     username: String(item.username || ''),
     score: Number(item.score || 0),
+    memberId: String(item.memberId || '').trim(),
+    source: String(item.source || '').trim(),
     storeId: String(item.storeId || '').trim(),
     sortOrder: hasSortOrder ? toSortOrder(item.sortOrder, index + 1) : index + 1
   }))
@@ -3238,12 +3229,9 @@ function getLeaderboardBoards() {
   return boards
 }
 
-function getLeaderboard(type = 'weekly', storeId = '') {
+function getLeaderboard(type = 'weekly') {
   const boards = getLeaderboardBoards()
-  const scopedStoreId = String(storeId || '').trim()
-  const list = scopedStoreId
-    ? (boards[type] || boards.weekly).filter((item) => !item.storeId || String(item.storeId || '').trim() === scopedStoreId)
-    : (boards[type] || boards.weekly)
+  const list = boards[type] || boards.weekly
   return rankLeaderboardList(list)
 }
 
@@ -3287,17 +3275,8 @@ function fetchLeaderboard(callback, type = 'weekly') {
 function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
   const nextList = normalizeLeaderboardList(list).map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-  let payloadList = nextList
-  if (storeId) {
-    const scopedId = String(storeId || '').trim()
-    const merged = (boards[type] || []).filter((item) => String(item.storeId || '').trim() !== scopedId)
-    payloadList = nextList.map((item) => Object.assign({}, item, { storeId: scopedId }))
-    boards[type] = merged.concat(payloadList)
-  } else {
-    boards[type] = nextList
-    payloadList = boards[type]
-  }
-  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: payloadList, storeId: String(storeId || '').trim() }, (payload) => {
+  boards[type] = nextList
+  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { type, list: boards[type] }, (payload) => {
     if (payload) {
       wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards(payload))
       if (callback) callback(getLeaderboard(type), true)
@@ -3312,24 +3291,21 @@ function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
 
 function addLeaderboardUser(record, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const scopedId = String(storeId || record.storeId || '').trim()
-  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
+  const list = boards[type] || []
   list.push({
     id: `${type}-rank-${Date.now()}`,
     username: record.username,
-    score: Number(record.score || 0),
-    storeId: scopedId
+    score: Number(record.score || 0)
   })
   const next = normalizeLeaderboardList(list)
     .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
     .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-  return saveLeaderboard(next, callback, type, scopedId)
+  return saveLeaderboard(next, callback, type)
 }
 
 function updateLeaderboardRank(id, direction, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const scopedId = String(storeId || '').trim()
-  const list = normalizeLeaderboardList((boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId))
+  const list = normalizeLeaderboardList(boards[type] || [])
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
   const index = list.findIndex((item) => item.id === id)
   const target = direction === 'up' ? index - 1 : index + 1
@@ -3340,29 +3316,27 @@ function updateLeaderboardRank(id, direction, callback, type = 'weekly', storeId
   const temp = next[index]
   next[index] = next[target]
   next[target] = temp
-  return saveLeaderboard(next, callback, type, scopedId)
+  return saveLeaderboard(next, callback, type)
 }
 
 function adjustLeaderboardScore(id, delta, callback, type = 'weekly', storeId = '') {
   const amount = Number(delta || 0)
-  if (!id || !amount) return getLeaderboard(type, storeId)
+  if (!id || !amount) return getLeaderboard(type)
   const boards = getLeaderboardBoards()
-  const scopedId = String(storeId || '').trim()
-  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
+  const list = boards[type] || []
   const next = normalizeLeaderboardList(list)
     .map((item) => (item.id === id ? Object.assign({}, item, { score: Math.max(0, Number(item.score || 0) + amount) }) : item))
     .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
     .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-  return saveLeaderboard(next, callback, type, scopedId)
+  return saveLeaderboard(next, callback, type)
 }
 
 function deleteLeaderboardUser(id, callback, type = 'weekly', storeId = '') {
-  if (!id) return getLeaderboard(type, storeId)
+  if (!id) return getLeaderboard(type)
   const boards = getLeaderboardBoards()
-  const scopedId = String(storeId || '').trim()
-  const list = (boards[type] || []).filter((item) => !scopedId || String(item.storeId || '').trim() === scopedId)
+  const list = boards[type] || []
   const next = list.filter((item) => item.id !== id)
-  return saveLeaderboard(next, callback, type, scopedId)
+  return saveLeaderboard(next, callback, type)
 }
 
 function getDataOverview() {
@@ -3568,6 +3542,8 @@ module.exports = {
   adjustMemberPieces,
   getPointLogs,
   fetchPointLogs,
+  getVoucherLogs,
+  fetchVoucherLogs,
   getInventory,
   fetchInventory,
   updateProductOrder,

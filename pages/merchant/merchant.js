@@ -69,7 +69,7 @@ Page({
     selectedStoreId: 'all',
     selectedStoreName: '全部门店',
     storeScopeOptions: [],
-    tabs: ['订单', '菜单管理', '活动管理', '充值', '酒水券', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '积分', '基础', '库存', '排行'],
+    tabs: ['订单', '菜单管理', '活动管理', '充值', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行'],
     activeTab: '订单',
     orderStatuses: ['全部', '待支付', '已确认', '已完成', '已取消'],
     activeStatus: '全部',
@@ -138,7 +138,9 @@ Page({
       orders: [],
       signups: [],
       cellar: [],
-      logs: []
+      logs: [],
+      rechargeRecords: [],
+      voucherLogs: []
     },
     rankTabs: state.leaderboardTabs,
     activeRankType: 'weekly',
@@ -476,7 +478,10 @@ Page({
   addMemberPoints() {
     this.changePoints(1)
   },
-  addMemberPieces() {
+  deductMemberPoints() {
+    this.changePoints(-1)
+  },
+  changePieces(sign) {
     const amount = Number(this.data.pointsDelta || 0)
     if (!amount || amount < 0) {
       wx.showToast({ title: '请输入碎片数量', icon: 'none' })
@@ -493,7 +498,7 @@ Page({
       hint: '请先核对会员ID和昵称，再确认碎片调整',
       confirmText: '确认调整',
       action: (member) => {
-        state.adjustMemberPieces(member.id, amount, String(this.data.pointsReason || '').trim(), this.data.session.name, (payload) => {
+        state.adjustMemberPieces(member.id, sign * amount, String(this.data.pointsReason || '').trim(), this.data.session.name, (payload) => {
           if (!payload) return
           this.setData({ pointsMemberKey: '', pointsDelta: '', pointsReason: '' })
           this.refreshPoints()
@@ -502,6 +507,12 @@ Page({
         })
       }
     })
+  },
+  addMemberPieces() {
+    this.changePieces(1)
+  },
+  deductMemberPieces() {
+    this.changePieces(-1)
   },
   refreshBasics() {
     const render = () => {
@@ -1057,11 +1068,19 @@ Page({
     const orders = state.getOrders().filter(matches)
     const signups = state.getSignups().filter(matches)
     const cellar = state.getCellar().filter(matches)
+    const rechargeRecords = state.getRechargeRecords()
+      .filter(matches)
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    const voucherLogs = state.getVoucherLogs()
+      .filter(matches)
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
     const logs = state.getPointLogs()
       .filter(matches)
       .slice()
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
-    return Object.assign({}, source, { orders, signups, cellar, logs })
+    return Object.assign({}, source, { orders, signups, cellar, logs, rechargeRecords, voucherLogs })
   },
   syncSelectedMemberDetail() {
     if (!this.data.memberDetailVisible || !this.data.selectedMember || !this.data.selectedMember.id) return
@@ -1074,6 +1093,8 @@ Page({
     const member = this.data.allMembers.find((item) => item.id === id) || state.getMemberList().find((item) => item.id === id)
     if (!member) return
     this.setData({
+      pointsMemberKey: member.id || '',
+      'voucherForm.memberKey': member.id || '',
       selectedMember: this.buildMemberDetail(member),
       memberDetailVisible: true
     })
@@ -1280,7 +1301,7 @@ Page({
     const packages = (this.data.rechargeSettings.packages || []).map((item, i) => {
       if (i !== index) return item
       return Object.assign({}, item, {
-        [field]: field === 'payAmount' || field === 'creditAmount' ? Number(value || 0) : value
+        [field]: field === 'payAmount' || field === 'creditAmount' || field === 'voucherCount' ? Number(value || 0) : value
       })
     })
     this.setData({ 'rechargeSettings.packages': packages })
@@ -1290,6 +1311,7 @@ Page({
       id: `pkg-${Date.now()}`,
       payAmount: 0,
       creditAmount: 0,
+      voucherCount: 0,
       label: '新套餐',
       subLabel: '',
       tip: ''
@@ -1313,6 +1335,7 @@ Page({
           id: item.id || `pkg-${index + 1}`,
           payAmount: Number(item.payAmount || 0),
           creditAmount: Number(item.creditAmount || 0),
+          voucherCount: Number(item.voucherCount || 0),
           label: String(item.label || '').trim() || `套餐${index + 1}`,
           subLabel: String(item.subLabel || '').trim(),
           tip: String(item.tip || '').trim()
@@ -1361,30 +1384,37 @@ Page({
     const field = event.currentTarget.dataset.field
     this.setData({ [`voucherForm.${field}`]: event.detail.value })
   },
-  grantDrinkVoucher() {
+  adjustDrinkVoucher(sign = 1) {
     const memberKey = String(this.data.voucherForm.memberKey || '').trim()
-    const count = Number(this.data.voucherForm.count || 0)
+    const amount = Math.abs(Number(this.data.voucherForm.count || 0))
     const note = String(this.data.voucherForm.note || '').trim()
-    if (!memberKey || !count) {
+    if (!memberKey || !amount) {
       wx.showToast({ title: '请填写会员和数量', icon: 'none' })
       return
     }
+    const count = sign * amount
     this.openMemberPicker({
       memberKey,
       title: '选择会员',
-      hint: '请先核对会员ID和昵称，再确认酒水券赠送',
-      confirmText: '确认赠送',
+      hint: '请先核对会员ID和昵称，再确认酒水券增减',
+      confirmText: '确认调整',
       action: (member) => {
         state.grantDrinkVoucher(member.id, count, note, (payload) => {
           if (!payload) return
           this.setData({
             voucherForm: { memberKey: '', count: '', note: '' }
           })
-          wx.showToast({ title: '酒水券已赠送', icon: 'success' })
+          wx.showToast({ title: '酒水券已调整', icon: 'success' })
           this.refreshDataManagement()
         })
       }
     })
+  },
+  grantDrinkVoucher() {
+    this.adjustDrinkVoucher(1)
+  },
+  deductDrinkVoucher() {
+    this.adjustDrinkVoucher(-1)
   },
   inputRechargeForm(event) {
     const field = event.currentTarget.dataset.field
@@ -1639,10 +1669,9 @@ Page({
   },
   refreshLeaderboard() {
     const type = this.data.activeRankType || 'weekly'
-    const storeId = this.activeStoreId()
-    this.setData({ leaderboard: state.getLeaderboard(type, storeId), selectedRankUser: null, rankDeltaScore: '' })
+    this.setData({ leaderboard: state.getLeaderboard(type), selectedRankUser: null, rankDeltaScore: '' })
     state.fetchLeaderboard((list) => {
-      this.setData({ leaderboard: list ? state.getLeaderboard(type, storeId) : state.getLeaderboard(type, storeId) })
+      this.setData({ leaderboard: list ? state.getLeaderboard(type) : state.getLeaderboard(type) })
     }, type)
   },
   selectRankType(event) {
@@ -1667,10 +1696,10 @@ Page({
       wx.showToast({ title: '请填写正数分值', icon: 'none' })
       return
     }
-    state.addLeaderboardUser({ username, score, storeId: this.activeStoreId() }, () => {
+    state.addLeaderboardUser({ username, score }, () => {
       this.setData({ rankUsername: '', rankScore: '' })
       this.refreshLeaderboard()
-    }, this.data.activeRankType || 'weekly', this.activeStoreId())
+    }, this.data.activeRankType || 'weekly')
   },
   selectRankUser(event) {
     const id = event.currentTarget.dataset.id
@@ -1692,7 +1721,20 @@ Page({
     state.adjustLeaderboardScore(selected.id, delta, () => {
       this.refreshLeaderboard()
       wx.showToast({ title: '分数已更新', icon: 'success' })
-    }, this.data.activeRankType || 'weekly', this.activeStoreId())
+    }, this.data.activeRankType || 'weekly')
+  },
+  addRankAwardScore(event) {
+    const selected = this.data.selectedRankUser
+    if (!selected) {
+      wx.showToast({ title: '请先选择玩家', icon: 'none' })
+      return
+    }
+    const delta = Number(event.currentTarget.dataset.score || 0)
+    if (!delta) return
+    state.adjustLeaderboardScore(selected.id, delta, () => {
+      this.refreshLeaderboard()
+      wx.showToast({ title: `已加${delta}分`, icon: 'success' })
+    }, this.data.activeRankType || 'weekly')
   },
   deleteRankUser() {
     const selected = this.data.selectedRankUser
@@ -1709,7 +1751,7 @@ Page({
           this.setData({ selectedRankUser: null, rankDeltaScore: '' })
           this.refreshLeaderboard()
           wx.showToast({ title: '玩家已删除', icon: 'success' })
-        }, this.data.activeRankType || 'weekly', this.activeStoreId())
+        }, this.data.activeRankType || 'weekly')
       }
     })
   },
@@ -1717,7 +1759,7 @@ Page({
     const { id, direction } = event.currentTarget.dataset
     state.updateLeaderboardRank(id, direction, () => {
       this.refreshLeaderboard()
-    }, this.data.activeRankType || 'weekly', this.activeStoreId())
+    }, this.data.activeRankType || 'weekly')
   },
   logout() {
     wx.showModal({

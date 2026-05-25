@@ -99,46 +99,25 @@
     <view class="section-name">排行榜</view>
     <view class="section-more" bindtap="goLeaderboard">更多</view>
   </view>
-  <view class="home-rank-grid">
-    <view class="home-rank-column">
-      <view class="home-rank-col-title">周榜</view>
-      <view class="home-rank-card" wx:for="{{weeklyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
-        <view class="home-rank-top">
-          <view class="home-rank-badge">{{index + 1}}</view>
-          <view class="home-rank-main">
-            <view class="home-rank-name">{{item.username}}</view>
-            <view class="home-rank-score">{{item.score}} 分</view>
-          </view>
-        </view>
-      </view>
-      <view wx:if="{{!weeklyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
+  <view class="home-rank-panel">
+    <view class="home-rank-tabs">
+      <view
+        class="home-rank-tab {{activeRankType === item.key ? 'active' : ''}}"
+        wx:for="{{leaderboardTabs}}"
+        wx:key="key"
+        data-type="{{item.key}}"
+        bindtap="switchRankType"
+      >{{item.label}}</view>
     </view>
-    <view class="home-rank-column">
-      <view class="home-rank-col-title">月榜</view>
-      <view class="home-rank-card" wx:for="{{monthlyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
-        <view class="home-rank-top">
-          <view class="home-rank-badge">{{index + 1}}</view>
-          <view class="home-rank-main">
-            <view class="home-rank-name">{{item.username}}</view>
-            <view class="home-rank-score">{{item.score}} 分</view>
-          </view>
-        </view>
+    <view class="home-rank-card {{index == 0 ? 'top-row top-one' : ''}} {{index == 1 ? 'top-row top-two' : ''}} {{index == 2 ? 'top-row top-three' : ''}}" wx:for="{{leaderboardList}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
+      <view class="home-rank-badge">{{item.rank}}</view>
+      <view class="home-rank-main">
+        <view class="home-rank-name">{{item.username}}</view>
+        <view class="home-rank-score">{{item.score}} 分</view>
       </view>
-      <view wx:if="{{!monthlyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
+      <view wx:if="{{index < 3}}" class="home-rank-medal">{{index == 0 ? '冠军' : index == 1 ? '亚军' : '季军'}}</view>
     </view>
-    <view class="home-rank-column">
-      <view class="home-rank-col-title">年度榜</view>
-      <view class="home-rank-card" wx:for="{{yearlyLeaderboard}}" wx:for-item="item" wx:for-index="index" wx:key="id" bindtap="goLeaderboard">
-        <view class="home-rank-top">
-          <view class="home-rank-badge">{{index + 1}}</view>
-          <view class="home-rank-main">
-            <view class="home-rank-name">{{item.username}}</view>
-            <view class="home-rank-score">{{item.score}} 分</view>
-          </view>
-        </view>
-      </view>
-      <view wx:if="{{!yearlyLeaderboard.length}}" class="home-rank-empty">暂无数据</view>
-    </view>
+    <view wx:if="{{!leaderboardList.length}}" class="home-rank-empty">暂无数据</view>
   </view>
 </scroll-view>
 <cart-summary-bar summary="{{cartSummary}}" bind:cartchange="handleCartChange" />

@@ -13,7 +13,7 @@ Page({
       payableTotal: 0
     },
     useBalance: true,
-    useVoucher: true,
+    useVoucher: false,
     paying: false
   },
   onShow() {
@@ -48,13 +48,12 @@ Page({
       return
     }
     const useBalance = Number(member.balance || 0) > 0
-    const useVoucher = Number(member.drinkVoucherCount || 0) > 0
     this.setData({
       cart,
       member,
       voucherSettings: state.getVoucherSettings(),
       useBalance,
-      useVoucher
+      useVoucher: false
     }, () => this.rebuildPreview())
   },
   rebuildPreview() {
@@ -80,7 +79,7 @@ Page({
     state.createOrderWithWechatPay({
       mode: '堂食',
       useBalance: this.data.useBalance,
-      useVoucher: this.data.useVoucher
+      useVoucher: false
     }, (order) => {
       this.setData({ paying: false })
       if (!order) return

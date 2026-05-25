@@ -16,7 +16,7 @@
       <view class="voucher-note">{{voucherSummary.note}}</view>
       <view class="voucher-expire">{{voucherSummary.expireText}}</view>
     </view>
-    <view class="voucher-action" bindtap="goUseVoucher">去使用</view>
+    <view class="voucher-action" bindtap="goUseVoucher">到店核销</view>
   </view>
   <view wx:else class="points-card">
     <view class="points-num">

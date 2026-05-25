@@ -422,93 +422,189 @@
   line-height: 36rpx;
 }
 
-.home-rank-card {
-  margin-bottom: 22rpx;
-  padding: 26rpx 22rpx;
-  border-radius: 18rpx;
-  background: #241633;
-  border: 1rpx solid rgba(255, 255, 255, 0.08);
+.home-rank-panel {
+  padding: 0 22rpx 24rpx;
 }
 
-.home-rank-top {
+.home-rank-tabs {
+  margin-bottom: 18rpx;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+}
+
+.home-rank-tab {
+  height: 58rpx;
+  border-radius: 8rpx;
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8ccef;
+  font-size: 25rpx;
+  font-weight: 800;
+}
+
+.home-rank-tab.active {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.home-rank-card {
+  min-height: 112rpx;
+  margin-bottom: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 8rpx;
+  display: grid;
+  grid-template-columns: 78rpx minmax(0, 1fr);
+  gap: 18rpx;
+  align-items: center;
+  background: #241633;
+  border: 1rpx solid rgba(216, 180, 254, 0.13);
+  box-shadow: 0 10rpx 26rpx rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.home-rank-card.top-row {
+  grid-template-columns: 88rpx minmax(0, 1fr) 96rpx;
+  min-height: 132rpx;
+  padding: 22rpx;
+  border-width: 2rpx;
+  box-shadow: 0 18rpx 42rpx rgba(24, 11, 39, 0.36);
+}
+
+.home-rank-card.top-one {
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(124, 58, 237, 0.24)),
+    #2c1746;
+  border-color: rgba(251, 191, 36, 0.7);
+}
+
+.home-rank-card.top-two {
+  background:
+    linear-gradient(135deg, rgba(203, 213, 225, 0.2), rgba(139, 92, 246, 0.22)),
+    #25183a;
+  border-color: rgba(226, 232, 240, 0.48);
+}
+
+.home-rank-card.top-three {
+  background:
+    linear-gradient(135deg, rgba(217, 119, 6, 0.22), rgba(139, 92, 246, 0.2)),
+    #241633;
+  border-color: rgba(251, 146, 60, 0.48);
 }
 
 .home-rank-badge {
-  flex: 0 0 54rpx;
-  width: 54rpx;
-  height: 54rpx;
+  width: 66rpx;
+  height: 66rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #8b5cf6;
   color: #fff;
-  font-size: 26rpx;
+  font-size: 30rpx;
   font-weight: 900;
 }
 
 .home-rank-main {
   min-width: 0;
-  flex: 1;
 }
 
 .home-rank-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: #fff;
   font-size: 30rpx;
-  line-height: 38rpx;
+  line-height: 40rpx;
   font-weight: 900;
+  word-break: break-all;
 }
 
 .home-rank-score {
-  margin-top: 6rpx;
-  color: #d8b4fe;
-  font-size: 24rpx;
-  line-height: 32rpx;
-  font-weight: 800;
-}
-
-.home-rank-link {
-  color: #d8b4fe;
+  margin-top: 8rpx;
+  color: #f0c15a;
   font-size: 26rpx;
-  line-height: 34rpx;
-  font-weight: 800;
-}
-
-.home-rank-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-  padding: 0 22rpx 24rpx;
-}
-
-.home-rank-column {
-  min-width: 0;
-}
-
-.home-rank-col-title {
-  margin-bottom: 14rpx;
-  color: #fff;
-  font-size: 28rpx;
-  line-height: 36rpx;
   font-weight: 900;
 }
 
-.home-rank-column .home-rank-card {
-  margin-bottom: 14rpx;
-  padding: 18rpx 16rpx;
+.home-rank-medal {
+  height: 46rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 23rpx;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.top-one .home-rank-badge {
+  width: 78rpx;
+  height: 78rpx;
+  background: #f59e0b;
+  box-shadow: 0 0 0 8rpx rgba(245, 158, 11, 0.16);
+  color: #2b1603;
+}
+
+.top-two .home-rank-badge {
+  width: 72rpx;
+  height: 72rpx;
+  background: #cbd5e1;
+  color: #1e1b4b;
+}
+
+.top-three .home-rank-badge {
+  width: 72rpx;
+  height: 72rpx;
+  background: #fb923c;
+  color: #2b1603;
+}
+
+.top-one .home-rank-name {
+  color: #fff7ed;
+  font-size: 34rpx;
+}
+
+.top-two .home-rank-name,
+.top-three .home-rank-name {
+  color: #f8f2ff;
+  font-size: 32rpx;
+}
+
+.top-one .home-rank-score {
+  color: #fbbf24;
+  font-size: 29rpx;
+}
+
+.top-two .home-rank-score {
+  color: #e2e8f0;
+}
+
+.top-three .home-rank-score {
+  color: #fed7aa;
+}
+
+.top-one .home-rank-medal {
+  background: #f59e0b;
+  color: #2b1603;
+}
+
+.top-two .home-rank-medal {
+  background: #cbd5e1;
+  color: #1e1b4b;
+}
+
+.top-three .home-rank-medal {
+  background: #fb923c;
+  color: #2b1603;
 }
 
 .home-rank-empty {
-  padding: 18rpx 0 6rpx;
+  padding: 28rpx 0 8rpx;
   color: #8f86a1;
   font-size: 24rpx;
   line-height: 32rpx;
+  text-align: center;
 }
 
 .home-activity-list {
