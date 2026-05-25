@@ -2302,7 +2302,7 @@ function resetCartPayTypes(payType = 'cash') {
     return getCart()
   }
   const products = getProducts()
-  const next = getCart().map((item) => {
+  const changed = getCart().map((item) => {
     const product = products.find((entry) => entry.id === item.id)
     const points = Number(item.points || (product && product.points) || 0)
     const nextPayType = payType === 'points' && points > 0 ? 'points' : 'cash'
@@ -2312,7 +2312,17 @@ function resetCartPayTypes(payType = 'cash') {
       cartKey: `${item.id}::${nextPayType}`
     })
   })
-  saveCart(next)
+  const merged = []
+  changed.forEach((item) => {
+    const key = item.cartKey || `${item.id}::${item.payType || 'cash'}`
+    const index = merged.findIndex((entry) => (entry.cartKey || entry.id) === key)
+    if (index > -1) {
+      merged[index] = Object.assign({}, merged[index], { count: Number(merged[index].count || 0) + Number(item.count || 0) })
+    } else {
+      merged.push(Object.assign({}, item, { cartKey: key }))
+    }
+  })
+  saveCart(merged)
   return getCart()
 }
 

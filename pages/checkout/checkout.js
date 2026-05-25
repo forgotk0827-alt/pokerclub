@@ -37,7 +37,7 @@ Page({
       })
       return
     }
-    this.refresh()
+    state.fetchProducts(() => this.refresh())
   },
   refresh() {
     const cart = state.getCart()
