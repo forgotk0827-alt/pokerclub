@@ -197,6 +197,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.rank-award-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .ghost-action,
 .solid-action {
   height: 58rpx;
