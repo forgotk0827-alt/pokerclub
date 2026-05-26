@@ -12,8 +12,8 @@
   <rect width="300" height="300" rx="18" fill="url(#s1)"/>
   <circle cx="150" cy="150" r="86" fill="#0D1A2A" stroke="url(#s2)" stroke-width="6"/>
   <circle cx="150" cy="150" r="58" fill="#10263D" stroke="#E5C77C" stroke-width="4"/>
-  <text x="150" y="136" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">ROYAL</text>
-  <text x="150" y="160" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">DEYOU</text>
-  <text x="150" y="184" text-anchor="middle" font-size="18" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-weight="700" fill="#E5C77C">SPECIAL</text>
+  <text x="150" y="136" text-anchor="middle" font-size="18" font-family="瘦金体, FZShouJinShu-S10S, FZShouJinShu, STSong, serif" font-weight="700" fill="#E5C77C">ROYAL</text>
+  <text x="150" y="160" text-anchor="middle" font-size="18" font-family="瘦金体, FZShouJinShu-S10S, FZShouJinShu, STSong, serif" font-weight="700" fill="#E5C77C">DEYOU</text>
+  <text x="150" y="184" text-anchor="middle" font-size="18" font-family="瘦金体, FZShouJinShu-S10S, FZShouJinShu, STSong, serif" font-weight="700" fill="#E5C77C">SPECIAL</text>
   <path d="M60 224L240 224" stroke="url(#s2)" stroke-width="6" stroke-linecap="round"/>
 </svg>

@@ -2,7 +2,7 @@ page {
   min-height: 100%;
   background: #0b0f10;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "瘦金体", "FZShouJinShu-S10S", "FZShouJinShu", "STSong", serif;
   font-size: 28rpx;
 }
 
@@ -10,8 +10,12 @@ view,
 text,
 scroll-view,
 button,
-input {
+input,
+textarea,
+picker,
+navigator {
   box-sizing: border-box;
+  font-family: "瘦金体", "FZShouJinShu-S10S", "FZShouJinShu", "STSong", serif;
 }
 
 button {
