@@ -149,6 +149,22 @@
         <input value="{{activityForm.remainingQuota}}" type="number" placeholder="剩余名额" data-field="remainingQuota" bindinput="inputActivityField" />
       </view>
       <input class="desc-input" value="{{activityForm.dayLabel}}" placeholder="日期标签，如 今天/明天/后天" data-field="dayLabel" bindinput="inputActivityField" />
+      <view class="media-row">
+        <view class="ghost-action" data-field="image" bindtap="chooseActivityImage">上传列表图</view>
+        <image wx:if="{{activityForm.image}}" class="media-preview" src="{{activityForm.image}}" mode="aspectFill" />
+      </view>
+      <view class="media-row">
+        <view class="ghost-action" data-field="detailImage" bindtap="chooseActivityImage">上传活动详情图</view>
+        <image wx:if="{{activityForm.detailImage}}" class="media-preview" src="{{activityForm.detailImage}}" mode="aspectFill" />
+      </view>
+      <view class="media-row">
+        <view class="ghost-action" data-field="environmentImage" bindtap="chooseActivityImage">上传环境详情图</view>
+        <image wx:if="{{activityForm.environmentImage}}" class="media-preview" src="{{activityForm.environmentImage}}" mode="aspectFill" />
+      </view>
+      <view class="media-row">
+        <view class="ghost-action" data-field="resultImage" bindtap="chooseActivityImage">上传赛事结果图</view>
+        <image wx:if="{{activityForm.resultImage}}" class="media-preview" src="{{activityForm.resultImage}}" mode="aspectFill" />
+      </view>
       <view class="muted-line">已报名：{{activityForm.joined || 0}}</view>
       <view class="dual-actions">
         <view class="ghost-action" data-id="{{activityForm.id}}" bindtap="duplicateActivity">复制活动</view>
@@ -164,9 +180,10 @@
       <view class="muted-line">{{item.date}} · {{item.location}}</view>
       <view class="muted-line">价格 ¥{{item.price || 0}} · 截止 {{item.deadlineAt || item.deadline || '未设置'}}</view>
       <view class="muted-line">已报 {{item.joined || 0}} · 剩余 {{item.remaining || item.remainingQuota || item.quota - item.joined || 0}}</view>
-      <view class="action-row two-col">
+      <view class="action-row three-col">
         <view class="solid-action" data-id="{{item.id}}" bindtap="editActivity">编辑</view>
         <view class="ghost-action" data-id="{{item.id}}" bindtap="duplicateActivity">复制发布</view>
+        <view class="ghost-action danger" data-id="{{item.id}}" bindtap="deleteActivity">删除</view>
       </view>
     </view>
   </view>
@@ -570,7 +587,7 @@
   <view wx:elif="{{activeTab === '排行'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">排行榜</view>
-      <view class="muted-line">全门店统一展示。周榜不清零，月榜每月1号12点清零；小型比赛冠军+3分，亚军+2分，季军+1分。</view>
+      <view class="muted-line">全门店统一展示。周榜每周日12点清零，月榜每月1号12点清零；小型比赛冠军+3分，亚军+2分，季军+1分。</view>
       <view class="rank-tabs">
         <view class="rank-tab {{activeRankType === item.key ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:for-item="item" wx:key="key" data-type="{{item.key}}" bindtap="selectRankType">{{item.label}}</view>
       </view>

@@ -698,6 +698,27 @@ Page({
       activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
+  deleteActivity(event) {
+    const id = event.currentTarget.dataset.id
+    const activity = this.data.activities.find((item) => item.id === id)
+    if (!activity) return
+    wx.showModal({
+      title: '删除活动',
+      content: `确认删除 ${activity.title} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteActivity(id, (list, synced) => {
+          if (!synced) {
+            wx.showToast({ title: '活动删除失败', icon: 'none' })
+            return
+          }
+          if (this.data.activityForm.id === id) this.newActivity()
+          this.refreshActivities()
+          wx.showToast({ title: '活动已删除', icon: 'success' })
+        })
+      }
+    })
+  },
   inputActivityField(event) {
     const field = event.currentTarget.dataset.field
     this.setData({ [`activityForm.${field}`]: event.detail.value })

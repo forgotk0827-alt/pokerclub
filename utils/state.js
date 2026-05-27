@@ -2067,6 +2067,25 @@ function updateActivity(activity, callback) {
   return list
 }
 
+function deleteActivity(id, callback) {
+  const activityId = String(id || '').trim()
+  if (!activityId) {
+    if (callback) callback(null, false)
+    return getActivities()
+  }
+  const requested = requestMerchantApi(`/api/merchant/activities/${encodeURIComponent(activityId)}`, 'DELETE', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    const saved = saveActivities(getActivities().filter((item) => item.id !== activityId))
+    if (callback) callback(saved, true)
+  })
+  if (requested) return getActivities()
+  if (callback) callback(null, false)
+  return getActivities()
+}
+
 function fetchMerchantActivities(callback) {
   fetchMerchantList('/api/merchant/activities', getActivities, saveActivities, callback)
 }
@@ -3405,18 +3424,45 @@ function saveLeaderboard(list, callback, type = 'weekly', storeId = '') {
   return getLeaderboard(type)
 }
 
+function saveLeaderboardBoards(boards, callback, type = 'weekly') {
+  const nextBoards = normalizeLeaderboardBoards(boards)
+  const requested = requestMerchantApi('/api/merchant/leaderboard', 'POST', { boards: nextBoards }, (payload) => {
+    if (payload) {
+      wx.setStorageSync(KEYS.leaderboard, normalizeLeaderboardBoards(payload))
+      if (callback) callback(getLeaderboard(type), true)
+      return
+    }
+    if (callback) callback(null, false)
+  })
+  if (requested) return getLeaderboard(type)
+  if (callback) callback(null, false)
+  return getLeaderboard(type)
+}
+
+function leaderboardIdentity(record) {
+  return String(record && (record.memberId || record.username || record.id) || '').trim()
+}
+
 function addLeaderboardUser(record, callback, type = 'weekly', storeId = '') {
   const boards = getLeaderboardBoards()
-  const list = boards[type] || []
-  list.push({
-    id: `${type}-rank-${Date.now()}`,
-    username: record.username,
-    score: Number(record.score || 0)
+  const id = `rank-${Date.now()}`
+  LEADERBOARD_TYPES.forEach((key) => {
+    const list = boards[key] || []
+    const identity = String(record.memberId || record.username || '').trim()
+    const exists = identity && normalizeLeaderboardList(list).some((item) => leaderboardIdentity(item) === identity)
+    if (!exists) {
+      list.push({
+        id,
+        memberId: record.memberId || '',
+        username: record.username,
+        score: Number(record.score || 0)
+      })
+    }
+    boards[key] = normalizeLeaderboardList(list)
+      .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+      .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
   })
-  const next = normalizeLeaderboardList(list)
-    .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-    .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-  return saveLeaderboard(next, callback, type)
+  return saveLeaderboardBoards(boards, callback, type)
 }
 
 function updateLeaderboardRank(id, direction, callback, type = 'weekly', storeId = '') {
@@ -3439,20 +3485,36 @@ function adjustLeaderboardScore(id, delta, callback, type = 'weekly', storeId = 
   const amount = Number(delta || 0)
   if (!id || !amount) return getLeaderboard(type)
   const boards = getLeaderboardBoards()
-  const list = boards[type] || []
-  const next = normalizeLeaderboardList(list)
-    .map((item) => (item.id === id ? Object.assign({}, item, { score: Math.max(0, Number(item.score || 0) + amount) }) : item))
-    .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-    .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
-  return saveLeaderboard(next, callback, type)
+  const source = normalizeLeaderboardList(boards[type] || []).find((item) => item.id === id)
+  const identity = leaderboardIdentity(source) || id
+  LEADERBOARD_TYPES.forEach((key) => {
+    const list = boards[key] || []
+    const normalized = normalizeLeaderboardList(list)
+    const hasTarget = normalized.some((item) => item.id === id || leaderboardIdentity(item) === identity)
+    const withTarget = hasTarget || !source || amount < 0
+      ? normalized
+      : normalized.concat(Object.assign({}, source, {
+          id: source.id || `rank-${Date.now()}`,
+          score: 0
+        }))
+    boards[key] = withTarget
+      .map((item) => (item.id === id || leaderboardIdentity(item) === identity ? Object.assign({}, item, { score: Math.max(0, Number(item.score || 0) + amount) }) : item))
+      .sort((a, b) => b.score - a.score || Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+      .map((item, index) => Object.assign({}, item, { sortOrder: index + 1 }))
+  })
+  return saveLeaderboardBoards(boards, callback, type)
 }
 
 function deleteLeaderboardUser(id, callback, type = 'weekly', storeId = '') {
   if (!id) return getLeaderboard(type)
   const boards = getLeaderboardBoards()
-  const list = boards[type] || []
-  const next = list.filter((item) => item.id !== id)
-  return saveLeaderboard(next, callback, type)
+  const source = normalizeLeaderboardList(boards[type] || []).find((item) => item.id === id)
+  const identity = leaderboardIdentity(source) || id
+  LEADERBOARD_TYPES.forEach((key) => {
+    const list = boards[key] || []
+    boards[key] = normalizeLeaderboardList(list).filter((item) => item.id !== id && leaderboardIdentity(item) !== identity)
+  })
+  return saveLeaderboardBoards(boards, callback, type)
 }
 
 function getDataOverview() {
@@ -3599,6 +3661,7 @@ module.exports = {
   getActivity,
   saveActivities,
   updateActivity,
+  deleteActivity,
   isActivitySignupClosed,
   openActivityLocation,
   getMember,
@@ -3676,6 +3739,7 @@ module.exports = {
   adjustLeaderboardScore,
   deleteLeaderboardUser,
   saveLeaderboard,
+  saveLeaderboardBoards,
   getLeaderboardBoards,
   merchantLogout,
   leaderboardTabs: LEADERBOARD_TABS

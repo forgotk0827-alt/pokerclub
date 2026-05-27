@@ -2393,7 +2393,7 @@ function syncLeaderboardState(force = false) {
     const lastKey = db.leaderboardMeta.resetKeys[type]
     if (!lastKey) {
       db.leaderboardMeta.resetKeys[type] = key
-    } else if (lastKey !== key && type === 'monthly') {
+    } else if (lastKey !== key && (type === 'weekly' || type === 'monthly')) {
       db.leaderboard[type] = []
       db.leaderboardMeta.resetKeys[type] = key
     } else if (lastKey !== key) {
