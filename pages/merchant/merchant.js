@@ -1728,20 +1728,22 @@ Page({
     if (!selected) return
     this.setData({ selectedRankUser: selected, rankDeltaScore: '' })
   },
-  addRankScore() {
+  adjustRankScore(event) {
     const selected = this.data.selectedRankUser
     if (!selected) {
       wx.showToast({ title: '请先选择玩家', icon: 'none' })
       return
     }
-    const delta = Number(this.data.rankDeltaScore || 0)
-    if (!delta) {
-      wx.showToast({ title: '请输入增减分数', icon: 'none' })
+    const amount = Math.abs(Number(this.data.rankDeltaScore || 0))
+    if (!amount) {
+      wx.showToast({ title: '请输入分数', icon: 'none' })
       return
     }
+    const delta = event.currentTarget.dataset.direction === 'deduct' ? -amount : amount
     state.adjustLeaderboardScore(selected.id, delta, () => {
+      this.setData({ rankDeltaScore: '' })
       this.refreshLeaderboard()
-      wx.showToast({ title: '分数已更新', icon: 'success' })
+      wx.showToast({ title: delta > 0 ? `已加${amount}分` : `已减${amount}分`, icon: 'success' })
     }, this.data.activeRankType || 'weekly')
   },
   addRankAwardScore(event) {

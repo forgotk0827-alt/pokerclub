@@ -597,8 +597,9 @@
         <view class="solid-action" bindtap="addRankUser">新增</view>
       </view>
       <view class="rank-form">
-        <input value="{{rankDeltaScore}}" type="number" placeholder="增减分数" bindinput="inputRankDeltaScore" />
-        <view class="solid-action" bindtap="addRankScore">调整分数</view>
+        <input value="{{rankDeltaScore}}" type="number" placeholder="分数" bindinput="inputRankDeltaScore" />
+        <view class="solid-action" data-direction="add" bindtap="adjustRankScore">增加分数</view>
+        <view class="solid-action dark" data-direction="deduct" bindtap="adjustRankScore">减少分数</view>
         <view class="ghost-action danger" bindtap="deleteRankUser">删除</view>
       </view>
       <view class="dual-actions rank-award-actions">
