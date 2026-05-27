@@ -820,22 +820,38 @@ Page({
       })
     }
   },
-  chooseGlobalVideo() {
-    if (!wx.chooseMedia) {
-      wx.showToast({ title: '当前环境不支持视频上传', icon: 'none' })
+  chooseShowcaseImage() {
+    const setImage = (path) => {
+      state.uploadMerchantMedia(path, 'image', (url) => {
+        if (!url) return
+        const current = Array.isArray(this.data.globalSettings.showcaseImages) ? this.data.globalSettings.showcaseImages : []
+        this.setData({ 'globalSettings.showcaseImages': current.concat(url) })
+      })
+    }
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        success: (res) => {
+          const file = res.tempFiles && res.tempFiles[0]
+          if (file) setImage(file.tempFilePath)
+        }
+      })
       return
     }
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['video'],
-      success: (res) => {
-        const file = res.tempFiles && res.tempFiles[0]
-        if (!file) return
-        state.uploadMerchantMedia(file.tempFilePath, 'video', (url) => {
-          if (url) this.setData({ 'globalSettings.videoUrl': url })
-        })
-      }
-    })
+    if (wx.chooseImage) {
+      wx.chooseImage({
+        count: 1,
+        success: (res) => {
+          if (res.tempFilePaths && res.tempFilePaths[0]) setImage(res.tempFilePaths[0])
+        }
+      })
+    }
+  },
+  removeShowcaseImage(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    const current = Array.isArray(this.data.globalSettings.showcaseImages) ? this.data.globalSettings.showcaseImages : []
+    this.setData({ 'globalSettings.showcaseImages': current.filter((_, itemIndex) => itemIndex !== index) })
   },
   saveActivity() {
     const form = this.data.activityForm
@@ -1496,7 +1512,7 @@ Page({
   saveGlobalSettings() {
     const next = state.saveGlobalSettings({
       videoTitle: this.data.globalSettings.videoTitle,
-      videoUrl: this.data.globalSettings.videoUrl,
+      showcaseImages: this.data.globalSettings.showcaseImages,
       printTemplate: this.data.globalSettings.printTemplate,
       leaderboardRule: this.data.globalSettings.leaderboardRule,
       newOrderReminder: this.data.globalSettings.newOrderReminder,
@@ -1522,7 +1538,7 @@ Page({
   saveShowcaseSettings() {
     const next = state.saveGlobalSettings({
       videoTitle: this.data.globalSettings.videoTitle,
-      videoUrl: this.data.globalSettings.videoUrl,
+      showcaseImages: this.data.globalSettings.showcaseImages,
       showcaseText: this.data.globalSettings.showcaseText
     })
     this.setData({ globalSettings: next })

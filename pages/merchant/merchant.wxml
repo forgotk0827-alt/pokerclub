@@ -439,11 +439,17 @@
     <view class="menu-editor">
       <view class="editor-title">精彩呈现</view>
       <view class="form-grid">
-        <input value="{{globalSettings.videoTitle}}" placeholder="视频标题" data-field="videoTitle" bindinput="inputGlobalSetting" />
-        <view class="ghost-action" bindtap="chooseGlobalVideo">上传门店视频</view>
+        <input value="{{globalSettings.videoTitle}}" placeholder="展示标题" data-field="videoTitle" bindinput="inputGlobalSetting" />
+        <view class="ghost-action" bindtap="chooseShowcaseImage">上传轮播图片</view>
       </view>
       <textarea class="desc-input textarea-input" value="{{globalSettings.showcaseText}}" placeholder="前台展示文案" data-field="showcaseText" bindinput="inputGlobalSetting"></textarea>
-      <view class="muted-line">视频地址：{{globalSettings.videoUrl || '未上传'}}</view>
+      <view class="muted-line">已上传 {{globalSettings.showcaseImages.length || 0}} 张图片，用户端将以轮播形式展示。</view>
+      <view class="showcase-image-grid">
+        <view class="showcase-image-item" wx:for="{{globalSettings.showcaseImages}}" wx:for-item="item" wx:key="*this">
+          <image class="media-preview" src="{{item}}" mode="aspectFill" />
+          <view class="ghost-action mini-action danger" data-index="{{index}}" bindtap="removeShowcaseImage">删除</view>
+        </view>
+      </view>
       <view class="dual-actions">
         <view class="ghost-action" bindtap="refreshGlobalSettings">刷新</view>
         <view class="solid-action" bindtap="saveShowcaseSettings">保存展示</view>

@@ -319,8 +319,9 @@ function normalizePrintTemplate(template) {
 
 function defaultGlobalSettings() {
   return {
-    videoTitle: '门店视频专区',
-    videoUrl: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
+    videoTitle: '精彩呈现',
+    videoUrl: '',
+    showcaseImages: ['/assets/hero-bar.svg', '/assets/activity-card.svg', '/assets/product-pack.svg'],
     printTemplate: defaultPrintTemplate(),
     leaderboardRule: '按积分从高到低排序，商家可手动微调排名。',
     newOrderReminder: 'voice,vibrate,modal',
@@ -347,6 +348,9 @@ function normalizeGlobalSettings(settings) {
   next.reminderInterval = Math.max(0, Number(next.reminderInterval || defaults.reminderInterval))
   next.homeNotice = String(next.homeNotice || defaults.homeNotice)
   next.showcaseText = String(next.showcaseText || defaults.showcaseText)
+  next.showcaseImages = Array.isArray(next.showcaseImages) && next.showcaseImages.length
+    ? next.showcaseImages.map((item) => String(item || '').trim()).filter(Boolean)
+    : defaults.showcaseImages.slice()
   next.joinUsTitle = String(next.joinUsTitle || defaults.joinUsTitle)
   next.joinUsText = String(next.joinUsText || defaults.joinUsText)
   next.joinUsImage = String(next.joinUsImage || defaults.joinUsImage)

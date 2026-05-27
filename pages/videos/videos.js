@@ -3,14 +3,13 @@ const state = require('../../utils/state')
 Page({
   data: {
     globalSettings: null,
-    videos: [],
-    activeId: ''
+    images: []
   },
   onShow() {
     state.fetchGlobalSettings((globalSettings) => {
       this.setData({
         globalSettings,
-        videos: globalSettings ? this.buildVideos(globalSettings) : []
+        images: this.buildImages(globalSettings)
       })
     })
   },
@@ -18,29 +17,13 @@ Page({
     const globalSettings = state.getGlobalSettings()
     this.setData({
       globalSettings,
-      videos: this.buildVideos(globalSettings)
+      images: this.buildImages(globalSettings)
     })
   },
-  buildVideos(globalSettings) {
+  buildImages(globalSettings) {
     const settings = globalSettings || state.getGlobalSettings()
-    const current = settings.videoUrl
-      ? [
-          {
-            id: 'merchant-video',
-            type: '精彩呈现',
-            title: settings.videoTitle || '精彩呈现',
-            desc: settings.showcaseText || '',
-            poster: '/assets/hero-bar.svg',
-            src: settings.videoUrl
-          }
-        ]
+    return Array.isArray(settings.showcaseImages)
+      ? settings.showcaseImages.filter(Boolean)
       : []
-    return current
-  },
-  play(event) {
-    this.setData({ activeId: event.currentTarget.dataset.id })
-  },
-  pause() {
-    this.setData({ activeId: '' })
   }
 })

@@ -1,15 +1,8 @@
-.video-page {
+.showcase-page {
   min-height: 100vh;
   padding: 24rpx 24rpx 56rpx;
   background: #050807;
   color: #fff;
-}
-
-.video-card {
-  margin-bottom: 24rpx;
-  overflow: hidden;
-  border-radius: 8rpx;
-  background: #242526;
 }
 
 .showcase-copy {
@@ -22,22 +15,28 @@
   line-height: 42rpx;
 }
 
-.video-wrap {
+.showcase-card {
+  overflow: hidden;
+  border-radius: 8rpx;
+  background: #242526;
+}
+
+.showcase-swiper {
   width: 100%;
-  height: 390rpx;
+  height: 620rpx;
   background: #111;
 }
 
-.video-wrap video {
+.showcase-image {
   width: 100%;
   height: 100%;
 }
 
-.video-info {
+.showcase-info {
   padding: 22rpx 24rpx 26rpx;
 }
 
-.video-type {
+.showcase-type {
   display: inline-flex;
   min-width: 120rpx;
   height: 42rpx;
@@ -51,16 +50,25 @@
   font-weight: 900;
 }
 
-.video-title {
+.showcase-title {
   margin-top: 18rpx;
   font-size: 32rpx;
   line-height: 42rpx;
   font-weight: 900;
 }
 
-.video-desc {
+.showcase-desc {
   margin-top: 10rpx;
   color: #b7bec8;
   font-size: 25rpx;
   line-height: 36rpx;
+}
+
+.showcase-empty {
+  padding: 120rpx 0;
+  border-radius: 8rpx;
+  background: #242526;
+  color: #8f98a4;
+  text-align: center;
+  font-size: 26rpx;
 }

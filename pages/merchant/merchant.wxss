@@ -597,6 +597,28 @@ input {
   background: #f3f4f6;
 }
 
+.showcase-image-grid {
+  margin-top: 14rpx;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.showcase-image-item {
+  min-width: 0;
+}
+
+.showcase-image-item .media-preview {
+  width: 100%;
+  height: 126rpx;
+  display: block;
+}
+
+.showcase-image-item .mini-action {
+  margin-top: 8rpx;
+  width: 100%;
+}
+
 .large-preview {
   width: 260rpx;
   height: 170rpx;
