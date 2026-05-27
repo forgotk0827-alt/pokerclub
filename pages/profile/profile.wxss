@@ -202,46 +202,6 @@
   font-size: 24rpx;
 }
 
-.assistant {
-  min-height: 116rpx;
-  margin-top: 18rpx;
-  padding: 22rpx 26rpx;
-  border-radius: 16rpx;
-  display: grid;
-  grid-template-columns: 70rpx minmax(0, 1fr) 70rpx;
-  gap: 20rpx;
-  align-items: center;
-  background: #fff;
-  color: #1f2937;
-}
-
-.assistant-avatar {
-  width: 70rpx;
-  height: 70rpx;
-  border-radius: 50%;
-}
-
-.assistant-main {
-  min-width: 0;
-}
-
-.assistant-title {
-  font-size: 28rpx;
-  line-height: 36rpx;
-  font-weight: 900;
-}
-
-.assistant-desc {
-  margin-top: 6rpx;
-  color: #555;
-  font-size: 24rpx;
-}
-
-.advisor-qr {
-  width: 58rpx;
-  height: 58rpx;
-}
-
 .menu-panel {
   margin-top: 48rpx;
   padding: 22rpx 22rpx 28rpx;
@@ -550,40 +510,6 @@
   border-bottom: 0;
 }
 
-.group-section {
-  padding: 78rpx 0 0;
-  text-align: center;
-  background: #050807;
-}
-
-.group-qr {
-  width: 170rpx;
-  height: 170rpx;
-  border: 8rpx solid #fff;
-}
-
-.qr-logo {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 48rpx;
-  height: 36rpx;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  color: #e25754;
-  font-size: 16rpx;
-  font-weight: 900;
-}
-
-.group-tip {
-  margin-top: 20rpx;
-  color: #98a3b4;
-  font-size: 24rpx;
-}
-
 .member-qr-mask {
   position: fixed;
   z-index: 40;
@@ -692,7 +618,6 @@
 }
 
 .stats,
-.assistant,
 .menu-panel {
   border-radius: 8rpx;
   background: #f8f3e7;
@@ -702,10 +627,6 @@
 
 .stat-num {
   color: #1d3838;
-}
-
-.group-section {
-  background: #0b0f10;
 }
 
 .profile-page {
@@ -737,7 +658,6 @@
 }
 
 .stats,
-.assistant,
 .menu-panel {
   background: #efe7ff;
   color: #241633;
@@ -745,10 +665,6 @@
 
 .stat-num {
   color: #6d28d9;
-}
-
-.group-section {
-  background: #120a1f;
 }
 
 .profile-editor-mask {

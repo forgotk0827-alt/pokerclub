@@ -225,12 +225,6 @@ Page({
       wx.navigateTo({ url: '/pages/vip-upgrade/vip-upgrade' })
     })
   },
-  contact() {
-    if (!state.requireLogin('联系顾问')) {
-      return
-    }
-    wx.showToast({ title: '已联系顾问', icon: 'success' })
-  },
   goSignups() {
     state.requireLogin('查看报名记录', () => {
       wx.navigateTo({ url: '/pages/profile-signups/profile-signups' })

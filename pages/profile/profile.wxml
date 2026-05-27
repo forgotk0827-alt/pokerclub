@@ -45,15 +45,6 @@
     </view>
   </view>
 
-  <view class="assistant">
-    <image class="assistant-avatar" src="/assets/hero-bar.svg" mode="aspectFill" />
-    <view class="assistant-main">
-      <view class="assistant-title">{{member.consultant}}</view>
-      <view class="assistant-desc">有任何问题随时联系我哦！</view>
-    </view>
-    <view class="qr-code advisor-qr"></view>
-  </view>
-
   <view class="menu-panel">
     <view class="menu-title">我的</view>
     <view class="menu-line"></view>
@@ -99,13 +90,6 @@
         <text>退出登录</text>
       </view>
     </view>
-  </view>
-
-  <view class="group-section">
-    <view class="qr-code group-qr">
-      <view class="qr-logo">破壳派</view>
-    </view>
-    <view class="group-tip">点击打开二维码后长按识别加入店铺群</view>
   </view>
 
   <view wx:if="{{qrVisible}}" class="member-qr-mask" bindtap="closeMemberQr">
