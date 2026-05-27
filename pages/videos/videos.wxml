@@ -7,11 +7,6 @@
         <image class="showcase-image" src="{{item}}" mode="aspectFill" />
       </swiper-item>
     </swiper>
-    <view class="showcase-info">
-      <view class="showcase-type">精彩呈现</view>
-      <view class="showcase-title">{{globalSettings.videoTitle || '精彩呈现'}}</view>
-      <view class="showcase-desc">滑动查看门店赛事、聚会和现场瞬间。</view>
-    </view>
   </view>
   <view wx:else class="showcase-empty">暂无展示图片</view>
 </scroll-view>
