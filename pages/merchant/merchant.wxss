@@ -201,6 +201,95 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.rank-dashboard {
+  margin-top: 16rpx;
+  padding: 22rpx;
+  border-radius: 8rpx;
+  background: #fff;
+}
+
+.rank-head,
+.rank-operate-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.rank-rule-chip {
+  flex: 0 0 auto;
+  height: 48rpx;
+  padding: 0 18rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  background: #111827;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.rank-operate-card,
+.rank-add-card {
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border-radius: 8rpx;
+  background: #f9fafb;
+  border: 1rpx solid #eef0f3;
+}
+
+.rank-panel-title {
+  color: #111827;
+  font-size: 26rpx;
+  line-height: 34rpx;
+  font-weight: 900;
+}
+
+.rank-award-grid {
+  margin-top: 18rpx;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10rpx;
+}
+
+.award-first {
+  background: #e25754;
+}
+
+.award-second {
+  background: #1f2429;
+}
+
+.award-third {
+  background: #6b7280;
+}
+
+.rank-adjust-row,
+.rank-add-row {
+  margin-top: 14rpx;
+  display: grid;
+  gap: 10rpx;
+  align-items: center;
+}
+
+.rank-adjust-row {
+  grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr));
+}
+
+.rank-add-row {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr) minmax(0, 0.8fr);
+}
+
+.rank-adjust-row input,
+.rank-add-row input {
+  height: 58rpx;
+  padding: 0 16rpx;
+  border-radius: 8rpx;
+  background: #fff;
+  border: 1rpx solid #e5e7eb;
+  font-size: 24rpx;
+}
+
 .ghost-action,
 .solid-action {
   height: 58rpx;
@@ -578,9 +667,28 @@ input {
 
 .rank-row {
   display: grid;
-  grid-template-columns: 58rpx minmax(0, 1fr) 54rpx 54rpx;
-  gap: 12rpx;
+  grid-template-columns: 58rpx minmax(0, 1fr) 92rpx 118rpx;
+  gap: 14rpx;
   align-items: center;
+  border: 1rpx solid transparent;
+}
+
+.rank-row-active {
+  border-color: rgba(226, 87, 84, 0.46);
+  background: #fff8f8;
+}
+
+.rank-list-head {
+  margin-top: 18rpx;
+  padding: 0 20rpx;
+  height: 48rpx;
+  display: grid;
+  grid-template-columns: 58rpx minmax(0, 1fr) 92rpx 118rpx;
+  gap: 14rpx;
+  align-items: center;
+  color: #6b7280;
+  font-size: 22rpx;
+  font-weight: 900;
 }
 
 .rank-index {
@@ -596,8 +704,34 @@ input {
   font-weight: 900;
 }
 
+.rank-top-one {
+  background: #eab308;
+}
+
+.rank-top-two {
+  background: #6b7280;
+}
+
+.rank-top-three {
+  background: #a16207;
+}
+
 .rank-main {
   min-width: 0;
+}
+
+.rank-score {
+  color: #e25754;
+  font-size: 34rpx;
+  font-weight: 900;
+  text-align: right;
+}
+
+.rank-move-group {
+  display: grid;
+  grid-template-columns: repeat(2, 54rpx);
+  gap: 8rpx;
+  justify-content: end;
 }
 
 .member-detail-mask {
