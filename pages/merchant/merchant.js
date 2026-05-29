@@ -1422,10 +1422,6 @@ Page({
     const settings = this.data.voucherSettings
     const next = state.saveVoucherSettings(
       {
-        title: String(settings.title || '').trim(),
-        ruleName: String(settings.ruleName || '').trim(),
-        buyCount: Number(settings.buyCount || 0),
-        freeCount: Number(settings.freeCount || 0),
         note: String(settings.note || '').trim(),
         expireText: String(settings.expireText || '').trim()
       },

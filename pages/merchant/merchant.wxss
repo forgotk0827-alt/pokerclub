@@ -628,10 +628,6 @@
   writing-mode: vertical-rl;
 }
 
-.voucher-count-grid {
-  margin-top: 16rpx;
-}
-
 .mini-action {
   width: 92rpx;
   height: 48rpx;
