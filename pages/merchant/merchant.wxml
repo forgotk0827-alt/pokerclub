@@ -586,9 +586,9 @@
       </view>
       <view class="sub-title">商家端权限</view>
       <checkbox-group class="permission-grid" bindchange="toggleStaffPermissions">
-        <label class="permission-item" wx:for="{{staffPermissionOptions}}" wx:for-item="item" wx:key="*this">
-          <checkbox value="{{item}}" checked="{{staffForm.permissions.indexOf(item) > -1}}" color="#e25754" />
-          <text>{{item}}</text>
+        <label class="permission-item" wx:for="{{staffPermissionItems}}" wx:for-item="item" wx:key="name">
+          <checkbox value="{{item.name}}" checked="{{item.checked}}" color="#e25754" />
+          <text>{{item.name}}</text>
         </label>
       </checkbox-group>
       <view class="dual-actions">

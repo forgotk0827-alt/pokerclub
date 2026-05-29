@@ -54,6 +54,14 @@ const merchantTabOptions = ['订单', '菜单管理', '活动管理', '充值', 
 const superAdminTabs = merchantTabOptions.concat('店员管理')
 const defaultStaffPermissions = ['订单', '活动管理', '基础']
 
+function buildStaffPermissionItems(permissions) {
+  const selected = Array.isArray(permissions) ? permissions : []
+  return merchantTabOptions.map((name) => ({
+    name,
+    checked: selected.indexOf(name) > -1
+  }))
+}
+
 function swapSortOrder(list, id, direction) {
   const items = (list || []).map((item, index) => Object.assign({}, item, {
     sortOrder: Number(item.sortOrder || index + 1)
@@ -166,7 +174,7 @@ Page({
     memberPickerSelectedName: '',
     memberPickerConfirmText: '确认执行',
     staffAccounts: [],
-    staffPermissionOptions: merchantTabOptions,
+    staffPermissionItems: buildStaffPermissionItems(defaultStaffPermissions),
     staffStoreOptions: [],
     staffStoreIndex: 0,
     staffForm: {
@@ -1778,19 +1786,25 @@ Page({
     })
   },
   toggleStaffPermissions(event) {
-    this.setData({ 'staffForm.permissions': event.detail.value || [] })
+    const permissions = event.detail.value || []
+    this.setData({
+      'staffForm.permissions': permissions,
+      staffPermissionItems: buildStaffPermissionItems(permissions)
+    })
   },
   newStaffAccount() {
     const firstStore = this.data.staffStoreOptions[0] || state.getStores().map((item) => ({ id: item.id, name: item.shortName || item.name }))[0] || {}
+    const permissions = defaultStaffPermissions.slice()
     this.setData({
       staffStoreIndex: 0,
+      staffPermissionItems: buildStaffPermissionItems(permissions),
       staffForm: {
         id: '',
         username: '',
         password: '',
         name: '',
         storeId: firstStore.id || '',
-        permissions: defaultStaffPermissions.slice()
+        permissions
       }
     })
   },
@@ -1799,15 +1813,17 @@ Page({
     const account = this.data.staffAccounts.find((item) => item.id === id)
     if (!account) return
     const index = this.data.staffStoreOptions.findIndex((item) => item.id === account.storeId)
+    const permissions = Array.isArray(account.permissions) ? account.permissions : []
     this.setData({
       staffStoreIndex: index > -1 ? index : 0,
+      staffPermissionItems: buildStaffPermissionItems(permissions),
       staffForm: {
         id: account.id,
         username: account.username || '',
         password: '',
         name: account.name || '',
         storeId: account.storeId || '',
-        permissions: Array.isArray(account.permissions) ? account.permissions : []
+        permissions
       }
     })
   },
