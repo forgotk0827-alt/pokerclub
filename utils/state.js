@@ -3031,6 +3031,55 @@ function addSignup(activity, callback) {
   return getSignups()
 }
 
+function anonymizeActivitySignup(signup, index = 0) {
+  const seed = String((signup && (signup.id || signup.memberId || signup.createdAt)) || index)
+  let total = index
+  for (let i = 0; i < seed.length; i += 1) total += seed.charCodeAt(i)
+  const displayName = total % 2 === 0 ? '帅哥' : '美女'
+  return {
+    id: (signup && signup.id) || `signup-${index}`,
+    avatarUrl: (signup && signup.avatarUrl) || '',
+    avatarText: displayName.slice(0, 1),
+    displayName
+  }
+}
+
+function fetchActivitySignups(activityId, callback) {
+  const id = String(activityId || '').trim()
+  if (!id) {
+    if (callback) callback([])
+    return
+  }
+  const base = apiBaseUrl()
+  const fallback = () => {
+    const local = getSignups()
+      .filter((item) => item.activityId === id)
+      .map(anonymizeActivitySignup)
+    if (callback) callback(local)
+  }
+  if (!base) {
+    fallback()
+    return
+  }
+  wx.request({
+    url: `${base}/api/activities/${encodeURIComponent(id)}/signups`,
+    method: 'GET',
+    timeout: 10000,
+    success(res) {
+      const body = res.data || {}
+      const payload = body.data || body
+      if (res.statusCode >= 200 && res.statusCode < 300 && Array.isArray(payload)) {
+        if (callback) callback(payload.map(anonymizeActivitySignup))
+        return
+      }
+      fallback()
+    },
+    fail() {
+      fallback()
+    }
+  })
+}
+
 function inferStoreByActivity(activity) {
   const stores = getStores()
   if (activity && activity.location && activity.location.indexOf('新街口') > -1) {
@@ -3764,6 +3813,7 @@ module.exports = {
   getStorePrinter,
   buildPrintTemplate,
   getSignups,
+  fetchActivitySignups,
   addSignup,
   getStoreSignups,
   updateSignupStatus,

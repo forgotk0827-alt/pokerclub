@@ -31,20 +31,23 @@ Page({
       setTimeout(() => wx.navigateBack(), 600)
       return
     }
-    const avatars = state.getSignups()
-      .filter((item) => item.activityId === activity.id)
-      .slice(0, 6)
-      .map((item) => ({
-        avatarUrl: item.avatarUrl || '',
-        avatarText: item.avatarText || (item.nickname || '').slice(0, 1) || '人'
-      }))
     this.setData({
       activity: Object.assign({}, activity, {
         remaining: Math.max(0, Number(activity.quota || 0) - Number(activity.joined || 0)),
         signupClosed: state.isActivitySignupClosed(activity),
         signupText: state.isActivitySignupClosed(activity) ? '已截止' : '立即报名'
       }),
-      avatars
+      avatars: []
+    })
+    state.fetchActivitySignups(activity.id, (list) => {
+      this.setData({
+        avatars: (list || []).slice(0, 12).map((item, index) => ({
+          id: item.id || `signup-${index}`,
+          avatarUrl: item.avatarUrl || '',
+          avatarText: item.avatarText || (item.displayName || '').slice(0, 1) || '帅',
+          displayName: item.displayName || (index % 2 === 0 ? '帅哥' : '美女')
+        }))
+      })
     })
   },
   switchTab(event) {

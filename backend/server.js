@@ -67,6 +67,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/categories') return sendOk(res, db.categories)
     if (req.method === 'GET' && pathname === '/api/products') return sendOk(res, publicProducts(url.searchParams.get('storeId')))
     if (req.method === 'GET' && pathname === '/api/activities') return sendOk(res, db.activities)
+    if (req.method === 'GET' && match(pathname, '/api/activities/:id/signups')) return await handleGetActivitySignups(req, res, pathname)
     if (req.method === 'GET' && match(pathname, '/api/activities/:id')) return await handleGetActivity(req, res, pathname)
     if (req.method === 'GET' && pathname === '/api/recharge-settings') return sendOk(res, db.rechargeSettings)
     if (req.method === 'GET' && pathname === '/api/voucher-settings') return sendOk(res, db.voucherSettings || defaultVoucherSettings())
@@ -315,6 +316,29 @@ function handleGetActivity(req, res, pathname) {
   const activity = db.activities.find((item) => item.id === id)
   if (!activity) throw httpError(404, '活动不存在')
   sendOk(res, activity)
+}
+
+function handleGetActivitySignups(req, res, pathname) {
+  const { id } = params(pathname, '/api/activities/:id/signups')
+  const activity = db.activities.find((item) => item.id === id)
+  if (!activity) throw httpError(404, '活动不存在')
+  const list = db.signups
+    .filter((item) => item.activityId === id)
+    .map((item, index) => ({
+      id: item.id || `${id}-${index}`,
+      avatarUrl: item.avatarUrl || '',
+      avatarText: activitySignupDisplayName(item, index).slice(0, 1),
+      displayName: activitySignupDisplayName(item, index),
+      status: item.status || '已报名'
+    }))
+  sendOk(res, list)
+}
+
+function activitySignupDisplayName(signup, index = 0) {
+  const seed = String(signup.id || signup.memberId || signup.createdAt || index)
+  let total = index
+  for (let i = 0; i < seed.length; i += 1) total += seed.charCodeAt(i)
+  return total % 2 === 0 ? '帅哥' : '美女'
 }
 
 async function handleUpdateProfile(req, res, user) {
