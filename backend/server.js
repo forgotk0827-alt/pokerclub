@@ -36,6 +36,7 @@ const COLLECTION_KEYS = [
   'pointLogs',
   'globalSettings',
   'leaderboard',
+  'staffAccounts',
   'authRevocations'
 ]
 
@@ -94,6 +95,7 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname.startsWith('/api/merchant/')) {
       const merchant = requireMerchant(req)
+      ensureMerchantPermission(merchant, pathname)
       if (req.method === 'GET' && pathname === '/api/merchant/data/overview') return sendOk(res, getOverview(merchant))
       if (req.method === 'GET' && pathname === '/api/merchant/data/export') return sendText(res, exportSummary(merchant))
       if (req.method === 'GET' && pathname === '/api/merchant/orders') return sendOk(res, scopedList(db.orders, merchant))
@@ -102,6 +104,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/api/merchant/table-qrcodes') return sendOk(res, tableQrcodeList(merchant))
       if (req.method === 'POST' && pathname === '/api/merchant/table-qrcodes/generate') return await handleGenerateTableQrcodes(req, res, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/members') return sendOk(res, scopedMembers(merchant))
+      if (req.method === 'GET' && pathname === '/api/merchant/staff-accounts') return await handleGetStaffAccounts(req, res, merchant)
+      if (req.method === 'POST' && pathname === '/api/merchant/staff-accounts') return await handleSaveStaffAccount(req, res, merchant)
+      if (req.method === 'DELETE' && match(pathname, '/api/merchant/staff-accounts/:id')) return await handleDeleteStaffAccount(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/signups') return sendOk(res, scopedList(db.signups, merchant))
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/signups/:id/status')) return await handleSignupStatus(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/cellar') return sendOk(res, scopedList(db.cellar, merchant))
@@ -210,14 +215,16 @@ async function handleMerchantLogin(req, res) {
   if (!account) throw httpError(401, '账号或密码错误')
   const store = account.role === 'super_admin' ? null : db.stores.find((item) => item.id === account.storeId)
   if (account.role !== 'super_admin' && !store) throw httpError(403, '账号未绑定有效门店')
-  const token = signToken({ type: 'merchant', username, role: account.role, storeId: account.storeId })
+  const permissions = normalizeStaffPermissions(account.permissions || [])
+  const token = signToken({ type: 'merchant', username, role: account.role, storeId: account.storeId, permissions })
   sendOk(res, {
     token,
     username,
     name: account.name,
     role: account.role,
     storeId: account.storeId,
-    storeName: store ? store.shortName || store.name : '全部门店'
+    storeName: store ? store.shortName || store.name : '全部门店',
+    permissions
   })
 }
 
@@ -1147,6 +1154,7 @@ function requireMerchant(req) {
   const payload = verifyBearer(req)
   if (payload.type !== 'merchant') throw httpError(401, '商家登录已失效')
   payload.role = payload.role || 'store_admin'
+  payload.permissions = normalizeStaffPermissions(payload.permissions || [])
   return payload
 }
 
@@ -1161,7 +1169,121 @@ function merchantAccounts() {
     { username: sourceData.merchantAccount.username, password: sourceData.merchantAccount.password, role: 'store_admin', storeId: sourceData.merchantAccount.storeId, name: sourceData.merchantAccount.name }
   ]
   const envAccounts = parseJsonEnv('MERCHANT_ACCOUNTS')
-  return Array.isArray(envAccounts) && envAccounts.length ? envAccounts : accounts
+  const baseAccounts = Array.isArray(envAccounts) && envAccounts.length ? envAccounts : accounts
+  return baseAccounts.concat(normalizeStaffAccounts(db && db.staffAccounts))
+}
+
+function staffPermissionOptions() {
+  return ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行']
+}
+
+function normalizeStaffPermissions(permissions) {
+  const allowed = staffPermissionOptions()
+  return (Array.isArray(permissions) ? permissions : [])
+    .map((item) => String(item || '').trim())
+    .filter((item, index, list) => allowed.includes(item) && list.indexOf(item) === index)
+}
+
+function normalizeStaffAccounts(accounts) {
+  return (Array.isArray(accounts) ? accounts : [])
+    .map((item) => ({
+      id: String(item.id || `staff-${Date.now()}-${Math.floor(Math.random() * 1000)}`),
+      username: String(item.username || '').trim(),
+      password: String(item.password || '').trim(),
+      name: String(item.name || '').trim(),
+      role: 'staff',
+      storeId: String(item.storeId || '').trim(),
+      permissions: normalizeStaffPermissions(item.permissions || []),
+      createdAt: item.createdAt || now(),
+      updatedAt: item.updatedAt || ''
+    }))
+    .filter((item) => item.username && item.password && item.storeId)
+}
+
+function requireSuperMerchant(merchant) {
+  if (!isSuperMerchant(merchant)) throw httpError(403, '仅总管理员可操作')
+}
+
+function ensureMerchantPermission(merchant, pathname) {
+  if (!merchant || merchant.role !== 'staff') return
+  const permissions = normalizeStaffPermissions(merchant.permissions || [])
+  if (pathname.includes('/global-settings')) {
+    const globalTabs = ['轮播条', '精彩呈现', '加入我们', '通用设置']
+    if (globalTabs.some((tab) => permissions.includes(tab))) return
+    throw httpError(403, '当前店员无此权限')
+  }
+  const tab = merchantPermissionByPath(pathname)
+  if (!tab) return
+  if (!permissions.includes(tab)) throw httpError(403, '当前店员无此权限')
+}
+
+function merchantPermissionByPath(pathname) {
+  if (pathname.includes('/orders')) return '订单'
+  if (pathname.includes('/products') || pathname.includes('/categories') || pathname.includes('/inventory')) return '菜单管理'
+  if (pathname.includes('/activities')) return '活动管理'
+  if (pathname.includes('/recharge-settings') || pathname.includes('/recharge-records') || pathname.includes('/members/') && pathname.includes('/balance')) return '充值'
+  if (pathname.includes('/voucher-settings') || pathname.includes('/voucher-logs') || pathname.includes('/vouchers')) return '酒水券管理'
+  if (pathname.includes('/data/')) return '数据管理'
+  if (pathname.includes('/members') || pathname.includes('/point-logs') || pathname.includes('/points') || pathname.includes('/pieces')) return '会员管理'
+  if (pathname.includes('/table-qrcodes')) return '桌码'
+  if (pathname.includes('/stores')) return '门店管理'
+  if (pathname.includes('/signups') || pathname.includes('/cellar')) return '基础'
+  if (pathname.includes('/leaderboard')) return '排行'
+  return ''
+}
+
+async function handleGetStaffAccounts(req, res, merchant) {
+  requireSuperMerchant(merchant)
+  db.staffAccounts = normalizeStaffAccounts(db.staffAccounts)
+  sendOk(res, db.staffAccounts.map((item) => Object.assign({}, item, {
+    password: '',
+    storeName: storeNameById(item.storeId),
+    permissionsText: item.permissions.join('、')
+  })))
+}
+
+async function handleSaveStaffAccount(req, res, merchant) {
+  requireSuperMerchant(merchant)
+  const body = await readJson(req)
+  const id = String(body.id || '').trim() || `staff-${Date.now()}`
+  const username = String(body.username || '').trim()
+  const password = String(body.password || '').trim()
+  const storeId = String(body.storeId || '').trim()
+  const name = String(body.name || '').trim() || username
+  if (!username) throw httpError(400, '请填写店员账号')
+  const list = normalizeStaffAccounts(db.staffAccounts)
+  const existing = list.find((item) => item.id === id)
+  const finalPassword = password || (existing && existing.password) || ''
+  if (!finalPassword) throw httpError(400, '请填写店员密码')
+  if (!db.stores.some((item) => item.id === storeId)) throw httpError(400, '请选择门店')
+  const fixedUsernames = merchantAccounts().filter((item) => item.role !== 'staff').map((item) => item.username)
+  if (fixedUsernames.includes(username) || list.some((item) => item.id !== id && item.username === username)) {
+    throw httpError(409, '店员账号已存在')
+  }
+  const next = {
+    id,
+    username,
+    password: finalPassword,
+    name,
+    role: 'staff',
+    storeId,
+    permissions: normalizeStaffPermissions(body.permissions || []),
+    createdAt: existing ? existing.createdAt : now(),
+    updatedAt: now()
+  }
+  db.staffAccounts = list.some((item) => item.id === id)
+    ? list.map((item) => (item.id === id ? next : item))
+    : [next].concat(list)
+  await persist()
+  sendOk(res, Object.assign({}, next, { password: '', storeName: storeNameById(next.storeId), permissionsText: next.permissions.join('、') }))
+}
+
+async function handleDeleteStaffAccount(req, res, pathname, merchant) {
+  requireSuperMerchant(merchant)
+  const { id } = params(pathname, '/api/merchant/staff-accounts/:id')
+  db.staffAccounts = normalizeStaffAccounts(db.staffAccounts).filter((item) => item.id !== id)
+  await persist()
+  sendOk(res, { id })
 }
 
 function isSuperMerchant(merchant) {
@@ -1914,6 +2036,7 @@ function createInitialDb() {
     globalSettings: defaultGlobalSettings(),
     leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
     leaderboardMeta: {},
+    staffAccounts: [],
     authRevocations: []
   }
 }
@@ -1980,6 +2103,7 @@ function normalizeDbShape(raw) {
       globalSettings: defaultGlobalSettings(),
       leaderboard: normalizeLeaderboardBoards(sourceData.leaderboard),
       leaderboardMeta: {},
+      staffAccounts: [],
       authRevocations: []
     },
     raw || {}
@@ -2006,6 +2130,7 @@ function normalizeDbShape(raw) {
   next.globalSettings = normalizeGlobalSettings(next.globalSettings)
   next.leaderboard = normalizeLeaderboardBoards(next.leaderboard)
   next.leaderboardMeta = next.leaderboardMeta && typeof next.leaderboardMeta === 'object' ? next.leaderboardMeta : {}
+  next.staffAccounts = normalizeStaffAccounts(next.staffAccounts)
   next.authRevocations = normalizeAuthRevocations(next.authRevocations)
   ;(Array.isArray(next.members) ? next.members : []).forEach((member) => {
     if (!member) return

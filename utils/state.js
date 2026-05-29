@@ -1031,6 +1031,7 @@ function merchantLogin(username, password, callback) {
       role: payload.role || 'store_admin',
       storeId: payload.storeId || (store && store.id) || '',
       storeName: payload.storeName || (store ? store.shortName || store.name : '全部门店'),
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
       token: payload.token,
       loginAt: formatTime(new Date())
     }
@@ -1201,6 +1202,24 @@ function isMerchantLoggedIn() {
 function isSuperMerchant() {
   const session = getMerchantSession()
   return !!(session && session.role === 'super_admin')
+}
+
+function fetchStaffAccounts(callback) {
+  requestMerchantApi('/api/merchant/staff-accounts', 'GET', {}, (payload) => {
+    if (callback) callback(Array.isArray(payload) ? payload : [])
+  })
+}
+
+function saveStaffAccount(account, callback) {
+  requestMerchantApi('/api/merchant/staff-accounts', 'POST', account || {}, (payload) => {
+    if (callback) callback(payload)
+  })
+}
+
+function deleteStaffAccount(id, callback) {
+  requestMerchantApi(`/api/merchant/staff-accounts/${encodeURIComponent(id)}`, 'DELETE', {}, (payload) => {
+    if (callback) callback(!!payload)
+  })
 }
 
 function canReadPrivateData() {
@@ -3719,6 +3738,9 @@ module.exports = {
   isMerchantLoggedIn,
   isSuperMerchant,
   requireMerchantLogin,
+  fetchStaffAccounts,
+  saveStaffAccount,
+  deleteStaffAccount,
   getStores,
   fetchStores,
   fetchMerchantStores,

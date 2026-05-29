@@ -558,6 +558,61 @@
     </view>
   </view>
 
+  <view wx:elif="{{activeTab === '店员管理'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">{{staffForm.id ? '编辑店员' : '新增店员'}}</view>
+      <view class="muted-line">为门店创建店员商家端账号，并勾选允许访问的功能模块。</view>
+      <view class="form-grid">
+        <view class="field-block">
+          <view class="field-label">店员账号</view>
+          <input value="{{staffForm.username}}" placeholder="例如：gaochun_waiter01" data-field="username" bindinput="inputStaffField" />
+        </view>
+        <view class="field-block">
+          <view class="field-label">店员姓名</view>
+          <input value="{{staffForm.name}}" placeholder="例如：高淳店店员01" data-field="name" bindinput="inputStaffField" />
+        </view>
+      </view>
+      <view class="form-grid">
+        <view class="field-block">
+          <view class="field-label">登录密码</view>
+          <input value="{{staffForm.password}}" password placeholder="{{staffForm.id ? '不填则保持原密码' : '请输入登录密码'}}" data-field="password" bindinput="inputStaffField" />
+        </view>
+        <view class="field-block">
+          <view class="field-label">所属门店</view>
+          <picker mode="selector" range="{{staffStoreOptions}}" range-key="name" value="{{staffStoreIndex}}" bindchange="selectStaffStore">
+            <view class="picker-input">{{(staffStoreOptions[staffStoreIndex] && staffStoreOptions[staffStoreIndex].name) || '请选择门店'}}</view>
+          </picker>
+        </view>
+      </view>
+      <view class="sub-title">商家端权限</view>
+      <checkbox-group class="permission-grid" bindchange="toggleStaffPermissions">
+        <label class="permission-item" wx:for="{{staffPermissionOptions}}" wx:for-item="item" wx:key="*this">
+          <checkbox value="{{item}}" checked="{{staffForm.permissions.indexOf(item) > -1}}" color="#e25754" />
+          <text>{{item}}</text>
+        </label>
+      </checkbox-group>
+      <view class="dual-actions">
+        <view class="ghost-action" bindtap="newStaffAccount">清空新增</view>
+        <view class="solid-action" bindtap="saveStaffAccount">保存店员</view>
+      </view>
+    </view>
+
+    <view class="sub-title">店员账号</view>
+    <view wx:if="{{!staffAccounts.length}}" class="empty small">暂无店员账号</view>
+    <view class="basic-card" wx:for="{{staffAccounts}}" wx:for-item="item" wx:key="id">
+      <view class="card-top">
+        <view class="item-title">{{item.name || item.username}}</view>
+        <view class="tag">{{item.username}}</view>
+      </view>
+      <view class="muted-line">门店：{{item.storeName || item.storeId}}</view>
+      <view class="muted-line">权限：{{item.permissionsText || '未配置'}}</view>
+      <view class="action-row two-col">
+        <view class="solid-action" data-id="{{item.id}}" bindtap="editStaffAccount">编辑</view>
+        <view class="ghost-action danger" data-id="{{item.id}}" bindtap="deleteStaffAccount">删除</view>
+      </view>
+    </view>
+  </view>
+
   <view wx:elif="{{activeTab === '通用设置'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">通用设置</view>

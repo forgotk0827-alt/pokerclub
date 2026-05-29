@@ -50,6 +50,9 @@ const emptyActivityForm = {
 }
 
 const activityTypeOptions = ['国际扑克', '掼蛋']
+const merchantTabOptions = ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行']
+const superAdminTabs = merchantTabOptions.concat('店员管理')
+const defaultStaffPermissions = ['订单', '活动管理', '基础']
 
 function swapSortOrder(list, id, direction) {
   const items = (list || []).map((item, index) => Object.assign({}, item, {
@@ -71,7 +74,7 @@ Page({
     selectedStoreId: 'all',
     selectedStoreName: '全部门店',
     storeScopeOptions: [],
-    tabs: ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行'],
+    tabs: superAdminTabs,
     activeTab: '订单',
     orderStatuses: ['全部', '待支付', '已确认', '已完成', '已取消'],
     activeStatus: '全部',
@@ -161,14 +164,27 @@ Page({
     memberPickerSelectedId: '',
     memberPickerSelectedMember: null,
     memberPickerSelectedName: '',
-    memberPickerConfirmText: '确认执行'
+    memberPickerConfirmText: '确认执行',
+    staffAccounts: [],
+    staffPermissionOptions: merchantTabOptions,
+    staffStoreOptions: [],
+    staffStoreIndex: 0,
+    staffForm: {
+      id: '',
+      username: '',
+      password: '',
+      name: '',
+      storeId: '',
+      permissions: defaultStaffPermissions
+    }
   },
   onShow() {
     state.requireMerchantLogin((session) => {
-      const tabs = this.data.tabs.includes('活动管理') ? this.data.tabs : this.data.tabs.slice(0, 2).concat('活动管理', this.data.tabs.slice(2))
+      const tabs = this.tabsForSession(session)
       this.setData({
         session,
         tabs,
+        activeTab: tabs.includes(this.data.activeTab) ? this.data.activeTab : (tabs[0] || '订单'),
         selectedStoreId: session.role === 'super_admin' ? 'all' : session.storeId
       }, () => {
         this.refreshStoreScopeOptions()
@@ -195,9 +211,19 @@ Page({
     this.refreshBasics()
     this.refreshInventory()
     this.refreshLeaderboard()
+    this.refreshStaffAccounts()
   },
   switchTab(event) {
-    this.setData({ activeTab: event.currentTarget.dataset.tab })
+    const tab = event.currentTarget.dataset.tab
+    if (!this.data.tabs.includes(tab)) return
+    this.setData({ activeTab: tab })
+  },
+  tabsForSession(session) {
+    if (!session) return []
+    if (session.role === 'super_admin') return superAdminTabs.slice()
+    const permissions = Array.isArray(session.permissions) ? session.permissions : []
+    const allowed = permissions.length ? permissions : merchantTabOptions
+    return merchantTabOptions.filter((tab) => allowed.includes(tab))
   },
   isSuperAdmin() {
     const session = this.data.session || state.getMerchantSession()
@@ -1726,6 +1752,107 @@ Page({
     state.fetchLeaderboard((list) => {
       this.setData({ leaderboard: list ? state.getLeaderboard(type) : state.getLeaderboard(type) })
     }, type)
+  },
+  refreshStaffAccounts() {
+    if (!this.isSuperAdmin()) return
+    const stores = state.getStores()
+    const staffStoreOptions = stores.map((item) => ({ id: item.id, name: item.shortName || item.name }))
+    const currentStoreId = this.data.staffForm.storeId || (staffStoreOptions[0] && staffStoreOptions[0].id) || ''
+    const staffStoreIndex = Math.max(0, staffStoreOptions.findIndex((item) => item.id === currentStoreId))
+    this.setData({ staffStoreOptions, staffStoreIndex: staffStoreIndex > -1 ? staffStoreIndex : 0 })
+    state.fetchStaffAccounts((list) => {
+      this.setData({ staffAccounts: list || [] })
+    })
+  },
+  inputStaffField(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`staffForm.${field}`]: event.detail.value })
+  },
+  selectStaffStore(event) {
+    const index = Number(event.detail.value || 0)
+    const option = this.data.staffStoreOptions[index] || this.data.staffStoreOptions[0]
+    if (!option) return
+    this.setData({
+      staffStoreIndex: index,
+      'staffForm.storeId': option.id
+    })
+  },
+  toggleStaffPermissions(event) {
+    this.setData({ 'staffForm.permissions': event.detail.value || [] })
+  },
+  newStaffAccount() {
+    const firstStore = this.data.staffStoreOptions[0] || state.getStores().map((item) => ({ id: item.id, name: item.shortName || item.name }))[0] || {}
+    this.setData({
+      staffStoreIndex: 0,
+      staffForm: {
+        id: '',
+        username: '',
+        password: '',
+        name: '',
+        storeId: firstStore.id || '',
+        permissions: defaultStaffPermissions.slice()
+      }
+    })
+  },
+  editStaffAccount(event) {
+    const id = event.currentTarget.dataset.id
+    const account = this.data.staffAccounts.find((item) => item.id === id)
+    if (!account) return
+    const index = this.data.staffStoreOptions.findIndex((item) => item.id === account.storeId)
+    this.setData({
+      staffStoreIndex: index > -1 ? index : 0,
+      staffForm: {
+        id: account.id,
+        username: account.username || '',
+        password: '',
+        name: account.name || '',
+        storeId: account.storeId || '',
+        permissions: Array.isArray(account.permissions) ? account.permissions : []
+      }
+    })
+  },
+  saveStaffAccount() {
+    const form = this.data.staffForm
+    if (!String(form.username || '').trim()) {
+      wx.showToast({ title: '请填写店员账号', icon: 'none' })
+      return
+    }
+    if (!form.id && !String(form.password || '').trim()) {
+      wx.showToast({ title: '请填写店员密码', icon: 'none' })
+      return
+    }
+    if (!String(form.storeId || '').trim()) {
+      wx.showToast({ title: '请选择门店', icon: 'none' })
+      return
+    }
+    if (!Array.isArray(form.permissions) || !form.permissions.length) {
+      wx.showToast({ title: '请至少勾选一个权限', icon: 'none' })
+      return
+    }
+    state.saveStaffAccount(form, (saved) => {
+      if (!saved) return
+      wx.showToast({ title: '店员已保存', icon: 'success' })
+      this.newStaffAccount()
+      this.refreshStaffAccounts()
+    })
+  },
+  deleteStaffAccount(event) {
+    const id = event.currentTarget.dataset.id
+    const account = this.data.staffAccounts.find((item) => item.id === id)
+    if (!account) return
+    wx.showModal({
+      title: '删除店员',
+      content: `确认删除 ${account.name || account.username} ?`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteStaffAccount(id, (ok) => {
+          if (!ok) return
+          wx.showToast({ title: '店员已删除', icon: 'success' })
+          if (this.data.staffForm.id === id) this.newStaffAccount()
+          this.refreshStaffAccounts()
+        })
+      }
+    })
   },
   selectRankType(event) {
     const type = event.currentTarget.dataset.type || 'weekly'

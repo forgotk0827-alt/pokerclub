@@ -628,6 +628,27 @@
   writing-mode: vertical-rl;
 }
 
+.permission-grid {
+  margin-top: 12rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.permission-item {
+  min-height: 64rpx;
+  padding: 0 14rpx;
+  border: 1rpx solid #e5e7eb;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: #fff;
+  color: #111827;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
 .mini-action {
   width: 92rpx;
   height: 48rpx;
