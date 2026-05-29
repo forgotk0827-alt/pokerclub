@@ -12,7 +12,6 @@
     </view>
     <view class="voucher-mid">
       <view class="voucher-title">{{voucherSummary.title}}</view>
-      <view class="voucher-rule">{{voucherSummary.ruleName}}</view>
       <view class="voucher-note">{{voucherSummary.note}}</view>
       <view class="voucher-expire">{{voucherSummary.expireText}}</view>
     </view>
