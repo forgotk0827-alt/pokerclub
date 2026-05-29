@@ -241,9 +241,9 @@ function defaultRechargeSettings() {
     note: '充值1000元送5张酒水券，充值3000元送20张，充值9000元送80张；各门店统一执行。',
     paymentLabel: '微信支付',
     packages: [
-      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '', tip: '' },
-      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '', tip: '' },
-      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '', tip: '' }
+      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '赠送5张酒水券', tip: '' },
+      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '赠送20张酒水券', tip: '' },
+      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '赠送80张酒水券', tip: '' }
     ]
   }
 }
@@ -254,7 +254,8 @@ function defaultVoucherSettings() {
     ruleName: '到店消费后每次可用1张',
     buyCount: 1,
     freeCount: 0,
-    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。'
+    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。',
+    expireText: '长期有效'
   }
 }
 
@@ -2530,40 +2531,44 @@ function saveRechargeSettings(settings, callback) {
 
 function getVoucherSettings() {
   const stored = wx.getStorageSync(KEYS.voucherSettings)
-  const next = Object.assign({}, defaultVoucherSettings(), stored || {})
+  const next = normalizeVoucherSettings(stored || {})
+  return next
+}
+
+function normalizeVoucherSettings(settings) {
+  const next = Object.assign({}, defaultVoucherSettings(), settings || {})
   next.buyCount = Math.max(1, Number(next.buyCount || 0))
   next.freeCount = Math.max(0, Number(next.freeCount || 0))
   next.title = String(next.title || '').trim() || defaultVoucherSettings().title
   next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
   next.note = normalizeVoucherNote(next.note)
+  next.expireText = String(next.expireText || '').trim() || defaultVoucherSettings().expireText
   return next
 }
 
 function fetchVoucherSettings(callback) {
-  requestMerchantApi('/api/merchant/voucher-settings', 'GET', {}, (payload) => {
+  const done = (payload) => {
     if (payload) {
-      const next = Object.assign({}, defaultVoucherSettings(), payload)
-      next.buyCount = Math.max(1, Number(next.buyCount || 0))
-      next.freeCount = Math.max(0, Number(next.freeCount || 0))
-      next.note = normalizeVoucherNote(next.note)
+      const next = normalizeVoucherSettings(payload)
       wx.setStorageSync(KEYS.voucherSettings, next)
       if (callback) callback(next)
       return
     }
     if (callback) callback(null)
-  })
+  }
+  if (isMerchantLoggedIn()) {
+    requestMerchantApi('/api/merchant/voucher-settings', 'GET', {}, done)
+    return
+  }
+  requestApi('/api/voucher-settings', 'GET', {}, done)
 }
 
 function saveVoucherSettings(settings, callback) {
-  const next = Object.assign({}, getVoucherSettings(), settings || {})
-  next.buyCount = Math.max(1, Number(next.buyCount || 0))
-  next.freeCount = Math.max(0, Number(next.freeCount || 0))
-  next.title = String(next.title || '').trim() || defaultVoucherSettings().title
-  next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}送${next.freeCount}`
-  next.note = normalizeVoucherNote(next.note)
+  const next = normalizeVoucherSettings(Object.assign({}, getVoucherSettings(), settings || {}))
+  wx.setStorageSync(KEYS.voucherSettings, next)
   const requested = requestMerchantApi('/api/merchant/voucher-settings', 'POST', next, (payload) => {
     if (payload) {
-      const saved = Object.assign({}, next, payload)
+      const saved = normalizeVoucherSettings(Object.assign({}, next, payload))
       wx.setStorageSync(KEYS.voucherSettings, saved)
       if (callback) callback(saved, true)
       return

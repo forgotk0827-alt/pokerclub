@@ -69,6 +69,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/activities') return sendOk(res, db.activities)
     if (req.method === 'GET' && match(pathname, '/api/activities/:id')) return await handleGetActivity(req, res, pathname)
     if (req.method === 'GET' && pathname === '/api/recharge-settings') return sendOk(res, db.rechargeSettings)
+    if (req.method === 'GET' && pathname === '/api/voucher-settings') return sendOk(res, db.voucherSettings || defaultVoucherSettings())
     if (req.method === 'GET' && pathname === '/api/global-settings') return sendOk(res, db.globalSettings)
     if (req.method === 'GET' && pathname === '/api/leaderboard') return await handleGetLeaderboard(req, res, url)
 
@@ -976,6 +977,7 @@ async function handleVoucherSettings(req, res) {
   next.title = String(next.title || '').trim() || defaultVoucherSettings().title
   next.ruleName = String(next.ruleName || '').trim() || `${next.buyCount}减${next.freeCount}`
   next.note = normalizeVoucherNote(next.note)
+  next.expireText = String(next.expireText || '').trim() || defaultVoucherSettings().expireText
   db.voucherSettings = next
   await persist()
   sendOk(res, db.voucherSettings)
@@ -1974,6 +1976,7 @@ function normalizeDbShape(raw) {
   voucherSettings.title = String(voucherSettings.title || '').trim() || defaultVoucherSettings().title
   voucherSettings.ruleName = String(voucherSettings.ruleName || '').trim() || `${voucherSettings.buyCount}减${voucherSettings.freeCount}`
   voucherSettings.note = normalizeVoucherNote(voucherSettings.note)
+  voucherSettings.expireText = String(voucherSettings.expireText || '').trim() || defaultVoucherSettings().expireText
   next.voucherSettings = voucherSettings
   next.voucherLogs = Array.isArray(next.voucherLogs) ? next.voucherLogs : []
   next.globalSettings = normalizeGlobalSettings(next.globalSettings)
@@ -2120,9 +2123,9 @@ function defaultRechargeSettings() {
     note: '充值1000元送5张酒水券，充值3000元送20张，充值9000元送80张；各门店统一执行。',
     paymentLabel: '微信支付',
     packages: [
-      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '', tip: '' },
-      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '', tip: '' },
-      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '', tip: '' }
+      { id: 'pkg-1000', payAmount: 1000, creditAmount: 1000, voucherCount: 5, label: '充1000元', subLabel: '赠送5张酒水券', tip: '' },
+      { id: 'pkg-3000', payAmount: 3000, creditAmount: 3000, voucherCount: 20, label: '充3000元', subLabel: '赠送20张酒水券', tip: '' },
+      { id: 'pkg-9000', payAmount: 9000, creditAmount: 9000, voucherCount: 80, label: '充9000元', subLabel: '赠送80张酒水券', tip: '' }
     ]
   }
 }
@@ -2133,7 +2136,8 @@ function defaultVoucherSettings() {
     ruleName: '到店消费后每次可用1张',
     buyCount: 1,
     freeCount: 0,
-    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。'
+    note: '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定，最终解释权归门店。',
+    expireText: '长期有效'
   }
 }
 

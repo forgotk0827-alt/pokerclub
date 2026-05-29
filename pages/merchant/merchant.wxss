@@ -570,6 +570,68 @@
   text-align: center;
 }
 
+.voucher-preview {
+  min-height: 154rpx;
+  margin-top: 16rpx;
+  border-radius: 8rpx;
+  display: grid;
+  grid-template-columns: 150rpx minmax(0, 1fr) 86rpx;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.06);
+}
+
+.voucher-preview-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #fff6dc 0%, #fff 100%);
+  color: #a11f1f;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.voucher-preview-main {
+  min-width: 0;
+  padding: 18rpx 16rpx;
+  color: #6b7280;
+}
+
+.voucher-preview-title {
+  color: #4b5563;
+  font-size: 26rpx;
+  line-height: 34rpx;
+  font-weight: 900;
+}
+
+.voucher-preview-rule,
+.voucher-preview-note,
+.voucher-preview-expire {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
+.voucher-preview-rule {
+  color: #374151;
+}
+
+.voucher-preview-action {
+  border-left: 1rpx solid #ececec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  font-size: 24rpx;
+  line-height: 30rpx;
+  font-weight: 900;
+  writing-mode: vertical-rl;
+}
+
+.voucher-count-grid {
+  margin-top: 16rpx;
+}
+
 .mini-action {
   width: 92rpx;
   height: 48rpx;

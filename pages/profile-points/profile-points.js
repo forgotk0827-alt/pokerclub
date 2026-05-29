@@ -19,9 +19,11 @@ Page({
   refreshMemberFromServer() {
     state.fetchMyProfile((member) => {
       const nextMember = member || state.getMember()
-      this.setData({
-        member: nextMember,
-        voucherSummary: this.buildVoucherSummary(nextMember)
+      state.fetchVoucherSettings(() => {
+        this.setData({
+          member: nextMember,
+          voucherSummary: this.buildVoucherSummary(nextMember)
+        })
       })
     })
   },
@@ -41,7 +43,7 @@ Page({
       title: settings.title || '我的酒水券',
       ruleName: settings.ruleName || '到店消费后每次可用1张',
       note: settings.note || '可兑换一瓶啤酒或一箱啤酒，由门店自行决定。',
-      expireText: '长期有效'
+      expireText: settings.expireText || '长期有效'
     }
   },
   goUseVoucher() {

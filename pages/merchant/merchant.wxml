@@ -295,6 +295,61 @@
     </view>
   </view>
 
+  <view wx:elif="{{activeTab === '酒水券管理'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">酒水券展示设置</view>
+      <view class="muted-line">这里配置客人端“我的酒水券”卡片中红框区域的标题、使用规则、说明和有效期。</view>
+      <view class="voucher-preview">
+        <view class="voucher-preview-count">{{member.drinkVoucherCount || 0}} 张</view>
+        <view class="voucher-preview-main">
+          <view class="voucher-preview-title">{{voucherSettings.title || '我的酒水券'}}</view>
+          <view class="voucher-preview-rule">{{voucherSettings.ruleName || '到店消费后每次可用1张'}}</view>
+          <view class="voucher-preview-note">{{voucherSettings.note || '可以兑换一瓶啤酒或一箱啤酒，由门店自行决定。'}}</view>
+          <view class="voucher-preview-expire">{{voucherSettings.expireText || '长期有效'}}</view>
+        </view>
+        <view class="voucher-preview-action">到店核销</view>
+      </view>
+      <view class="form-grid">
+        <view class="field-block">
+          <view class="field-label">卡片标题</view>
+          <input value="{{voucherSettings.title}}" placeholder="例如：我的酒水券" data-field="title" bindinput="inputVoucherSetting" />
+          <view class="field-help">显示在酒水券卡片右侧第一行。</view>
+        </view>
+        <view class="field-block">
+          <view class="field-label">使用规则</view>
+          <input value="{{voucherSettings.ruleName}}" placeholder="例如：请5减1" data-field="ruleName" bindinput="inputVoucherSetting" />
+          <view class="field-help">显示在标题下方，用来写核销规则。</view>
+        </view>
+      </view>
+      <view class="field-block full-field">
+        <view class="field-label">说明文案</view>
+        <textarea class="desc-input textarea-input" value="{{voucherSettings.note}}" placeholder="例如：适用于精酿、鸡尾酒和饮料类商品，点餐时自动抵扣。" data-field="note" bindinput="inputVoucherSetting"></textarea>
+        <view class="field-help">显示在红框中间，可以写适用商品、抵扣方式或注意事项。</view>
+      </view>
+      <view class="field-block full-field">
+        <view class="field-label">有效期文案</view>
+        <input class="desc-input" value="{{voucherSettings.expireText}}" placeholder="例如：长期有效" data-field="expireText" bindinput="inputVoucherSetting" />
+        <view class="field-help">显示在说明下方，例如“长期有效”或“领取后30天内有效”。</view>
+      </view>
+      <view class="form-grid voucher-count-grid">
+        <view class="field-block">
+          <view class="field-label">买入数量</view>
+          <input value="{{voucherSettings.buyCount}}" type="number" placeholder="例如：5" data-field="buyCount" bindinput="inputVoucherSetting" />
+          <view class="field-help">保留原有字段，方便后续组合规则。</view>
+        </view>
+        <view class="field-block">
+          <view class="field-label">赠送数量</view>
+          <input value="{{voucherSettings.freeCount}}" type="number" placeholder="例如：1" data-field="freeCount" bindinput="inputVoucherSetting" />
+          <view class="field-help">保留原有字段，当前主要用于规则兜底。</view>
+        </view>
+      </view>
+      <view class="dual-actions">
+        <view class="ghost-action" bindtap="refreshRecharge">刷新配置</view>
+        <view class="solid-action" bindtap="saveVoucherSettings">保存酒水券设置</view>
+      </view>
+    </view>
+  </view>
+
   <view wx:elif="{{activeTab === '数据管理'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">数据概览</view>

@@ -71,7 +71,7 @@ Page({
     selectedStoreId: 'all',
     selectedStoreName: '全部门店',
     storeScopeOptions: [],
-    tabs: ['订单', '菜单管理', '活动管理', '充值', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行'],
+    tabs: ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行'],
     activeTab: '订单',
     orderStatuses: ['全部', '待支付', '已确认', '已完成', '已取消'],
     activeStatus: '全部',
@@ -1426,7 +1426,8 @@ Page({
         ruleName: String(settings.ruleName || '').trim(),
         buyCount: Number(settings.buyCount || 0),
         freeCount: Number(settings.freeCount || 0),
-        note: String(settings.note || '').trim()
+        note: String(settings.note || '').trim(),
+        expireText: String(settings.expireText || '').trim()
       },
       (saved) => {
         if (!saved) return

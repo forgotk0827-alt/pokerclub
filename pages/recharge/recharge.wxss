@@ -144,9 +144,19 @@
 
 .package-pay {
   color: #d46259;
-  font-size: 34rpx;
+  font-size: 32rpx;
   line-height: 42rpx;
   font-weight: 900;
+  text-align: center;
+}
+
+.package-sub {
+  margin-top: 12rpx;
+  color: #7a5a55;
+  font-size: 23rpx;
+  line-height: 30rpx;
+  font-weight: 800;
+  text-align: center;
 }
 
 .package-credit {

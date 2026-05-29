@@ -15,6 +15,7 @@
     <scroll-view scroll-x class="package-row" enable-flex>
       <view wx:for="{{settings.packages}}" wx:key="id" class="package-card {{!useCustomRecharge && selectedIndex === index ? 'package-active' : ''}}" data-index="{{index}}" bindtap="selectPackage">
         <view class="package-pay">{{item.label}}</view>
+        <view wx:if="{{item.subLabel || item.voucherCount}}" class="package-sub">{{item.subLabel || ('赠送' + item.voucherCount + '张酒水券')}}</view>
       </view>
     </scroll-view>
   </view>
