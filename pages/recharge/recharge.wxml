@@ -22,13 +22,11 @@
   <view class="section custom-section {{useCustomRecharge ? 'custom-active' : ''}}" bindtap="selectCustomRecharge">
     <view class="section-head">
       <view class="section-title">自定义充值</view>
-      <view class="section-sub">点这里后会取消上方套餐选择</view>
     </view>
     <view class="custom-amount-row">
       <view class="custom-currency">¥</view>
       <input value="{{customPayAmount}}" type="number" placeholder="输入充值金额" bindinput="inputCustomPayAmount" />
     </view>
-    <view class="custom-note">自定义充值按统一规则赠券：满1000送5张，满3000送20张，满9000送80张。</view>
   </view>
 
   <view class="recharge-bar">

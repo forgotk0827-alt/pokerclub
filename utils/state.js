@@ -3,6 +3,7 @@ const config = require('./config')
 
 const KEYS = {
   store: 'deyou_selected_store',
+  storeManual: 'deyou_selected_store_manual',
   cart: 'deyou_cart',
   orders: 'deyou_orders',
   signups: 'deyou_signups',
@@ -1230,13 +1231,13 @@ function normalizeStoreLocation(store) {
       latitude: 31.9567,
       longitude: 118.8465,
       businessHours: '14:00 - 05:00',
-      cover: '/assets/hero-bar.svg'
+      cover: '/bac-clean.jpg'
     },
     xinjiekou: {
       latitude: 32.0431,
       longitude: 118.7847,
       businessHours: '14:00 - 05:00',
-      cover: '/assets/hero-bar.svg'
+      cover: '/bac-clean.jpg'
     }
   }
   const preset = defaults[store.id] || {}
@@ -1336,7 +1337,7 @@ function updateStore(store, callback) {
     latitude: Number(store.latitude || 0),
     longitude: Number(store.longitude || 0),
     businessHours: String(store.businessHours || '14:00 - 05:00').trim(),
-    cover: store.cover || '/assets/hero-bar.svg',
+    cover: store.cover || '/bac-clean.jpg',
     printerSn: String(store.printerSn || '').trim(),
     printerName: String(store.printerName || '').trim(),
     printerCopies: Math.max(1, Number(store.printerCopies || 1))
@@ -1382,8 +1383,46 @@ function getStore() {
   return stores.find((item) => item.id === id) || stores[0] || normalizeStoreLocation(data.stores[0])
 }
 
-function setStore(id) {
+function setStore(id, options = {}) {
   wx.setStorageSync(KEYS.store, id)
+  if (options.manual !== false) wx.setStorageSync(KEYS.storeManual, true)
+}
+
+function distanceBetween(lat1, lon1, lat2, lon2) {
+  const toRad = (value) => Number(value || 0) * Math.PI / 180
+  const earthRadius = 6371000
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function selectNearestStore(callback) {
+  const stores = getStores().filter((item) => Number(item.latitude || 0) && Number(item.longitude || 0))
+  const currentId = wx.getStorageSync(KEYS.store)
+  if (!stores.length || wx.getStorageSync(KEYS.storeManual) || !wx.getLocation) {
+    if (callback) callback(getStore())
+    return
+  }
+  wx.getLocation({
+    type: 'gcj02',
+    success(res) {
+      const nearest = stores
+        .map((store) => Object.assign({}, store, {
+          distance: distanceBetween(res.latitude, res.longitude, store.latitude, store.longitude)
+        }))
+        .sort((left, right) => left.distance - right.distance)[0]
+      if (nearest && nearest.id && nearest.id !== currentId) {
+        wx.setStorageSync(KEYS.store, nearest.id)
+      }
+      if (callback) callback(getStore())
+    },
+    fail() {
+      if (callback) callback(getStore())
+    }
+  })
 }
 
 function thirdStoreId() {
@@ -1436,7 +1475,7 @@ function setTableContext(context, options = {}) {
     clearCart()
   }
   wx.setStorageSync(KEYS.tableContext, next)
-  setStore(next.storeId)
+  setStore(next.storeId, { manual: false })
   if (options.toast !== false) wx.showToast({ title: `已进入${next.tableName}`, icon: 'success' })
   return next
 }
@@ -2741,6 +2780,7 @@ function fetchGlobalSettings(callback) {
 
 function saveGlobalSettings(settings, callback) {
   const next = normalizeGlobalSettings(Object.assign({}, getGlobalSettings(), settings || {}))
+  wx.setStorageSync(KEYS.globalSettings, next)
   const requested = requestMerchantApi('/api/merchant/global-settings', 'POST', next, (payload) => {
     if (!payload) {
       if (callback) callback(null, false)
@@ -2845,7 +2885,7 @@ function recordConsumption(amount) {
   if (!isLoggedIn()) return getMember()
   const member = getMember()
   const totalSpent = Number(member.totalSpent || 0) + Number(amount || 0)
-  const points = Number(member.points || 0) + Math.floor(Number(amount || 0))
+  const points = Number(member.points || 0)
   return saveMember(
     Object.assign({}, member, {
       totalSpent,
@@ -3021,7 +3061,7 @@ function getCellar() {
 function addCellar(record) {
   if (!isLoggedIn()) return getCellar()
   const list = getCellar()
-  list.unshift(Object.assign({ id: `CJ${Date.now()}`, status: '待处理', createdAt: formatTime(new Date()) }, record || {}))
+  list.unshift(Object.assign({ id: `CJ${Date.now()}`, status: '审核中', createdAt: formatTime(new Date()) }, record || {}))
   wx.setStorageSync(KEYS.cellar, list)
   return list
 }
@@ -3048,10 +3088,10 @@ function submitCellar(record, callback) {
     Object.assign(
       {
         id: `CJ${Date.now()}`,
-        status: '存放中',
+        status: '审核中',
         createdAt: formatTime(now),
         expireAt: formatDate(expireAt),
-        reminder: '到期前7天提醒'
+        reminder: '待商家审核通过后开始存放'
       },
       record || {}
     )
@@ -3628,6 +3668,7 @@ module.exports = {
   deleteStore,
   getStore,
   setStore,
+  selectNearestStore,
   storeIdByTableNo,
   getTableContext,
   setTableContext,

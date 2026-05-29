@@ -41,7 +41,7 @@
       "provider": "wx069ba97219f66d99"
     }
   },
-  "requiredPrivateInfos": ["chooseLocation"],
+  "requiredPrivateInfos": ["chooseLocation", "getLocation"],
   "permission": {
     "scope.userLocation": {
       "desc": "用于选择门店位置和打开地图导航"

@@ -81,9 +81,9 @@
         <view class="menu-symbol faq-symbol">?</view>
         <text>常见问题</text>
       </view>
-      <view class="menu-item" bindtap="goAbout">
+      <view class="menu-item" bindtap="goJoinUs">
         <view class="menu-symbol about-symbol"></view>
-        <text>关于</text>
+        <text>加入我们</text>
       </view>
       <view class="menu-item logout-item" bindtap="logout">
         <view class="menu-symbol logout-symbol"></view>

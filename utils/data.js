@@ -5,7 +5,8 @@ const stores = [
     shortName: '江宁上元大街店',
     address: '江宁区东山街道上元大街江宁供销商厦1层',
     status: '营业中',
-    phone: '025-8888-0520'
+    phone: '025-8888-0520',
+    cover: '/bac-clean.jpg'
   },
 ]
 
@@ -34,7 +35,7 @@ const products = [
     id: 'pkg-198',
     categoryId: 'packages',
     name: '桌游酒水饮料套餐198元',
-    desc: '酒水饮料198/杯（鸡尾酒任选一杯）赠送3000积分',
+    desc: '酒水饮料198/杯（鸡尾酒任选一杯），可使用3000积分兑换',
     price: 198,
     points: 3000,
     unit: '份',
@@ -45,7 +46,7 @@ const products = [
     id: 'pkg-328',
     categoryId: 'packages',
     name: '桌游酒水饮料套餐328元',
-    desc: '酒水任选一杯，赠送5000积分，活动期间积分双倍',
+    desc: '酒水任选一杯，可使用5000积分兑换',
     price: 328,
     points: 5000,
     unit: '份',

@@ -279,6 +279,9 @@ Page({
   goAbout() {
     wx.navigateTo({ url: '/pages/profile-about/profile-about' })
   },
+  goJoinUs() {
+    wx.navigateTo({ url: '/pages/join-us/join-us' })
+  },
   logout() {
     wx.showModal({
       title: '退出登录',

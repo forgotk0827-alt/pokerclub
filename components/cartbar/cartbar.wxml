@@ -26,9 +26,9 @@
           <view class="sheet-price">¥{{item.price}}.00</view>
         </view>
         <view class="sheet-stepper">
-          <view class="sheet-step" data-id="{{item.id}}" data-delta="-1" bindtap="changeCount">-</view>
+          <view class="sheet-step" data-id="{{item.id}}" data-delta="-1" catchtap="changeCount">-</view>
           <text class="sheet-num">{{item.count}}</text>
-          <view class="sheet-step" data-id="{{item.id}}" data-delta="1" bindtap="changeCount">+</view>
+          <view class="sheet-step" data-id="{{item.id}}" data-delta="1" catchtap="changeCount">+</view>
         </view>
       </view>
     </scroll-view>

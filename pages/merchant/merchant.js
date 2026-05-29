@@ -49,6 +49,8 @@ const emptyActivityForm = {
   resultImage: '/assets/activity-card.svg'
 }
 
+const activityTypeOptions = ['国际扑克', '掼蛋']
+
 function swapSortOrder(list, id, direction) {
   const items = (list || []).map((item, index) => Object.assign({}, item, {
     sortOrder: Number(item.sortOrder || index + 1)
@@ -87,6 +89,8 @@ Page({
     categories: [],
     products: [],
     activities: [],
+    activityTypeOptions,
+    activityTypeIndex: 0,
     activityStoreOptions: [],
     activityStoreIndex: 0,
     activityForm: Object.assign({}, emptyActivityForm),
@@ -648,6 +652,7 @@ Page({
         storeId,
         location: store ? (store.address || store.shortName || store.name || '') : ''
       }),
+      activityTypeIndex: 0,
       activityStoreIndex: this.getActivityStoreIndex(storeId)
     })
   },
@@ -671,6 +676,7 @@ Page({
         deadlineDate: deadline.dateDate,
         deadlineTime: deadline.dateTime
       }),
+      activityTypeIndex: this.getActivityTypeIndex(activity.type),
       activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
@@ -695,8 +701,13 @@ Page({
         deadlineDate: deadline.dateDate,
         deadlineTime: deadline.dateTime
       }),
+      activityTypeIndex: this.getActivityTypeIndex(activity.type),
       activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
     })
+  },
+  getActivityTypeIndex(type) {
+    const index = activityTypeOptions.indexOf(String(type || '').trim())
+    return index > -1 ? index : 0
   },
   deleteActivity(event) {
     const id = event.currentTarget.dataset.id
@@ -722,6 +733,14 @@ Page({
   inputActivityField(event) {
     const field = event.currentTarget.dataset.field
     this.setData({ [`activityForm.${field}`]: event.detail.value })
+  },
+  selectActivityType(event) {
+    const index = Number(event.detail.value || 0)
+    const type = this.data.activityTypeOptions[index] || this.data.activityTypeOptions[0]
+    this.setData({
+      activityTypeIndex: index,
+      'activityForm.type': type
+    })
   },
   selectActivityStore(event) {
     const index = Number(event.detail.value || 0)

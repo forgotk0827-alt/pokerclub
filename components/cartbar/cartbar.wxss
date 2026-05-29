@@ -197,9 +197,9 @@
 }
 
 .sheet-step {
-  flex: 0 0 46rpx;
-  width: 46rpx;
-  height: 46rpx;
+  flex: 0 0 58rpx;
+  width: 58rpx;
+  height: 58rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -207,8 +207,10 @@
   background: #d74f45;
   color: #222;
   font-size: 34rpx;
-  line-height: 46rpx;
+  line-height: 58rpx;
   font-weight: 900;
+  position: relative;
+  z-index: 2;
 }
 
 .sheet-num {

@@ -35,11 +35,17 @@ Page({
   },
   refreshActivityList() {
     const selectedStoreId = String(this.data.selectedStoreId || '').trim()
-    this.setData({
-      activities: state.getActivities().filter((item) => {
+    const activities = state.getActivities().filter((item) => {
         if (!selectedStoreId) return true
         return !item.storeId || item.storeId === selectedStoreId
       })
+    const typeNames = Array.from(new Set(activities.map((item) => String(item.type || '').trim()).filter(Boolean)))
+    const types = [{ name: '全部' }].concat(typeNames.map((name) => ({ name })))
+    const activeType = types.some((item) => item.name === this.data.activeType) ? this.data.activeType : '全部'
+    this.setData({
+      activities,
+      types,
+      activeType
     }, () => this.filterList())
   },
   refreshDates() {

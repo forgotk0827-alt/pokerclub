@@ -8,7 +8,7 @@
   </view>
 
   <view class="store card">
-    <image class="store-thumb" src="/assets/product-special.svg" mode="aspectFill" />
+    <image class="store-thumb" src="/bac-clean.jpg" mode="aspectFill" />
     <view class="store-main">
       <view class="store-top">
         <text class="store-name">{{store.name}}</text>
@@ -37,7 +37,7 @@
       </view>
       <text>扫码点餐</text>
     </button>
-    <button class="quick-item" bindtap="showCoupon">
+    <button class="quick-item" bindtap="goActivity">
       <view class="quick-icon icon-ticket">
         <view class="ticket-pin left"></view>
         <view class="ticket-pin right"></view>

@@ -318,7 +318,7 @@ function handleGetActivity(req, res, pathname) {
 
 async function handleUpdateProfile(req, res, user) {
   const body = await readJson(req)
-  const allowed = ['nickname', 'avatarUrl', 'phone', 'gender', 'level', 'points', 'totalSpent']
+  const allowed = ['nickname', 'avatarUrl', 'phone', 'gender', 'level']
   allowed.forEach((key) => {
     if (body[key] !== undefined) user.member[key] = body[key]
   })
@@ -394,7 +394,7 @@ async function handleCreateOrder(req, res, user) {
     })
   }
   user.member.totalSpent = Number(user.member.totalSpent || 0) + total
-  user.member.points = Math.max(0, Number(user.member.points || 0) - pointsUsed) + Math.floor(total)
+  user.member.points = Math.max(0, Number(user.member.points || 0) - pointsUsed)
   user.member.consumptionCount = Number(user.member.consumptionCount || 0) + 1
   user.member.level = levelBySpend(user.member.totalSpent, user.member.points)
   await persist()
@@ -533,7 +533,6 @@ async function handleCreateOrderPayment(req, res, user) {
     const member = db.members.find((item) => item.id === order.memberId)
     if (member) {
       member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
-      member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
       member.consumptionCount = Number(member.consumptionCount || 0) + 1
       member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) - Number(order.voucherCountUsed || 0))
       member.level = levelBySpend(member.totalSpent, member.points)
@@ -608,10 +607,10 @@ async function handleSubmitCellar(req, res, user) {
     wineName: body.wineName,
     quantity: Number(body.quantity || 1),
     months: Number(body.months || 3),
-    status: '存放中',
+    status: '审核中',
     createdAt: now(created),
     expireAt: dateOnly(expire),
-    reminder: '到期前7天提醒'
+    reminder: '待商家审核通过后开始存放'
   }
   db.cellar.unshift(record)
   await persist()
@@ -909,7 +908,7 @@ async function handleSaveStore(req, res, merchant) {
     latitude: Number(body.latitude || 0),
     longitude: Number(body.longitude || 0),
     businessHours: String(body.businessHours || '14:00 - 05:00').trim(),
-    cover: body.cover || '/assets/hero-bar.svg',
+    cover: body.cover || '/bac-clean.jpg',
     printerSn: String(body.printerSn || '').trim(),
     printerName: String(body.printerName || '').trim(),
     printerCopies: Math.max(1, Number(body.printerCopies || 1))
@@ -925,7 +924,7 @@ async function handleSaveStore(req, res, merchant) {
     latitude: 0,
     longitude: 0,
     businessHours: '14:00 - 05:00',
-    cover: '/assets/hero-bar.svg',
+    cover: '/bac-clean.jpg',
     printerSn: '',
     printerName: '',
     printerCopies: 1
@@ -1631,7 +1630,6 @@ async function applyWechatPaySuccess(transaction) {
       order.paidAt = transaction.success_time || now()
       if (member) {
         member.totalSpent = Number(member.totalSpent || 0) + Number(order.total || 0)
-        member.points = Number(member.points || 0) + Math.floor(Number(order.total || 0))
         member.consumptionCount = Number(member.consumptionCount || 0) + 1
         member.drinkVoucherCount = Math.max(0, Number(member.drinkVoucherCount || 0) - Number(order.voucherCountUsed || 0))
         member.level = levelBySpend(member.totalSpent, member.points)
@@ -2068,7 +2066,7 @@ function normalizeStores(stores) {
     jiangning: { latitude: 31.9567, longitude: 118.8465 },
     xinjiekou: { latitude: 32.0431, longitude: 118.7847 }
   }
-  return stores.map((store) => Object.assign({ printerSn: '', printerName: '', printerCopies: 1 }, defaults[store.id] || {}, store))
+  return stores.map((store) => Object.assign({ cover: '/bac-clean.jpg', printerSn: '', printerName: '', printerCopies: 1 }, defaults[store.id] || {}, store))
 }
 
 function normalizeActivities(activities) {

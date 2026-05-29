@@ -13,12 +13,14 @@ Page({
   },
   onShow() {
     state.fetchStores(() => {
-      state.fetchProducts(() => {
-        state.fetchGlobalSettings((globalSettings) => {
-          state.fetchPublicLeaderboard(() => {
-            this.setData({ globalSettings })
-            this.loadHome()
-          }, 'weekly')
+      state.selectNearestStore(() => {
+        state.fetchProducts(() => {
+          state.fetchGlobalSettings((globalSettings) => {
+            state.fetchPublicLeaderboard(() => {
+              this.setData({ globalSettings })
+              this.loadHome()
+            }, 'weekly')
+          })
         })
       })
     })

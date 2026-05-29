@@ -127,6 +127,12 @@
           <view class="picker-input">{{(activityStoreOptions[activityStoreIndex] && activityStoreOptions[activityStoreIndex].name) || '请选择比赛门店'}}</view>
         </picker>
       </view>
+      <view class="form-grid">
+        <picker mode="selector" range="{{activityTypeOptions}}" value="{{activityTypeIndex}}" bindchange="selectActivityType">
+          <view class="picker-input">{{activityForm.type || '请选择比赛类型'}}</view>
+        </picker>
+        <input value="{{activityForm.type}}" placeholder="比赛类型，可填国际扑克/掼蛋等" data-field="type" bindinput="inputActivityField" />
+      </view>
       <view class="muted-line">比赛地点：{{activityForm.location || '请选择门店后自动带出'}}</view>
       <view class="form-grid date-time-grid">
         <picker mode="date" value="{{activityForm.dateDate}}" data-prefix="date" data-part="date" bindchange="selectActivityDateTime">
@@ -198,17 +204,18 @@
       <input class="desc-input" value="{{rechargeSettings.note}}" placeholder="充值提示文案" data-field="note" bindinput="inputRechargeSetting" />
       <view class="recharge-package" wx:for="{{rechargeSettings.packages}}" wx:for-item="item" wx:key="id">
         <view class="recharge-package-head">
-          <view class="item-title">套餐 {{index + 1}}</view>
+          <view class="item-title">{{item.label || '套餐'}} {{index + 1}}</view>
           <view class="ghost-action mini-action" data-index="{{index}}" bindtap="removeRechargePackage">删除</view>
         </view>
+        <view class="muted-line">示例：标题“充1000元”，副标题“到账1000元”，赠送说明“送5张酒水券”。</view>
         <view class="recharge-package-grid">
-          <input value="{{item.label}}" placeholder="标题" data-index="{{index}}" data-field="label" bindinput="inputRechargePackage" />
-          <input value="{{item.subLabel}}" placeholder="副标题" data-index="{{index}}" data-field="subLabel" bindinput="inputRechargePackage" />
-          <input value="{{item.payAmount}}" type="digit" placeholder="支付金额" data-index="{{index}}" data-field="payAmount" bindinput="inputRechargePackage" />
-          <input value="{{item.creditAmount}}" type="digit" placeholder="到账金额" data-index="{{index}}" data-field="creditAmount" bindinput="inputRechargePackage" />
-          <input value="{{item.voucherCount}}" type="number" placeholder="赠券张数" data-index="{{index}}" data-field="voucherCount" bindinput="inputRechargePackage" />
+          <input value="{{item.label}}" placeholder="套餐标题，如 充1000元" data-index="{{index}}" data-field="label" bindinput="inputRechargePackage" />
+          <input value="{{item.subLabel}}" placeholder="前台副标题，如 送5张酒水券" data-index="{{index}}" data-field="subLabel" bindinput="inputRechargePackage" />
+          <input value="{{item.payAmount}}" type="digit" placeholder="客人实际支付金额" data-index="{{index}}" data-field="payAmount" bindinput="inputRechargePackage" />
+          <input value="{{item.creditAmount}}" type="digit" placeholder="会员余额到账金额" data-index="{{index}}" data-field="creditAmount" bindinput="inputRechargePackage" />
+          <input value="{{item.voucherCount}}" type="number" placeholder="额外赠送酒水券张数" data-index="{{index}}" data-field="voucherCount" bindinput="inputRechargePackage" />
         </view>
-        <input class="desc-input" value="{{item.tip}}" placeholder="赠送说明" data-index="{{index}}" data-field="tip" bindinput="inputRechargePackage" />
+        <input class="desc-input" value="{{item.tip}}" placeholder="套餐备注/赠送说明，展示在充值记录中" data-index="{{index}}" data-field="tip" bindinput="inputRechargePackage" />
       </view>
       <view class="dual-actions">
         <view class="ghost-action" bindtap="addRechargePackage">新增套餐</view>
@@ -547,7 +554,7 @@
       <view class="muted-line">{{item.storeName}} · {{item.quantity}} · 到期 {{item.expireAt}}</view>
       <view class="action-row">
         <view class="ghost-action" data-id="{{item.id}}" data-status="已提取" bindtap="handleCellar">提取</view>
-        <view class="solid-action" data-id="{{item.id}}" data-status="存放中" bindtap="handleCellar">存放中</view>
+        <view class="solid-action" data-id="{{item.id}}" data-status="存放中" bindtap="handleCellar">审核通过</view>
       </view>
     </view>
 

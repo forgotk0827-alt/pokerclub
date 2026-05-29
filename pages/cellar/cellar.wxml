@@ -42,7 +42,7 @@
     <view class="record-meta">申请时间：{{item.createdAt}}</view>
     <view class="record-expire">到期时间：{{item.expireAt}}</view>
     <view wx:if="{{item.reminderText}}" class="reminder">{{item.reminderText}}</view>
-    <view wx:if="{{item.status !== '已提取'}}" class="record-actions">
+    <view wx:if="{{item.status === '存放中'}}" class="record-actions">
       <view class="outline-btn" data-id="{{item.id}}" bindtap="extract">提取</view>
       <view class="solid-btn" data-id="{{item.id}}" bindtap="renew">续存3个月</view>
     </view>
