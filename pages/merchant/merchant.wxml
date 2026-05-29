@@ -197,25 +197,72 @@
   <view wx:elif="{{activeTab === '充值'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">充值套餐设置</view>
-      <view class="recharge-setting-grid">
-        <input value="{{rechargeSettings.title}}" placeholder="页面标题" data-field="title" bindinput="inputRechargeSetting" />
-        <input value="{{rechargeSettings.paymentLabel}}" placeholder="支付方式名称" data-field="paymentLabel" bindinput="inputRechargeSetting" />
+      <view class="recharge-guide">
+        <view class="guide-title">字段怎么填</view>
+        <view class="guide-line">支付金额：客人微信实际支付的钱。</view>
+        <view class="guide-line">到账金额：支付成功后增加到会员储值余额的钱。</view>
+        <view class="guide-line">赠券张数：支付成功后额外进入会员背包的酒水券数量。</view>
       </view>
-      <input class="desc-input" value="{{rechargeSettings.note}}" placeholder="充值提示文案" data-field="note" bindinput="inputRechargeSetting" />
+      <view class="recharge-setting-grid">
+        <view class="field-block">
+          <view class="field-label">前台页面标题</view>
+          <input value="{{rechargeSettings.title}}" placeholder="例如：储值账户" data-field="title" bindinput="inputRechargeSetting" />
+          <view class="field-help">显示在客人充值页顶部。</view>
+        </view>
+        <view class="field-block">
+          <view class="field-label">支付方式名称</view>
+          <input value="{{rechargeSettings.paymentLabel}}" placeholder="例如：微信支付" data-field="paymentLabel" bindinput="inputRechargeSetting" />
+          <view class="field-help">用于说明客人当前通过什么方式付款。</view>
+        </view>
+      </view>
+      <view class="field-block full-field">
+        <view class="field-label">充值提示文案</view>
+        <input class="desc-input" value="{{rechargeSettings.note}}" placeholder="例如：充值1000元送5张酒水券，各门店通用" data-field="note" bindinput="inputRechargeSetting" />
+        <view class="field-help">显示在客人余额卡片下方，用来说明整体充值规则。</view>
+      </view>
       <view class="recharge-package" wx:for="{{rechargeSettings.packages}}" wx:for-item="item" wx:key="id">
         <view class="recharge-package-head">
           <view class="item-title">{{item.label || '套餐'}} {{index + 1}}</view>
           <view class="ghost-action mini-action" data-index="{{index}}" bindtap="removeRechargePackage">删除</view>
         </view>
-        <view class="muted-line">示例：标题“充1000元”，副标题“到账1000元”，赠送说明“送5张酒水券”。</view>
-        <view class="recharge-package-grid">
-          <input value="{{item.label}}" placeholder="套餐标题，如 充1000元" data-index="{{index}}" data-field="label" bindinput="inputRechargePackage" />
-          <input value="{{item.subLabel}}" placeholder="前台副标题，如 送5张酒水券" data-index="{{index}}" data-field="subLabel" bindinput="inputRechargePackage" />
-          <input value="{{item.payAmount}}" type="digit" placeholder="客人实际支付金额" data-index="{{index}}" data-field="payAmount" bindinput="inputRechargePackage" />
-          <input value="{{item.creditAmount}}" type="digit" placeholder="会员余额到账金额" data-index="{{index}}" data-field="creditAmount" bindinput="inputRechargePackage" />
-          <input value="{{item.voucherCount}}" type="number" placeholder="额外赠送酒水券张数" data-index="{{index}}" data-field="voucherCount" bindinput="inputRechargePackage" />
+        <view class="package-summary">
+          <view>客人支付 ¥{{item.payAmount || 0}}</view>
+          <view>余额到账 ¥{{item.creditAmount || 0}}</view>
+          <view>赠券 {{item.voucherCount || 0}} 张</view>
         </view>
-        <input class="desc-input" value="{{item.tip}}" placeholder="套餐备注/赠送说明，展示在充值记录中" data-index="{{index}}" data-field="tip" bindinput="inputRechargePackage" />
+        <view class="muted-line">推荐填法：套餐标题写“充1000元”，前台副标题写“送5张酒水券”，套餐备注可写内部说明或活动规则。</view>
+        <view class="recharge-package-grid">
+          <view class="field-block">
+            <view class="field-label">套餐标题</view>
+            <input value="{{item.label}}" placeholder="例如：充1000元" data-index="{{index}}" data-field="label" bindinput="inputRechargePackage" />
+            <view class="field-help">前台套餐卡片的主标题。</view>
+          </view>
+          <view class="field-block">
+            <view class="field-label">前台副标题</view>
+            <input value="{{item.subLabel}}" placeholder="例如：送5张酒水券" data-index="{{index}}" data-field="subLabel" bindinput="inputRechargePackage" />
+            <view class="field-help">显示在标题下方，可写优惠亮点。</view>
+          </view>
+          <view class="field-block">
+            <view class="field-label">客人支付金额</view>
+            <input value="{{item.payAmount}}" type="digit" placeholder="例如：1000" data-index="{{index}}" data-field="payAmount" bindinput="inputRechargePackage" />
+            <view class="field-help">微信支付扣款金额。</view>
+          </view>
+          <view class="field-block">
+            <view class="field-label">会员余额到账</view>
+            <input value="{{item.creditAmount}}" type="digit" placeholder="例如：1000" data-index="{{index}}" data-field="creditAmount" bindinput="inputRechargePackage" />
+            <view class="field-help">支付成功后增加到储值余额。</view>
+          </view>
+          <view class="field-block">
+            <view class="field-label">赠送酒水券</view>
+            <input value="{{item.voucherCount}}" type="number" placeholder="例如：5" data-index="{{index}}" data-field="voucherCount" bindinput="inputRechargePackage" />
+            <view class="field-help">填 0 表示不赠送。</view>
+          </view>
+        </view>
+        <view class="field-block full-field">
+          <view class="field-label">套餐备注</view>
+          <input class="desc-input" value="{{item.tip}}" placeholder="例如：限本月活动，充值后自动到账" data-index="{{index}}" data-field="tip" bindinput="inputRechargePackage" />
+          <view class="field-help">保存到充值记录里，方便之后核对。</view>
+        </view>
       </view>
       <view class="dual-actions">
         <view class="ghost-action" bindtap="addRechargePackage">新增套餐</view>

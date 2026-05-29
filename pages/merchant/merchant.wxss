@@ -476,6 +476,56 @@
   gap: 12rpx;
 }
 
+.recharge-package-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.recharge-guide {
+  margin-top: 14rpx;
+  padding: 18rpx;
+  border: 1rpx solid #dbeafe;
+  border-radius: 8rpx;
+  background: #eff6ff;
+}
+
+.guide-title {
+  color: #1e3a8a;
+  font-size: 26rpx;
+  line-height: 34rpx;
+  font-weight: 900;
+}
+
+.guide-line {
+  margin-top: 8rpx;
+  color: #1f2937;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.field-block {
+  min-width: 0;
+}
+
+.full-field {
+  margin-top: 14rpx;
+}
+
+.field-label {
+  margin-bottom: 8rpx;
+  color: #111827;
+  font-size: 24rpx;
+  line-height: 32rpx;
+  font-weight: 900;
+}
+
+.field-help {
+  margin-top: 6rpx;
+  color: #6b7280;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
 .image-actions {
   margin-top: 16rpx;
   display: grid;
@@ -485,10 +535,10 @@
 
 .recharge-package {
   margin-top: 16rpx;
-  padding: 16rpx;
-  border: 1rpx solid #eef0f3;
+  padding: 18rpx;
+  border: 1rpx solid #e5e7eb;
   border-radius: 8rpx;
-  background: #fafafa;
+  background: #fbfbfc;
 }
 
 .recharge-package-head {
@@ -496,6 +546,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 12rpx;
+}
+
+.package-summary {
+  margin-top: 14rpx;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10rpx;
+}
+
+.package-summary view {
+  min-height: 58rpx;
+  padding: 8rpx 10rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111827;
+  color: #fff;
+  font-size: 22rpx;
+  line-height: 30rpx;
+  font-weight: 900;
+  text-align: center;
 }
 
 .mini-action {
@@ -564,6 +636,10 @@ input {
 .desc-input {
   width: 100%;
   margin-top: 12rpx;
+}
+
+.field-block .desc-input {
+  margin-top: 0;
 }
 
 .textarea-input {

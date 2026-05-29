@@ -2322,8 +2322,13 @@ function updateCartItem(id, delta) {
   if (!isLoggedIn()) {
     return getCart()
   }
+  const target = String(id || '')
   const next = getCart()
-    .map((item) => ((item.cartKey || item.id) === id ? Object.assign({}, item, { count: item.count + delta }) : item))
+    .map((item) => {
+      const cartKey = item.cartKey || `${item.id}::${item.payType || 'cash'}`
+      const matched = cartKey === target || item.id === target
+      return matched ? Object.assign({}, item, { cartKey, count: item.count + delta }) : item
+    })
     .filter((item) => item.count > 0)
   saveCart(next)
   return next
