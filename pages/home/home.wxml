@@ -120,5 +120,43 @@
     <view wx:if="{{!leaderboardList.length}}" class="home-rank-empty">暂无数据</view>
   </view>
 </scroll-view>
+<view wx:if="{{nearestStorePromptVisible}}" class="nearest-mask">
+  <view class="nearest-dialog">
+    <view class="nearest-title">选择门店</view>
+    <view class="nearest-content">{{nearestStorePrompt.message}}</view>
+    <view class="nearest-actions">
+      <button class="nearest-btn nearest-secondary" bindtap="changeNearestStore">切换门店</button>
+      <button class="nearest-btn nearest-primary" bindtap="confirmNearestStore">确认使用本店</button>
+    </view>
+  </view>
+</view>
+<view wx:if="{{storePickerVisible}}" class="store-picker-mask" bindtap="hideStorePicker">
+  <view class="store-picker-panel" catchtap="noop">
+    <view class="store-picker-head">
+      <view>
+        <view class="store-picker-title">选择门店</view>
+        <view class="store-picker-sub">请选择本次消费或活动所在门店</view>
+      </view>
+      <view wx:if="{{canCloseStorePicker}}" class="store-picker-close" bindtap="hideStorePicker">×</view>
+    </view>
+    <scroll-view scroll-y class="store-picker-list">
+      <view
+        wx:for="{{stores}}"
+        wx:key="id"
+        class="store-picker-item {{store && store.id === item.id ? 'store-picker-active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="selectStore"
+      >
+        <view class="store-picker-main">
+          <view class="store-picker-name">{{item.shortName || item.name}}</view>
+          <view class="store-picker-address">{{item.address}}</view>
+        </view>
+        <view class="store-picker-status">{{item.status}}</view>
+      </view>
+      <view wx:if="{{!stores.length}}" class="store-picker-empty">暂无可选门店</view>
+    </scroll-view>
+    <button class="store-picker-more" bindtap="goStoreSelect">查看全部门店</button>
+  </view>
+</view>
 <cart-summary-bar summary="{{cartSummary}}" bind:cartchange="handleCartChange" />
 <main-tabbar active="home" />

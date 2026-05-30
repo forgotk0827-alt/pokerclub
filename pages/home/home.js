@@ -9,11 +9,18 @@ Page({
     activeRankType: 'weekly',
     leaderboardList: [],
     avatarList: ['客', '客', '客', '客', '客'],
-    cartSummary: { count: 0, total: 0 }
+    cartSummary: { count: 0, total: 0 },
+    nearestStorePromptVisible: false,
+    nearestStorePrompt: null,
+    storePickerVisible: false,
+    canCloseStorePicker: false,
+    stores: []
   },
   onShow() {
     state.fetchStores(() => {
-      state.selectNearestStore(() => {
+      const stores = state.getStores()
+      this.setData({ stores })
+      this.resolveInitialStore(() => {
         state.fetchProducts(() => {
           state.fetchGlobalSettings((globalSettings) => {
             state.fetchPublicLeaderboard(() => {
@@ -23,6 +30,31 @@ Page({
           })
         })
       })
+    })
+  },
+  resolveInitialStore(callback) {
+    if (state.isStoreGuideDone()) {
+      if (callback) callback()
+      return
+    }
+    state.requestNearestStore((nearest) => {
+      if (!nearest) {
+        this.showStorePicker()
+        if (callback) callback()
+        return
+      }
+      const storeName = nearest.shortName || nearest.name
+      const distanceText = state.formatDistance(nearest.distance)
+      this.setData({
+        nearestStorePromptVisible: true,
+        nearestStorePrompt: {
+          id: nearest.id,
+          name: storeName,
+          distanceText,
+          message: `已为你定位到最近门店：${storeName}${distanceText ? `（距离 ${distanceText}）` : ''}`
+        }
+      })
+      if (callback) callback()
     })
   },
   loadHome() {
@@ -45,8 +77,46 @@ Page({
     this.setData({ activeRankType: type, leaderboardList: [] }, () => this.loadLeaderboardPreview())
   },
   switchStore() {
+    this.showStorePicker()
+  },
+  confirmNearestStore() {
+    state.markStoreGuideDone()
+    this.setData({
+      nearestStorePromptVisible: false,
+      nearestStorePrompt: null
+    }, () => this.loadHome())
+  },
+  changeNearestStore() {
+    this.setData({
+      nearestStorePromptVisible: false,
+      nearestStorePrompt: null
+    }, () => this.showStorePicker())
+  },
+  showStorePicker() {
+    const stores = state.getStores()
+    this.setData({
+      stores,
+      storePickerVisible: true,
+      canCloseStorePicker: state.isStoreGuideDone()
+    })
+  },
+  hideStorePicker() {
+    if (!state.isStoreGuideDone()) return
+    this.setData({ storePickerVisible: false })
+  },
+  selectStore(event) {
+    const store = this.data.stores.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!store) return
+    state.clearTableContext()
+    state.setStore(store.id)
+    state.markStoreGuideDone()
+    this.setData({ storePickerVisible: false }, () => this.loadHome())
+  },
+  goStoreSelect() {
+    this.setData({ storePickerVisible: false })
     wx.navigateTo({ url: '/pages/store-select/store-select' })
   },
+  noop() {},
   openNavigation() {
     state.openStoreLocation(this.data.store)
   },

@@ -25,7 +25,8 @@ const KEYS = {
   rechargeRecords: 'deyou_recharge_records',
   stores: 'deyou_stores',
   tableContext: 'deyou_table_context',
-  globalSettings: 'deyou_global_settings'
+  globalSettings: 'deyou_global_settings',
+  storeGuideDone: 'deyou_store_guide_done'
 }
 
 const LEADERBOARD_TYPES = ['weekly', 'monthly', 'yearly']
@@ -1273,7 +1274,7 @@ function normalizeStoreLocation(store) {
 function getStores() {
   const stored = wx.getStorageSync(KEYS.stores)
   if (!Array.isArray(stored) || !stored.length) {
-    return []
+    return data.stores.map(normalizeStoreLocation)
   }
   return stored.map(normalizeStoreLocation)
 }
@@ -1408,6 +1409,14 @@ function setStore(id, options = {}) {
   if (options.manual !== false) wx.setStorageSync(KEYS.storeManual, true)
 }
 
+function isStoreGuideDone() {
+  return !!wx.getStorageSync(KEYS.storeGuideDone)
+}
+
+function markStoreGuideDone() {
+  wx.setStorageSync(KEYS.storeGuideDone, true)
+}
+
 function distanceBetween(lat1, lon1, lat2, lon2) {
   const toRad = (value) => Number(value || 0) * Math.PI / 180
   const earthRadius = 6371000
@@ -1441,6 +1450,39 @@ function selectNearestStore(callback) {
     },
     fail() {
       if (callback) callback(getStore())
+    }
+  })
+}
+
+function formatDistance(distance) {
+  const value = Number(distance || 0)
+  if (!value) return ''
+  if (value < 1000) return `${Math.round(value)}m`
+  return `${(value / 1000).toFixed(value < 10000 ? 1 : 0)}km`
+}
+
+function requestNearestStore(callback) {
+  const stores = getStores().filter((item) => Number(item.latitude || 0) && Number(item.longitude || 0))
+  if (!stores.length || !wx.getLocation) {
+    if (callback) callback(null, 'no-store-location')
+    return
+  }
+  wx.getLocation({
+    type: 'gcj02',
+    success(res) {
+      const nearest = stores
+        .map((store) => Object.assign({}, store, {
+          distance: distanceBetween(res.latitude, res.longitude, store.latitude, store.longitude)
+        }))
+        .sort((left, right) => left.distance - right.distance)[0] || null
+      if (nearest && nearest.id) {
+        wx.setStorageSync(KEYS.store, nearest.id)
+        wx.setStorageSync(KEYS.storeManual, false)
+      }
+      if (callback) callback(nearest, null)
+    },
+    fail(err) {
+      if (callback) callback(null, err || 'location-failed')
     }
   })
 }
@@ -3749,7 +3791,11 @@ module.exports = {
   deleteStore,
   getStore,
   setStore,
+  isStoreGuideDone,
+  markStoreGuideDone,
   selectNearestStore,
+  requestNearestStore,
+  formatDistance,
   storeIdByTableNo,
   getTableContext,
   setTableContext,

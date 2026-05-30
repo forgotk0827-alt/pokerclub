@@ -35,6 +35,7 @@ Page({
     }
     state.clearTableContext()
     state.setStore(store.id)
+    state.markStoreGuideDone()
     wx.reLaunch({ url: '/pages/home/home' })
   },
   openMap(event) {
