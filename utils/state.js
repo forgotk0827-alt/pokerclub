@@ -2066,35 +2066,64 @@ function isActivitySignupClosed(activity) {
   return !!(deadline && Date.now() > deadline.getTime())
 }
 
+function startOfLocalDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+}
+
+function dayLabelOffset(label) {
+  return {
+    今天: 0,
+    明天: 1,
+    后天: 2,
+    '2天后': 3
+  }[String(label || '').trim()]
+}
+
+function activityDayLabelFromDateText(text) {
+  const value = String(text || '').trim()
+  if (!value) return ''
+  const now = new Date()
+  let target = null
+  const isoDate = value.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/)
+  if (isoDate) {
+    target = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]))
+  } else {
+    const monthDay = value.match(/(\d{1,2})月(\d{1,2})日/)
+    if (monthDay) {
+      target = new Date(now.getFullYear(), Number(monthDay[1]) - 1, Number(monthDay[2]))
+    }
+  }
+  if (!target || Number.isNaN(target.getTime())) return ''
+  const diffDays = Math.round((startOfLocalDay(target) - startOfLocalDay(now)) / 86400000)
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '明天'
+  if (diffDays === 2) return '后天'
+  if (diffDays === 3) return '2天后'
+  return ''
+}
+
+function rollRelativeActivityDate(text, label) {
+  const value = String(text || '').trim()
+  const offset = dayLabelOffset(label)
+  if (offset === undefined || !/(\d{1,2})月(\d{1,2})日/.test(value) || /(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/.test(value)) {
+    return value
+  }
+  const target = new Date()
+  target.setDate(target.getDate() + offset)
+  const month = String(target.getMonth() + 1).padStart(2, '0')
+  const day = String(target.getDate()).padStart(2, '0')
+  const weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][target.getDay()]
+  return value.replace(/(\d{1,2})月(\d{1,2})日(?:\s*[（(][^）)]*[）)])?/, `${month}月${day}日 (${weekday})`)
+}
+
 function normalizeActivity(activity, index = 0) {
   const fallbackStore = inferStoreByActivity(activity)
   const joined = Number(activity.joined || 0)
   const quota = Number(activity.quota || 10)
   const explicitDayLabel = String(activity.dayLabel || '').trim()
-  const inferredDayLabel = (() => {
-    if (explicitDayLabel) return explicitDayLabel
-    const text = String(activity.date || '').trim()
-    if (!text) return ''
-    const now = new Date()
-    const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-    let target = null
-    const monthDay = text.match(/(\d{1,2})月(\d{1,2})日/)
-    if (monthDay) {
-      target = new Date(now.getFullYear(), Number(monthDay[1]) - 1, Number(monthDay[2]))
-    } else {
-      const isoDate = text.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/)
-      if (isoDate) {
-        target = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]))
-      }
-    }
-    if (!target || Number.isNaN(target.getTime())) return ''
-    const diffDays = Math.round((startOfDay(target) - startOfDay(now)) / 86400000)
-    if (diffDays === 0) return '今天'
-    if (diffDays === 1) return '明天'
-    if (diffDays === 2) return '后天'
-    if (diffDays === 3) return '2天后'
-    return ''
-  })()
+  const originalDate = String(activity && activity.date ? activity.date : '').trim()
+  const rolledDate = rollRelativeActivityDate(originalDate, explicitDayLabel)
+  const inferredDayLabel = activityDayLabelFromDateText(rolledDate) || explicitDayLabel
   return Object.assign(
     {
       id: `act-${Date.now()}-${index}`,
@@ -2120,6 +2149,7 @@ function normalizeActivity(activity, index = 0) {
     },
     activity || {},
     {
+      date: rolledDate,
       dayLabel: inferredDayLabel,
       quota,
       joined,
