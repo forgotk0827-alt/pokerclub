@@ -36,6 +36,7 @@ const COLLECTION_KEYS = [
   'pointLogs',
   'globalSettings',
   'leaderboard',
+  'leaderboardMeta',
   'staffAccounts',
   'authRevocations'
 ]
@@ -157,9 +158,19 @@ start().catch((error) => {
 
 async function start() {
   db = await loadDb()
+  await runScheduledMaintenance()
+  const maintenanceTimer = setInterval(() => {
+    runScheduledMaintenance().catch((error) => console.error('Scheduled maintenance failed', error))
+  }, 60 * 1000)
+  if (maintenanceTimer.unref) maintenanceTimer.unref()
   server.listen(PORT, HOST, () => {
     console.log(`Pokerpai backend running at http://${HOST}:${PORT} with ${STORAGE_DRIVER} storage`)
   })
+}
+
+async function runScheduledMaintenance() {
+  if (!db) return
+  if (syncLeaderboardState(false)) await persist()
 }
 
 async function handleWechatLogin(req, res) {
