@@ -275,13 +275,6 @@
   line-height: 36rpx;
 }
 
-.group-qr-support {
-  margin-top: 42rpx;
-  color: rgba(255, 255, 255, 0.46);
-  font-size: 24rpx;
-  line-height: 34rpx;
-}
-
 .menu-symbol {
   position: relative;
   width: 52rpx;
