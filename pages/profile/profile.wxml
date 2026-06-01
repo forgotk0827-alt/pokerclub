@@ -98,11 +98,6 @@
     <view class="group-qr-support">《中扑院》仅提供技术支持</view>
   </view>
 
-  <view class="service-qr-section">
-    <image class="service-qr-code" src="{{serviceQrImage}}" mode="aspectFit" bindtap="previewServiceQr" />
-    <view class="service-qr-tip">扫码添加客服微信</view>
-  </view>
-
   <view wx:if="{{qrVisible}}" class="member-qr-mask" bindtap="closeMemberQr">
     <view class="member-qr-dialog" catchtap="noop">
       <view class="member-qr-head">

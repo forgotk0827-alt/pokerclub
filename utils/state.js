@@ -767,6 +767,12 @@ function requestApi(path, method, data, callback) {
       const body = res.data || {}
       const payload = body.data || body
       if (res.statusCode < 200 || res.statusCode >= 300 || body.ok === false) {
+        if (res.statusCode === 401) {
+          clearUserSessionLocally()
+          wx.showToast({ title: '登录已失效，请重新登录', icon: 'none' })
+          if (callback) callback(null)
+          return
+        }
         wx.showToast({ title: body.message || payload.message || '接口请求失败', icon: 'none' })
         if (callback) callback(null)
         return
@@ -1116,6 +1122,12 @@ function requestMerchantApi(path, method, data, callback) {
       const payload = body.data || body
       if (res.statusCode < 200 || res.statusCode >= 300 || body.ok === false) {
         if (callback) {
+          if (res.statusCode === 401) {
+            clearMerchantSessionLocally()
+            wx.showToast({ title: '商家登录已失效，请重新登录', icon: 'none' })
+            callback(null)
+            return
+          }
           wx.showToast({ title: body.message || payload.message || '商家接口请求失败', icon: 'none' })
           callback(null)
         }
@@ -1152,6 +1164,12 @@ function requestMerchantText(path, method, data, callback) {
     responseType: 'text',
     success(res) {
       if (res.statusCode < 200 || res.statusCode >= 300) {
+        if (res.statusCode === 401) {
+          clearMerchantSessionLocally()
+          wx.showToast({ title: '商家登录已失效，请重新登录', icon: 'none' })
+          if (callback) callback(null)
+          return
+        }
         wx.showToast({ title: '商家接口请求失败', icon: 'none' })
         if (callback) callback(null)
         return

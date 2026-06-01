@@ -10,7 +10,6 @@ Page({
     qrVisible: false,
     qrTime: '',
     memberQr: [],
-    serviceQrImage: '/2a9ac3929e7818db1b98e17c97e5336c.jpg',
     globalSettings: state.getGlobalSettings(),
     profileEditorVisible: false,
     profileEditorMode: 'edit',
@@ -208,14 +207,6 @@ Page({
   },
   previewGroupQr() {
     const url = this.data.globalSettings && this.data.globalSettings.groupQrImage
-    if (!url || !wx.previewImage) return
-    wx.previewImage({
-      urls: [url],
-      current: url
-    })
-  },
-  previewServiceQr() {
-    const url = this.data.serviceQrImage
     if (!url || !wx.previewImage) return
     wx.previewImage({
       urls: [url],
