@@ -86,6 +86,8 @@ Page({
   filterList() {
     const signups = state.getSignups()
     const list = this.data.activities.filter((item) => {
+      const signupClosed = state.isActivitySignupClosed(item)
+      if (this.data.activeDay !== 'all' && signupClosed) return false
       const dayMatched = this.data.activeDay === 'all' || item.dayLabel === this.dayLabel(this.data.activeDay)
       const typeMatched = this.data.activeType === '全部' || item.type === this.data.activeType
       return dayMatched && typeMatched
