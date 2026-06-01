@@ -341,6 +341,14 @@ function defaultGlobalSettings() {
   }
 }
 
+function normalizeShowcaseImages(images, defaults) {
+  if (!Array.isArray(images)) return defaults.showcaseImages.slice()
+  const defaultImages = new Set(defaults.showcaseImages)
+  return images
+    .map((item) => String(item || '').trim())
+    .filter((item) => item && !defaultImages.has(item))
+}
+
 function normalizeGlobalSettings(settings) {
   const defaults = defaultGlobalSettings()
   const next = Object.assign({}, defaults, settings || {})
@@ -353,9 +361,7 @@ function normalizeGlobalSettings(settings) {
   next.reminderInterval = Math.max(0, Number(next.reminderInterval || defaults.reminderInterval))
   next.homeNotice = String(next.homeNotice || defaults.homeNotice)
   next.showcaseText = String(next.showcaseText || defaults.showcaseText)
-  next.showcaseImages = Array.isArray(next.showcaseImages)
-    ? next.showcaseImages.map((item) => String(item || '').trim()).filter(Boolean)
-    : defaults.showcaseImages.slice()
+  next.showcaseImages = normalizeShowcaseImages(settings && settings.showcaseImages, defaults)
   next.joinUsTitle = String(next.joinUsTitle || defaults.joinUsTitle)
   next.joinUsText = String(next.joinUsText || defaults.joinUsText)
   next.joinUsImage = String(next.joinUsImage || defaults.joinUsImage)
