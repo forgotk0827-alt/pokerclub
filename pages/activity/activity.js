@@ -39,7 +39,9 @@ Page({
         if (!selectedStoreId) return true
         return !item.storeId || item.storeId === selectedStoreId
       })
+    const typePriority = { '国际扑克': 1, '掼蛋': 2 }
     const typeNames = Array.from(new Set(activities.map((item) => String(item.type || '').trim()).filter(Boolean)))
+      .sort((a, b) => (typePriority[a] || 99) - (typePriority[b] || 99))
     const types = [{ name: '全部' }].concat(typeNames.map((name) => ({ name })))
     const activeType = types.some((item) => item.name === this.data.activeType) ? this.data.activeType : '全部'
     this.setData({

@@ -558,6 +558,33 @@
     </view>
   </view>
 
+  <view wx:elif="{{activeTab === '群聊二维码管理'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">群聊二维码管理</view>
+      <view class="muted-line">上传店铺群聊二维码后，客人端“我的”页面底部会展示二维码区域。</view>
+      <view class="group-qr-manager">
+        <view class="group-qr-preview">
+          <image wx:if="{{globalSettings.groupQrImage}}" class="group-qr-image" src="{{globalSettings.groupQrImage}}" mode="aspectFit" />
+          <view wx:else class="group-qr-empty">未上传二维码</view>
+        </view>
+        <view class="group-qr-side">
+          <view class="field-block full-field">
+            <view class="field-label">提示文案</view>
+            <input class="desc-input" value="{{globalSettings.groupQrTip}}" placeholder="点击打开二维码后长按识别加入店铺群" data-field="groupQrTip" bindinput="inputGlobalSetting" />
+          </view>
+          <view class="dual-actions compact-actions">
+            <view class="ghost-action" bindtap="chooseGroupQrImage">{{globalSettings.groupQrImage ? '更换二维码' : '上传二维码'}}</view>
+            <view class="ghost-action danger" bindtap="removeGroupQrImage">删除二维码</view>
+          </view>
+        </view>
+      </view>
+      <view class="dual-actions">
+        <view class="ghost-action" bindtap="refreshGlobalSettings">刷新</view>
+        <view class="solid-action" bindtap="saveGroupQrSettings">保存二维码</view>
+      </view>
+    </view>
+  </view>
+
   <view wx:elif="{{activeTab === '店员管理'}}" class="panel">
     <view class="menu-editor">
       <view class="editor-title">{{staffForm.id ? '编辑店员' : '新增店员'}}</view>

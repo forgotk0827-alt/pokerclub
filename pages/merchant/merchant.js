@@ -50,7 +50,7 @@ const emptyActivityForm = {
 }
 
 const activityTypeOptions = ['国际扑克', '掼蛋']
-const merchantTabOptions = ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行']
+const merchantTabOptions = ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '群聊二维码管理', '通用设置', '门店管理', '基础', '库存', '排行']
 const superAdminTabs = merchantTabOptions.concat('店员管理')
 const defaultStaffPermissions = ['订单', '活动管理', '基础']
 
@@ -1573,7 +1573,9 @@ Page({
       showcaseText: this.data.globalSettings.showcaseText,
       joinUsTitle: this.data.globalSettings.joinUsTitle,
       joinUsText: this.data.globalSettings.joinUsText,
-      joinUsImage: this.data.globalSettings.joinUsImage
+      joinUsImage: this.data.globalSettings.joinUsImage,
+      groupQrImage: this.data.globalSettings.groupQrImage,
+      groupQrTip: this.data.globalSettings.groupQrTip
     })
     this.setData({ globalSettings: next })
     wx.showToast({ title: '通用设置已保存', icon: 'success' })
@@ -1602,6 +1604,43 @@ Page({
     })
     this.setData({ globalSettings: next })
     wx.showToast({ title: '\u52a0\u5165\u6211\u4eec\u5df2\u53d1\u5e03', icon: 'success' })
+  },
+  saveGroupQrSettings() {
+    const next = state.saveGlobalSettings({
+      groupQrImage: this.data.globalSettings.groupQrImage,
+      groupQrTip: this.data.globalSettings.groupQrTip
+    })
+    this.setData({ globalSettings: next })
+    wx.showToast({ title: '\u7fa4\u804a\u4e8c\u7ef4\u7801\u5df2\u53d1\u5e03', icon: 'success' })
+  },
+  chooseGroupQrImage() {
+    const setImage = (path) => {
+      state.uploadMerchantMedia(path, 'image', (url) => {
+        if (url) this.setData({ 'globalSettings.groupQrImage': url })
+      })
+    }
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        success: (res) => {
+          const file = res.tempFiles && res.tempFiles[0]
+          if (file) setImage(file.tempFilePath)
+        }
+      })
+      return
+    }
+    if (wx.chooseImage) {
+      wx.chooseImage({
+        count: 1,
+        success: (res) => {
+          if (res.tempFilePaths && res.tempFilePaths[0]) setImage(res.tempFilePaths[0])
+        }
+      })
+    }
+  },
+  removeGroupQrImage() {
+    this.setData({ 'globalSettings.groupQrImage': '' })
   },
   chooseJoinUsImage() {
     const setImage = (path) => {

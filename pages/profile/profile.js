@@ -10,6 +10,8 @@ Page({
     qrVisible: false,
     qrTime: '',
     memberQr: [],
+    serviceQrImage: '/2a9ac3929e7818db1b98e17c97e5336c.jpg',
+    globalSettings: state.getGlobalSettings(),
     profileEditorVisible: false,
     profileEditorMode: 'edit',
     privacyAgreed: false,
@@ -33,9 +35,15 @@ Page({
           state.fetchMySignups(() => this.refresh())
         })
       })
+      state.fetchGlobalSettings((settings) => {
+        if (settings) this.setData({ globalSettings: settings })
+      })
       return
     }
     this.refresh()
+    state.fetchGlobalSettings((settings) => {
+      if (settings) this.setData({ globalSettings: settings })
+    })
   },
   onUnload() {
     this.clearNicknameTipTimer()
@@ -48,7 +56,8 @@ Page({
       isLoggedIn,
       signups: isLoggedIn ? state.getSignups() : [],
       orders: isLoggedIn ? state.getOrders().slice(0, 3) : [],
-      memberQr: this.buildMemberQr(member)
+      memberQr: this.buildMemberQr(member),
+      globalSettings: state.getGlobalSettings()
     })
   },
   buildMemberQr(member) {
@@ -196,6 +205,22 @@ Page({
   },
   closeMemberQr() {
     this.setData({ qrVisible: false })
+  },
+  previewGroupQr() {
+    const url = this.data.globalSettings && this.data.globalSettings.groupQrImage
+    if (!url || !wx.previewImage) return
+    wx.previewImage({
+      urls: [url],
+      current: url
+    })
+  },
+  previewServiceQr() {
+    const url = this.data.serviceQrImage
+    if (!url || !wx.previewImage) return
+    wx.previewImage({
+      urls: [url],
+      current: url
+    })
   },
   formatQrTime(date) {
     const pad = (value) => String(value).padStart(2, '0')

@@ -570,6 +570,7 @@ async function handleCreateOrderPayment(req, res, user) {
       member.level = levelBySpend(member.totalSpent, member.points)
     }
     syncOrderActivitySignups(order, member)
+    await autoPrintPaidOrder(order)
     await persist()
     sendOk(res, { order, payment: null, paid: true })
     return
@@ -777,29 +778,11 @@ async function handlePrintOrder(req, res, pathname, merchant) {
   const body = await readJson(req)
   const order = findById(db.orders, id, '订单不存在')
   ensureMerchantStoreAccess(merchant, order.storeId)
-  const store = db.stores.find((item) => item.id === order.storeId) || {}
-  const sn = String(store.printerSn || store.xpyunPrinterSn || '').trim()
-  if (!sn) throw httpError(400, '请先在门店管理中配置芯烨云打印机编号')
-  const copies = Math.max(1, Math.min(5, Number(body.copies || store.printerCopies || 1)))
-  const content = buildReceiptContent(order, store)
-  const result = await printXpyunReceipt({ sn, content, copies, voice: body.voice || 0 })
-  const record = {
-    id: `PR${Date.now()}`,
-    orderId: order.id,
-    storeId: order.storeId,
-    printerSn: sn,
-    copies,
-    status: result.ok ? 'sent' : 'failed',
-    message: result.message,
-    xpyunOrderId: result.orderId || '',
-    operator: merchant.username,
-    createdAt: now()
-  }
-  order.printLogs = Array.isArray(order.printLogs) ? order.printLogs : []
-  order.printLogs.unshift(record)
-  order.printStatus = record.status
-  order.lastPrintedAt = record.createdAt
-  order.lastPrintMessage = record.message
+  const { record, result } = await sendOrderToPrinter(order, {
+    copies: body.copies,
+    voice: body.voice || 0,
+    operator: merchant.username
+  })
   await persist()
   sendOk(res, { order, print: record, result })
 }
@@ -1174,7 +1157,7 @@ function merchantAccounts() {
 }
 
 function staffPermissionOptions() {
-  return ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行']
+  return ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '群聊二维码管理', '通用设置', '门店管理', '基础', '库存', '排行']
 }
 
 function normalizeStaffPermissions(permissions) {
@@ -1208,7 +1191,7 @@ function ensureMerchantPermission(merchant, pathname) {
   if (!merchant || merchant.role !== 'staff') return
   const permissions = normalizeStaffPermissions(merchant.permissions || [])
   if (pathname.includes('/global-settings')) {
-    const globalTabs = ['轮播条', '精彩呈现', '加入我们', '通用设置']
+    const globalTabs = ['轮播条', '精彩呈现', '加入我们', '群聊二维码管理', '通用设置']
     if (globalTabs.some((tab) => permissions.includes(tab))) return
     throw httpError(403, '当前店员无此权限')
   }
@@ -1785,6 +1768,7 @@ async function applyWechatPaySuccess(transaction) {
       changed = true
     }
     if (syncOrderActivitySignups(order, member)) changed = true
+    if (await autoPrintPaidOrder(order)) changed = true
   }
   const record = db.rechargeRecords.find((item) => item.outTradeNo === outTradeNo || item.id === outTradeNo)
   if (record && record.payStatus !== 'paid') {
@@ -1857,6 +1841,61 @@ async function printXpyunReceipt({ sn, content, copies = 1, voice = 0 }) {
     message: response.msg || '已发送至芯烨云打印机',
     orderId: response.data || ''
   }
+}
+
+async function sendOrderToPrinter(order, options = {}) {
+  const store = db.stores.find((item) => item.id === order.storeId) || {}
+  const sn = String(store.printerSn || store.xpyunPrinterSn || '').trim()
+  if (!sn) throw httpError(400, '请先在门店管理中配置芯烨云打印机编号')
+  const copies = Math.max(1, Math.min(5, Number(options.copies || store.printerCopies || 1)))
+  const content = buildReceiptContent(order, store)
+  const result = await printXpyunReceipt({ sn, content, copies, voice: options.voice || 0 })
+  const record = appendOrderPrintLog(order, {
+    printerSn: sn,
+    copies,
+    status: result.ok ? 'sent' : 'failed',
+    message: result.message,
+    xpyunOrderId: result.orderId || '',
+    operator: options.operator || '系统自动'
+  })
+  return { record, result }
+}
+
+function appendOrderPrintLog(order, data = {}) {
+  const record = {
+    id: `PR${Date.now()}`,
+    orderId: order.id,
+    storeId: order.storeId,
+    printerSn: data.printerSn || '',
+    copies: Number(data.copies || 1),
+    status: data.status || 'failed',
+    message: data.message || '',
+    xpyunOrderId: data.xpyunOrderId || '',
+    operator: data.operator || '系统自动',
+    createdAt: now()
+  }
+  order.printLogs = Array.isArray(order.printLogs) ? order.printLogs : []
+  order.printLogs.unshift(record)
+  order.printStatus = record.status
+  order.lastPrintedAt = record.createdAt
+  order.lastPrintMessage = record.message
+  return record
+}
+
+async function autoPrintPaidOrder(order) {
+  if (!order || !order.id || order.payStatus !== 'paid') return false
+  if (order.autoPrintAttempted || order.printStatus === 'sent') return false
+  order.autoPrintAttempted = true
+  try {
+    await sendOrderToPrinter(order, { operator: '支付成功自动打印', voice: 2 })
+  } catch (error) {
+    appendOrderPrintLog(order, {
+      status: 'failed',
+      message: error && error.message ? error.message : '自动打印失败',
+      operator: '支付成功自动打印'
+    })
+  }
+  return true
 }
 
 function postJson(url, body) {
@@ -2352,7 +2391,9 @@ function defaultGlobalSettings() {
     showcaseText: '\u7cbe\u5f69\u5448\u73b0\uff1a\u8bb0\u5f55\u7834\u58f3\u6d3e\u9152\u5427\u7684\u8d5b\u4e8b\u3001\u805a\u4f1a\u548c\u73b0\u573a\u77ac\u95f4\u3002',
     joinUsTitle: '\u52a0\u5165\u6211\u4eec',
     joinUsText: '\u6b22\u8fce\u52a0\u5165\u7834\u58f3\u6d3e\u9152\u5427\uff0c\u4e00\u8d77\u6253\u9020\u66f4\u4e13\u4e1a\u3001\u66f4\u6709\u6e29\u5ea6\u7684\u6251\u514b\u4e3b\u9898\u793e\u4ea4\u7a7a\u95f4\u3002',
-    joinUsImage: '/assets/hero-bar.svg'
+    joinUsImage: '/assets/hero-bar.svg',
+    groupQrImage: '',
+    groupQrTip: '\u70b9\u51fb\u6253\u5f00\u4e8c\u7ef4\u7801\u540e\u957f\u6309\u8bc6\u522b\u52a0\u5165\u5e97\u94fa\u7fa4'
   }
 }
 
@@ -2374,6 +2415,8 @@ function normalizeGlobalSettings(settings) {
   next.joinUsTitle = String(next.joinUsTitle || defaults.joinUsTitle)
   next.joinUsText = String(next.joinUsText || defaults.joinUsText)
   next.joinUsImage = String(next.joinUsImage || defaults.joinUsImage)
+  next.groupQrImage = String(next.groupQrImage || '')
+  next.groupQrTip = String(next.groupQrTip || defaults.groupQrTip)
   return next
 }
 

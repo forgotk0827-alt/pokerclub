@@ -1,7 +1,7 @@
-<topbar title="排行榜" showBack="{{true}}" />
+<topbar title="破壳大师排行榜" showBack="{{true}}" />
 <scroll-view scroll-y class="rank-page">
   <view class="rank-hero">
-    <view class="hero-title">会员积分排行榜</view>
+    <view class="hero-title">破壳大师排行榜</view>
     <view class="hero-sub">查看周榜、月榜和年度榜</view>
     <view class="rank-tabs">
       <view

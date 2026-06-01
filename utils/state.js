@@ -335,7 +335,9 @@ function defaultGlobalSettings() {
     showcaseText: '\u7cbe\u5f69\u5448\u73b0\uff1a\u8bb0\u5f55\u7834\u58f3\u6d3e\u9152\u5427\u7684\u8d5b\u4e8b\u3001\u805a\u4f1a\u548c\u73b0\u573a\u77ac\u95f4\u3002',
     joinUsTitle: '\u52a0\u5165\u6211\u4eec',
     joinUsText: '\u6b22\u8fce\u52a0\u5165\u7834\u58f3\u6d3e\u9152\u5427\uff0c\u4e00\u8d77\u6253\u9020\u66f4\u4e13\u4e1a\u3001\u66f4\u6709\u6e29\u5ea6\u7684\u6251\u514b\u4e3b\u9898\u793e\u4ea4\u7a7a\u95f4\u3002',
-    joinUsImage: '/assets/hero-bar.svg'
+    joinUsImage: '/assets/hero-bar.svg',
+    groupQrImage: '',
+    groupQrTip: '\u70b9\u51fb\u6253\u5f00\u4e8c\u7ef4\u7801\u540e\u957f\u6309\u8bc6\u522b\u52a0\u5165\u5e97\u94fa\u7fa4'
   }
 }
 
@@ -357,6 +359,8 @@ function normalizeGlobalSettings(settings) {
   next.joinUsTitle = String(next.joinUsTitle || defaults.joinUsTitle)
   next.joinUsText = String(next.joinUsText || defaults.joinUsText)
   next.joinUsImage = String(next.joinUsImage || defaults.joinUsImage)
+  next.groupQrImage = String(next.groupQrImage || '')
+  next.groupQrTip = String(next.groupQrTip || defaults.groupQrTip)
   return next
 }
 
