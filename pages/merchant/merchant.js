@@ -874,29 +874,33 @@ Page({
     }
   },
   chooseShowcaseImage() {
-    const setImage = (path) => {
-      state.uploadMerchantMedia(path, 'image', (url) => {
-        if (!url) return
-        const current = Array.isArray(this.data.globalSettings.showcaseImages) ? this.data.globalSettings.showcaseImages : []
-        this.setData({ 'globalSettings.showcaseImages': current.concat(url) })
+    const appendImage = (url) => {
+      if (!url) return
+      const current = Array.isArray(this.data.globalSettings.showcaseImages) ? this.data.globalSettings.showcaseImages : []
+      this.setData({ 'globalSettings.showcaseImages': current.concat(url) })
+    }
+    const uploadImages = (paths) => {
+      ;(paths || []).filter(Boolean).forEach((path) => {
+        state.uploadMerchantMedia(path, 'image', (url) => {
+          appendImage(url)
+        })
       })
     }
     if (wx.chooseMedia) {
       wx.chooseMedia({
-        count: 1,
+        count: 9,
         mediaType: ['image'],
         success: (res) => {
-          const file = res.tempFiles && res.tempFiles[0]
-          if (file) setImage(file.tempFilePath)
+          uploadImages((res.tempFiles || []).map((file) => file.tempFilePath))
         }
       })
       return
     }
     if (wx.chooseImage) {
       wx.chooseImage({
-        count: 1,
+        count: 9,
         success: (res) => {
-          if (res.tempFilePaths && res.tempFilePaths[0]) setImage(res.tempFilePaths[0])
+          uploadImages(res.tempFilePaths || [])
         }
       })
     }

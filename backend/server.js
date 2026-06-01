@@ -2391,7 +2391,7 @@ function defaultGlobalSettings() {
   return {
     videoTitle: '精彩呈现',
     videoUrl: '',
-    showcaseImages: ['/assets/hero-bar.svg', '/assets/activity-card.svg', '/assets/product-pack.svg'],
+    showcaseImages: [],
     printTemplate: defaultPrintTemplate(),
     leaderboardRule: '按积分从高到低排序，商家可手动微调排名。',
     newOrderReminder: 'voice,vibrate,modal',
@@ -2408,9 +2408,11 @@ function defaultGlobalSettings() {
   }
 }
 
+const LEGACY_SHOWCASE_IMAGES = ['/assets/hero-bar.svg', '/assets/activity-card.svg', '/assets/product-pack.svg']
+
 function normalizeShowcaseImages(images, defaults) {
   if (!Array.isArray(images)) return defaults.showcaseImages.slice()
-  const defaultImages = new Set(defaults.showcaseImages)
+  const defaultImages = new Set(defaults.showcaseImages.concat(LEGACY_SHOWCASE_IMAGES))
   return images
     .map((item) => String(item || '').trim())
     .filter((item) => item && !defaultImages.has(item))
