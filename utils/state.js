@@ -41,6 +41,8 @@ let userSessionLoggedIn = false
 let guestSessionMember = null
 let userSessionId = `${Date.now()}-${Math.random()}`
 let pendingWechatLoginCallback = null
+let serverSyncInFlight = false
+let serverSyncCallbacks = []
 
 function ensureSeed() {
   if (!wx.getStorageSync(KEYS.store)) wx.setStorageSync(KEYS.store, data.stores[0].id)
@@ -1304,6 +1306,7 @@ function normalizeStoreLocation(store) {
 function getStores() {
   const stored = wx.getStorageSync(KEYS.stores)
   if (!Array.isArray(stored) || !stored.length) {
+    if (isMerchantContext() || isMerchantLoggedIn()) return []
     return data.stores.map(normalizeStoreLocation)
   }
   return stored.map(normalizeStoreLocation)
@@ -2345,7 +2348,6 @@ function fetchMyRechargeRecords(callback) {
 
 function clearSyncedCaches() {
   ;[
-    KEYS.stores,
     KEYS.categories,
     KEYS.products,
     KEYS.activities,
@@ -2364,6 +2366,17 @@ function clearSyncedCaches() {
 }
 
 function syncServerData(callback) {
+  if (callback) serverSyncCallbacks.push(callback)
+  if (serverSyncInFlight) return
+  serverSyncInFlight = true
+  const finish = () => {
+    serverSyncInFlight = false
+    const callbacks = serverSyncCallbacks
+    serverSyncCallbacks = []
+    callbacks.forEach((item) => {
+      if (typeof item === 'function') item()
+    })
+  }
   clearSyncedCaches()
   const tasks = [
     fetchStores,
@@ -2374,22 +2387,40 @@ function syncServerData(callback) {
     fetchGlobalSettings,
     fetchPublicLeaderboard
   ]
-  if (isLoggedIn()) {
-    tasks.push(fetchMyProfile, fetchMyOrders, fetchMySignups, fetchMyCellar, fetchMyRechargeRecords)
-  }
   if (isMerchantLoggedIn()) {
     tasks.push(fetchMerchantBasics, fetchInventory)
-  }
-  if (!tasks.length) {
-    if (callback) callback()
-    return
   }
   let pending = tasks.length
   const done = () => {
     pending -= 1
-    if (pending <= 0 && callback) callback()
+    if (pending > 0) return
+    syncPrivateServerData(finish)
+  }
+  if (!tasks.length) {
+    syncPrivateServerData(finish)
+    return
   }
   tasks.forEach((task) => task(done))
+}
+
+function syncPrivateServerData(callback) {
+  if (!isLoggedIn()) {
+    if (callback) callback()
+    return
+  }
+  fetchMyProfile(() => {
+    if (!isLoggedIn()) {
+      if (callback) callback()
+      return
+    }
+    const tasks = [fetchMyOrders, fetchMySignups, fetchMyCellar, fetchMyRechargeRecords]
+    let pending = tasks.length
+    const done = () => {
+      pending -= 1
+      if (pending <= 0 && callback) callback()
+    }
+    tasks.forEach((task) => task(done))
+  })
 }
 
 function openActivityLocation(activity) {
@@ -3201,6 +3232,26 @@ function fetchActivitySignups(activityId, callback) {
   })
 }
 
+function fetchActivitySignupMap(activityIds, callback) {
+  const ids = Array.from(new Set((activityIds || []).map((id) => String(id || '').trim()).filter(Boolean)))
+  const result = {}
+  if (!ids.length) {
+    if (callback) callback(result)
+    return
+  }
+  let pending = ids.length
+  const done = () => {
+    pending -= 1
+    if (pending <= 0 && callback) callback(result)
+  }
+  ids.forEach((id) => {
+    fetchActivitySignups(id, (list) => {
+      result[id] = list || []
+      done()
+    })
+  })
+}
+
 function inferStoreByActivity(activity) {
   const stores = getStores()
   if (activity && activity.location && activity.location.indexOf('新街口') > -1) {
@@ -3942,6 +3993,7 @@ module.exports = {
   buildPrintTemplate,
   getSignups,
   fetchActivitySignups,
+  fetchActivitySignupMap,
   addSignup,
   getStoreSignups,
   updateSignupStatus,

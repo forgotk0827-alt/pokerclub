@@ -11,6 +11,7 @@ Page({
     activeType: '全部',
     activities: [],
     list: [],
+    signupMap: {},
     avatarList: ['帅', '帅', '帅', '帅']
   },
   onLoad() {
@@ -28,7 +29,7 @@ Page({
         selectedStoreName: selected ? (selected.shortName || selected.name) : ''
       }, () => {
         state.fetchActivities(() => {
-          state.fetchMySignups(() => this.refreshActivityList())
+          this.refreshActivityList()
         })
       })
     })
@@ -84,7 +85,7 @@ Page({
     return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
   },
   filterList() {
-    const signups = state.getSignups()
+    const signupMap = this.data.signupMap || {}
     const list = this.data.activities.filter((item) => {
       const signupClosed = state.isActivitySignupClosed(item)
       if (this.data.activeDay !== 'all' && signupClosed) return false
@@ -94,15 +95,32 @@ Page({
     }).map((item) => Object.assign({}, item, {
       signupClosed: state.isActivitySignupClosed(item),
       statusText: state.isActivitySignupClosed(item) ? '已截止' : '报名中',
-      avatars: signups
-        .filter((signup) => signup.activityId === item.id)
+      avatars: (signupMap[item.id] || [])
         .slice(0, 4)
         .map((signup) => ({
           avatarUrl: signup.avatarUrl || '',
-          avatarText: signup.avatarText || (signup.nickname || '').slice(0, 1) || '人'
+          avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
         }))
     }))
     this.setData({ list })
+    this.refreshSignupAvatars(list)
+  },
+  refreshSignupAvatars(list) {
+    const ids = (list || []).map((item) => item.id).filter(Boolean)
+    if (!ids.length) return
+    state.fetchActivitySignupMap(ids, (signupMap) => {
+      this.setData({ signupMap: signupMap || {} }, () => {
+        const nextList = this.data.list.map((item) => Object.assign({}, item, {
+          avatars: ((signupMap || {})[item.id] || [])
+            .slice(0, 4)
+            .map((signup) => ({
+              avatarUrl: signup.avatarUrl || '',
+              avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
+            }))
+        }))
+        this.setData({ list: nextList })
+      })
+    })
   },
   dayLabel(key) {
     return {

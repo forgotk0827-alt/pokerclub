@@ -104,6 +104,7 @@ Page({
     activityTypeIndex: 0,
     activityStoreOptions: [],
     activityStoreIndex: 0,
+    activityStoreName: '',
     activityForm: Object.assign({}, emptyActivityForm),
     menuCategoryName: '',
     menuCategoryDraft: '',
@@ -195,9 +196,11 @@ Page({
         activeTab: tabs.includes(this.data.activeTab) ? this.data.activeTab : (tabs[0] || '订单'),
         selectedStoreId: session.role === 'super_admin' ? 'all' : session.storeId
       }, () => {
-        this.refreshStoreScopeOptions()
-        this.refreshAll()
-        this.startOrderListener()
+        state.fetchMerchantStores(() => {
+          this.refreshStoreScopeOptions()
+          this.refreshAll()
+          this.startOrderListener()
+        })
       })
     })
   },
@@ -659,6 +662,7 @@ Page({
     const render = (list) => this.setData({
       activityStoreOptions: stores,
       activityStoreIndex: this.getActivityStoreIndex(this.data.activityForm.storeId, stores),
+      activityStoreName: this.getActivityStoreName(this.data.activityForm.storeId, stores) || this.data.activityStoreName,
       activities: this.filterByActiveStore(list || state.getActivities())
     })
     render()
@@ -668,6 +672,11 @@ Page({
     const scopedId = String(storeId || '').trim()
     const index = (options || []).findIndex((item) => item.id === scopedId)
     return index > -1 ? index : 0
+  },
+  getActivityStoreName(storeId, options = this.data.activityStoreOptions) {
+    const scopedId = String(storeId || '').trim()
+    const store = (options || []).find((item) => item.id === scopedId)
+    return store ? store.name : ''
   },
   getDefaultActivityStoreId() {
     const options = this.data.activityStoreOptions.length ? this.data.activityStoreOptions : state.getStores().map((item) => ({
@@ -687,7 +696,8 @@ Page({
         location: store ? (store.address || store.shortName || store.name || '') : ''
       }),
       activityTypeIndex: 0,
-      activityStoreIndex: this.getActivityStoreIndex(storeId)
+      activityStoreIndex: this.getActivityStoreIndex(storeId),
+      activityStoreName: this.getActivityStoreName(storeId)
     })
   },
   editActivity(event) {
@@ -711,7 +721,8 @@ Page({
         deadlineTime: deadline.dateTime
       }),
       activityTypeIndex: this.getActivityTypeIndex(activity.type),
-      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
+      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId()),
+      activityStoreName: this.getActivityStoreName(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
   duplicateActivity(event) {
@@ -736,7 +747,8 @@ Page({
         deadlineTime: deadline.dateTime
       }),
       activityTypeIndex: this.getActivityTypeIndex(activity.type),
-      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId())
+      activityStoreIndex: this.getActivityStoreIndex(activity.storeId || this.getDefaultActivityStoreId()),
+      activityStoreName: this.getActivityStoreName(activity.storeId || this.getDefaultActivityStoreId())
     })
   },
   getActivityTypeIndex(type) {
@@ -783,6 +795,7 @@ Page({
     const store = state.getStores().find((item) => item.id === option.id) || {}
     this.setData({
       activityStoreIndex: index,
+      activityStoreName: option.name,
       'activityForm.storeId': option.id,
       'activityForm.location': store.address || store.shortName || store.name || '',
       'activityForm.latitude': String(store.latitude || ''),
@@ -822,9 +835,19 @@ Page({
   },
   chooseActivityImage(event) {
     const field = event.currentTarget.dataset.field
+    const storeId = String(this.data.activityForm.storeId || '').trim()
+    const storeIndex = this.getActivityStoreIndex(storeId)
+    const storeName = this.getActivityStoreName(storeId) || this.data.activityStoreName
     const setImage = (path) => {
       state.uploadMerchantMedia(path, 'image', (url) => {
-        if (url) this.setData({ [`activityForm.${field}`]: url })
+        if (url) {
+          this.setData({
+            [`activityForm.${field}`]: url,
+            'activityForm.storeId': storeId,
+            activityStoreIndex: storeIndex,
+            activityStoreName: storeName
+          })
+        }
       })
     }
     if (wx.chooseMedia) {

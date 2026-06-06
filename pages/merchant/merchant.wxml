@@ -124,7 +124,7 @@
       <view class="form-grid">
         <input value="{{activityForm.title}}" placeholder="比赛名称" data-field="title" bindinput="inputActivityField" />
         <picker mode="selector" range="{{activityStoreOptions}}" range-key="name" value="{{activityStoreIndex}}" bindchange="selectActivityStore">
-          <view class="picker-input">{{(activityStoreOptions[activityStoreIndex] && activityStoreOptions[activityStoreIndex].name) || '请选择比赛门店'}}</view>
+          <view class="picker-input">{{activityStoreName || '请选择比赛门店'}}</view>
         </picker>
       </view>
       <view class="form-grid">
