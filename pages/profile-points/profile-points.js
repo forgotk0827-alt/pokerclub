@@ -4,7 +4,8 @@ Page({
   data: {
     member: {},
     activeTab: 'points',
-    voucherSummary: {}
+    voucherSummary: {},
+    globalSettings: state.getGlobalSettings()
   },
   onLoad(options) {
     this.setData({ activeTab: options && ['fragments', 'voucher'].includes(options.tab) ? options.tab : 'points' })
@@ -19,10 +20,13 @@ Page({
   refreshMemberFromServer() {
     state.fetchMyProfile((member) => {
       const nextMember = member || state.getMember()
-      state.fetchVoucherSettings(() => {
-        this.setData({
-          member: nextMember,
-          voucherSummary: this.buildVoucherSummary(nextMember)
+      state.fetchGlobalSettings((globalSettings) => {
+        state.fetchVoucherSettings(() => {
+          this.setData({
+            member: nextMember,
+            globalSettings: globalSettings || state.getGlobalSettings(),
+            voucherSummary: this.buildVoucherSummary(nextMember)
+          })
         })
       })
     })

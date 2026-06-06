@@ -339,7 +339,9 @@ function defaultGlobalSettings() {
     joinUsText: '\u6b22\u8fce\u52a0\u5165\u7834\u58f3\u6d3e\u9152\u5427\uff0c\u4e00\u8d77\u6253\u9020\u66f4\u4e13\u4e1a\u3001\u66f4\u6709\u6e29\u5ea6\u7684\u6251\u514b\u4e3b\u9898\u793e\u4ea4\u7a7a\u95f4\u3002',
     joinUsImage: '/assets/hero-bar.svg',
     groupQrImage: '',
-    groupQrTip: '\u70b9\u51fb\u6253\u5f00\u4e8c\u7ef4\u7801\u540e\u957f\u6309\u8bc6\u522b\u52a0\u5165\u5e97\u94fa\u7fa4'
+    groupQrTip: '\u70b9\u51fb\u6253\u5f00\u4e8c\u7ef4\u7801\u540e\u957f\u6309\u8bc6\u522b\u52a0\u5165\u5e97\u94fa\u7fa4',
+    pointsRuleText: '\u79ef\u5206\u53ef\u7528\u4e8e\u95e8\u5e97\u6d88\u8d39\u548c\u6d3b\u52a8\u6743\u76ca\u5151\u6362\uff0c\u5177\u4f53\u4f7f\u7528\u89c4\u5219\u4ee5\u95e8\u5e97\u8bf4\u660e\u4e3a\u51c6\u3002',
+    piecesRuleText: '\u788e\u7247\u53ef\u7528\u4e8e\u53c2\u4e0e\u95e8\u5e97\u6d3b\u52a8\u6216\u5151\u6362\u6307\u5b9a\u6743\u76ca\uff0c\u5177\u4f53\u4f7f\u7528\u65b9\u5f0f\u4ee5\u95e8\u5e97\u8bf4\u660e\u4e3a\u51c6\u3002'
   }
 }
 
@@ -371,6 +373,8 @@ function normalizeGlobalSettings(settings) {
   next.joinUsImage = String(next.joinUsImage || defaults.joinUsImage)
   next.groupQrImage = String(next.groupQrImage || '')
   next.groupQrTip = String(next.groupQrTip || defaults.groupQrTip)
+  next.pointsRuleText = String(next.pointsRuleText || defaults.pointsRuleText).trim()
+  next.piecesRuleText = String(next.piecesRuleText || defaults.piecesRuleText).trim()
   return next
 }
 

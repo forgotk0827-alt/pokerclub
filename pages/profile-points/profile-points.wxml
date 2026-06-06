@@ -17,10 +17,16 @@
     </view>
     <view class="voucher-action" bindtap="goUseVoucher">到店核销</view>
   </view>
-  <view wx:else class="points-card">
-    <view class="points-num">
-      {{activeTab === 'points' ? member.points : (member.gems || member.invitePieces || 0)}}
+  <view wx:else>
+    <view class="points-card">
+      <view class="points-num">
+        {{activeTab === 'points' ? member.points : (member.gems || member.invitePieces || 0)}}
+      </view>
+      <view class="points-label">{{activeTab === 'points' ? '积分余额' : '碎片余额'}}</view>
     </view>
-    <view class="points-label">{{activeTab === 'points' ? '积分余额' : '碎片余额'}}</view>
+    <view class="points-rule-card">
+      <view class="points-rule-title">{{activeTab === 'points' ? '积分说明' : '碎片说明'}}</view>
+      <view class="points-rule-text">{{activeTab === 'points' ? globalSettings.pointsRuleText : globalSettings.piecesRuleText}}</view>
+    </view>
   </view>
 </view>

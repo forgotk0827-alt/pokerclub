@@ -48,6 +48,29 @@
   font-size: 24rpx;
 }
 
+.points-rule-card {
+  margin-top: 18rpx;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  background: #fff;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.05);
+}
+
+.points-rule-title {
+  color: #111827;
+  font-size: 28rpx;
+  line-height: 36rpx;
+  font-weight: 700;
+}
+
+.points-rule-text {
+  margin-top: 12rpx;
+  color: #6b7280;
+  font-size: 25rpx;
+  line-height: 38rpx;
+  white-space: pre-wrap;
+}
+
 .voucher-card {
   min-height: 168rpx;
   padding: 22rpx 18rpx 22rpx 0;

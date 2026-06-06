@@ -1602,7 +1602,9 @@ Page({
       joinUsText: this.data.globalSettings.joinUsText,
       joinUsImage: this.data.globalSettings.joinUsImage,
       groupQrImage: this.data.globalSettings.groupQrImage,
-      groupQrTip: this.data.globalSettings.groupQrTip
+      groupQrTip: this.data.globalSettings.groupQrTip,
+      pointsRuleText: this.data.globalSettings.pointsRuleText,
+      piecesRuleText: this.data.globalSettings.piecesRuleText
     })
     this.setData({ globalSettings: next })
     wx.showToast({ title: '通用设置已保存', icon: 'success' })

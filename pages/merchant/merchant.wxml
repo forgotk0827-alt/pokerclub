@@ -650,6 +650,8 @@
       <input class="desc-input" value="{{globalSettings.newOrderReminder}}" placeholder="新订单提醒规则" data-field="newOrderReminder" bindinput="inputGlobalSetting" />
       <input class="desc-input" value="{{globalSettings.newOrderReminderText}}" placeholder="提醒文案模板" data-field="newOrderReminderText" bindinput="inputGlobalSetting" />
       <input class="desc-input" value="{{globalSettings.newOrderVoiceUrl}}" placeholder="语音地址" data-field="newOrderVoiceUrl" bindinput="inputGlobalSetting" />
+      <textarea class="desc-input textarea-input" value="{{globalSettings.pointsRuleText}}" placeholder="用户端积分说明" data-field="pointsRuleText" bindinput="inputGlobalSetting"></textarea>
+      <textarea class="desc-input textarea-input" value="{{globalSettings.piecesRuleText}}" placeholder="用户端碎片说明" data-field="piecesRuleText" bindinput="inputGlobalSetting"></textarea>
       <textarea class="desc-input textarea-input receipt-template-input" value="{{globalSettings.printTemplate}}" placeholder="小票模板" data-field="printTemplate" bindinput="inputGlobalSetting"></textarea>
       <view class="dual-actions">
         <view class="ghost-action" bindtap="refreshGlobalSettings">刷新</view>
