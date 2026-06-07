@@ -44,8 +44,8 @@ Page({
         avatars: (list || []).slice(0, 12).map((item, index) => ({
           id: item.id || `signup-${index}`,
           avatarUrl: item.avatarUrl || '',
-          avatarText: item.avatarText || (item.displayName || '').slice(0, 1) || '帅',
-          displayName: item.displayName || (index % 2 === 0 ? '帅哥' : '美女')
+          avatarText: item.avatarText || (item.displayName || '').slice(0, 1) || '会',
+          displayName: item.displayName || '会员'
         }))
       })
     })

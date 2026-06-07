@@ -353,10 +353,11 @@ function handleGetActivitySignups(req, res, pathname) {
 }
 
 function activitySignupDisplayName(signup, index = 0) {
-  const seed = String(signup.id || signup.memberId || signup.createdAt || index)
-  let total = index
-  for (let i = 0; i < seed.length; i += 1) total += seed.charCodeAt(i)
-  return total % 2 === 0 ? '帅哥' : '美女'
+  const member = db.members.find((item) => item.id === signup.memberId)
+  const gender = String((member && member.gender) || signup.gender || '').trim()
+  if (gender === '男') return '帅哥'
+  if (gender === '女') return '美女'
+  return '会员'
 }
 
 async function handleUpdateProfile(req, res, user) {
@@ -719,6 +720,7 @@ async function handleCreateSignup(req, res, user) {
     pointsPrice: Number(activity.pointsPrice || 0),
     avatarUrl: user.member.avatarUrl || '',
     avatarText: (user.member.avatarText || user.member.nickname || '').slice(0, 1),
+    gender: user.member.gender || '',
     status: '已报名',
     createdAt: now()
   }
@@ -749,6 +751,7 @@ function createActivitySignup(activity, member) {
     pointsPrice: Number(activity.pointsPrice || 0),
     avatarUrl: member.avatarUrl || '',
     avatarText: (member.avatarText || member.nickname || '').slice(0, 1),
+    gender: member.gender || '',
     status: '已报名',
     createdAt: now()
   }

@@ -3161,7 +3161,8 @@ function addSignup(activity, callback) {
     storeId: activity.storeId || store.id,
     storeName: activity.storeName || store.shortName,
     avatarUrl: currentMember.avatarUrl || '',
-    avatarText: (currentMember.avatarText || currentMember.nickname || '会员').slice(0, 1)
+    avatarText: (currentMember.avatarText || currentMember.nickname || '会员').slice(0, 1),
+    gender: currentMember.gender || ''
   }
   const mergeLocal = (signup) => {
     const next = getSignups()
@@ -3177,7 +3178,8 @@ function addSignup(activity, callback) {
     if (payload) {
       const next = mergeLocal(Object.assign({}, payload, {
         avatarUrl: payload.avatarUrl || baseRecord.avatarUrl,
-        avatarText: payload.avatarText || baseRecord.avatarText
+        avatarText: payload.avatarText || baseRecord.avatarText,
+        gender: payload.gender || baseRecord.gender
       }))
       if (callback) callback(next)
       return
@@ -3187,11 +3189,15 @@ function addSignup(activity, callback) {
   return getSignups()
 }
 
+function activitySignupDisplayName(signup) {
+  const gender = String((signup && signup.gender) || '').trim()
+  if (gender === '男') return '帅哥'
+  if (gender === '女') return '美女'
+  return '会员'
+}
+
 function anonymizeActivitySignup(signup, index = 0) {
-  const seed = String((signup && (signup.id || signup.memberId || signup.createdAt)) || index)
-  let total = index
-  for (let i = 0; i < seed.length; i += 1) total += seed.charCodeAt(i)
-  const displayName = total % 2 === 0 ? '帅哥' : '美女'
+  const displayName = (signup && signup.displayName) || activitySignupDisplayName(signup)
   return {
     id: (signup && signup.id) || `signup-${index}`,
     avatarUrl: (signup && signup.avatarUrl) || '',
