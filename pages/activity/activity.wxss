@@ -233,12 +233,15 @@
 
 .avatars {
   display: flex;
-  gap: 12rpx;
+  align-items: center;
+  max-width: 430rpx;
 }
 
 .avatar {
   width: 48rpx;
   height: 48rpx;
+  margin-right: -8rpx;
+  border: 2rpx solid rgba(43, 18, 63, 0.95);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -246,6 +249,7 @@
   background: #6788aa;
   color: #e8e8e8;
   font-size: 20rpx;
+  box-sizing: border-box;
 }
 
 .quota {

@@ -1,4 +1,5 @@
 const state = require('../../utils/state')
+const MAX_ACTIVITY_AVATARS = 10
 
 Page({
   data: {
@@ -95,12 +96,7 @@ Page({
     }).map((item) => Object.assign({}, item, {
       signupClosed: state.isActivitySignupClosed(item),
       statusText: state.isActivitySignupClosed(item) ? '已截止' : '报名中',
-      avatars: (signupMap[item.id] || [])
-        .slice(0, 4)
-        .map((signup) => ({
-          avatarUrl: signup.avatarUrl || '',
-          avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
-        }))
+      avatars: this.buildSignupAvatars(signupMap[item.id] || [])
     }))
     this.setData({ list })
     this.refreshSignupAvatars(list)
@@ -111,16 +107,20 @@ Page({
     state.fetchActivitySignupMap(ids, (signupMap) => {
       this.setData({ signupMap: signupMap || {} }, () => {
         const nextList = this.data.list.map((item) => Object.assign({}, item, {
-          avatars: ((signupMap || {})[item.id] || [])
-            .slice(0, 4)
-            .map((signup) => ({
-              avatarUrl: signup.avatarUrl || '',
-              avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
-            }))
+          avatars: this.buildSignupAvatars(((signupMap || {})[item.id] || []))
         }))
         this.setData({ list: nextList })
       })
     })
+  },
+  buildSignupAvatars(signups) {
+    return (signups || [])
+      .slice(0, MAX_ACTIVITY_AVATARS)
+      .map((signup, index) => ({
+        id: signup.id || signup.memberId || `signup-avatar-${index}`,
+        avatarUrl: signup.avatarUrl || '',
+        avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
+      }))
   },
   dayLabel(key) {
     return {

@@ -39,7 +39,7 @@
       </view>
       <view class="join-row">
         <view class="avatars">
-          <block wx:for="{{item.avatars}}" wx:key="avatarText">
+          <block wx:for="{{item.avatars}}" wx:key="id">
             <image wx:if="{{item.avatarUrl}}" class="avatar avatar-img" src="{{item.avatarUrl}}" mode="aspectFill" />
             <view wx:else class="avatar">{{item.avatarText}}</view>
           </block>
