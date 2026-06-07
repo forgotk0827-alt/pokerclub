@@ -814,6 +814,11 @@ async function handleCellarStatus(req, res, pathname, merchant) {
   const item = findById(db.cellar, id, '存酒不存在')
   ensureMerchantStoreAccess(merchant, item.storeId)
   item.status = body.status || item.status
+  if (item.status === '审核中') {
+    item.reminder = '待商家审核通过后开始存放'
+  } else if (item.reminder === '待商家审核通过后开始存放') {
+    item.reminder = ''
+  }
   await persist()
   sendOk(res, item)
 }

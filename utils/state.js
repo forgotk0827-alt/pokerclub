@@ -3395,12 +3395,15 @@ function renewCellar(id, months = 3, callback) {
 }
 
 function cellarReminder(item) {
+  const pendingReminder = '待商家审核通过后开始存放'
+  if (item.status === '审核中') return pendingReminder
   if (item.status !== '存放中') return ''
   const today = new Date()
   const expire = new Date(String(item.expireAt || '').replace(/-/g, '/'))
   const days = Math.ceil((expire.getTime() - today.getTime()) / 86400000)
   if (days < 0) return '已到期，请尽快处理'
   if (days <= 7) return `还有${days}天到期`
+  if (item.reminder === pendingReminder) return ''
   return item.reminder || ''
 }
 
