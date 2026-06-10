@@ -2071,7 +2071,7 @@ function escapeReceipt(value) {
 }
 
 function money(value) {
-  return `¥${Number(value || 0).toFixed(2)}`
+  return `${Number(value || 0).toFixed(2)}元`
 }
 
 async function loadDb() {

@@ -3080,12 +3080,12 @@ function buildPrintTemplate(order) {
     `下单时间：${order.createdAt}`,
     `用餐方式：${order.mode}`,
     '----------------',
-    ...(order.items || []).map((item) => `${item.name} x${item.count}  ¥${Number(item.price || 0) * Number(item.count || 0)}`),
+    ...(order.items || []).map((item) => `${item.name} x${item.count}  ${Number(item.price || 0) * Number(item.count || 0)}元`),
     '----------------',
-    `原价：¥${order.originalTotal || order.total}`,
-    ...(Number(order.voucherDiscount || 0) > 0 ? [`酒水券抵扣：¥${order.voucherDiscount}`] : []),
-    ...(Number(order.balanceUsed || 0) > 0 ? [`储值卡抵扣：¥${order.balanceUsed}`] : []),
-    `合计：¥${order.total}`,
+    `原价：${order.originalTotal || order.total}元`,
+    ...(Number(order.voucherDiscount || 0) > 0 ? [`酒水券抵扣：${order.voucherDiscount}元`] : []),
+    ...(Number(order.balanceUsed || 0) > 0 ? [`储值卡抵扣：${order.balanceUsed}元`] : []),
+    `合计：${order.total}元`,
     `状态：${order.status}`
   ].join('\n')
 }
