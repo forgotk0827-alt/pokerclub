@@ -1961,17 +1961,26 @@ function defaultPrintTemplate() {
     '<CB>破壳派酒吧</CB>',
     '<C>{{storeName}}</C>',
     '------------------------------',
-    '订单号：{{orderId}}',
     '门店：{{storeName}}',
-    '时间：{{createdAt}}',
-    '类型：{{mode}}',
     '桌号：{{tableName}}',
+    '订单号：{{orderId}}',
+    '下单时间：{{createdAt}}',
+    '打印时间：{{printTime}}',
+    '用餐方式：{{mode}}',
+    '会员：{{memberName}}',
     '------------------------------',
     '<B>商品明细</B>',
     '{{items}}',
     '------------------------------',
-    '<RIGHT>合计：{{total}}</RIGHT>',
-    '状态：{{status}}',
+    '商品数量：{{itemCount}}',
+    '商品原价：{{originalTotal}}',
+    '酒水券抵扣：{{voucherDiscount}}',
+    '储值卡抵扣：{{balanceUsed}}',
+    '积分抵扣：{{pointsUsed}}',
+    '<RIGHT>实付：{{total}}</RIGHT>',
+    '支付状态：{{payStatus}}',
+    '订单状态：{{status}}',
+    '备注：{{remark}}',
     '',
     '<C>谢谢惠顾，欢迎再来</C>'
   ].join('\n')
@@ -2002,10 +2011,13 @@ function buildReceiptContext(order, store) {
     const count = Number(item.count || 0)
     const price = Number(item.price || 0)
     const subtotal = price * count
+    const pointsSubtotal = Number(item.pointsSubtotal || 0)
+    const payType = item.payType === 'points' && pointsSubtotal > 0 ? '积分' : '现金'
     itemLines.push(`${escapeReceipt(item.name || '')}`)
-    itemLines.push(`  ${money(price)} x ${count}    ${money(subtotal)}`)
+    itemLines.push(`  ${money(price)} x ${count}    ${money(subtotal)} ${payType}`)
   })
   const itemCount = items.reduce((sum, item) => sum + Number(item.count || 0), 0)
+  const pointsUsed = items.reduce((sum, item) => sum + Number(item.pointsSubtotal || 0), 0)
   return {
     barName: '破壳派酒吧',
     storeName,
@@ -2023,6 +2035,14 @@ function buildReceiptContext(order, store) {
     remark: order.remark || order.note || '',
     note: order.note || order.remark || '',
     status: order.status || '',
+    payStatus: order.payStatus || '',
+    paidAt: order.paidAt || '',
+    paymentType: order.paymentType || '',
+    originalTotal: money(order.originalTotal !== undefined ? order.originalTotal : order.total),
+    voucherDiscount: money(order.voucherDiscount || 0),
+    balanceUsed: money(order.balanceUsed || 0),
+    pointsUsed: pointsUsed ? `${pointsUsed}积分` : '0积分',
+    payableBeforeBalance: money(order.payableBeforeBalance !== undefined ? order.payableBeforeBalance : order.total),
     total: money(order.total),
     totalAmount: Number(order.total || 0).toFixed(2),
     itemCount,
