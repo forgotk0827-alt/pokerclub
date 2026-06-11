@@ -1990,9 +1990,32 @@ function legacyPrintTemplate() {
   return '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
 }
 
+function hasCompletePrintTemplate(template) {
+  return [
+    '{{storeName}}',
+    '{{tableName}}',
+    '{{orderId}}',
+    '{{createdAt}}',
+    '{{printTime}}',
+    '{{mode}}',
+    '{{memberName}}',
+    '{{items}}',
+    '{{itemCount}}',
+    '{{originalTotal}}',
+    '{{voucherDiscount}}',
+    '{{balanceUsed}}',
+    '{{pointsUsed}}',
+    '{{total}}',
+    '{{payStatus}}',
+    '{{status}}',
+    '{{remark}}'
+  ].every((key) => template.indexOf(key) > -1)
+}
+
 function normalizePrintTemplate(template) {
   const value = String(template || '').trim()
   if (!value || value === legacyPrintTemplate()) return defaultPrintTemplate()
+  if (!hasCompletePrintTemplate(value)) return defaultPrintTemplate()
   return value
 }
 
