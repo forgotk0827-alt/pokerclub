@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'DELETE' && match(pathname, '/api/merchant/staff-accounts/:id')) return await handleDeleteStaffAccount(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/signups') return sendOk(res, scopedList(db.signups, merchant))
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/signups/:id/status')) return await handleSignupStatus(req, res, pathname, merchant)
-      if (req.method === 'GET' && pathname === '/api/merchant/cellar') return sendOk(res, scopedList(db.cellar, merchant))
+      if (req.method === 'GET' && pathname === '/api/merchant/cellar') return sendOk(res, cellarWithMemberInfo(scopedList(db.cellar, merchant)))
       if (req.method === 'POST' && pathname === '/api/merchant/cellar') return await handleMerchantCreateCellar(req, res, merchant)
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/cellar/:id/status')) return await handleCellarStatus(req, res, pathname, merchant)
       if (req.method === 'DELETE' && match(pathname, '/api/merchant/cellar/:id')) return await handleDeleteCellar(req, res, pathname, merchant)
@@ -685,6 +685,7 @@ async function handleMerchantCreateCellar(req, res, merchant) {
     id: `CJ${Date.now()}`,
     memberId: member.id,
     nickname: member.nickname || '',
+    phone: member.phone || '',
     storeId,
     storeName: store.shortName || store.name || '',
     wineName,
@@ -1352,6 +1353,18 @@ function applyMerchantStore(data, merchant) {
 function scopedList(list, merchant) {
   if (isSuperMerchant(merchant)) return list
   return (list || []).filter((item) => !item.storeId || item.storeId === merchant.storeId)
+}
+
+function cellarWithMemberInfo(list) {
+  return (list || []).map((item) => {
+    const member = db.members.find((entry) => entry.id === item.memberId) || {}
+    return Object.assign({}, item, {
+      nickname: item.nickname || member.nickname || '',
+      phone: item.phone || member.phone || '',
+      memberName: item.nickname || member.nickname || '',
+      memberPhone: item.phone || member.phone || ''
+    })
+  })
 }
 
 function scopedStores(merchant) {

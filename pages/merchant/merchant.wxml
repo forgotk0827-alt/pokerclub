@@ -378,6 +378,7 @@
         <view class="item-title">{{item.wineName}}</view>
         <view class="tag">{{item.status}}</view>
       </view>
+      <view class="muted-line">会员：{{item.nickname || item.memberName || '未命名会员'}} · {{item.phone || item.memberPhone || '无手机号'}} · {{item.memberId}}</view>
       <view class="muted-line">{{item.storeName}} · {{item.quantity}} · 到期 {{item.expireAt}}</view>
     </view>
   </view>
@@ -728,6 +729,7 @@
         <view class="item-title">{{item.wineName}}</view>
         <view class="tag">{{item.status}}</view>
       </view>
+      <view class="muted-line">会员：{{item.nickname || item.memberName || '未命名会员'}} · {{item.phone || item.memberPhone || '无手机号'}} · {{item.memberId}}</view>
       <view class="muted-line">{{item.storeName}} · {{item.quantity}} · 到期 {{item.expireAt}}</view>
       <view class="action-row">
         <view class="ghost-action" data-id="{{item.id}}" data-status="已提取" bindtap="handleCellar">提取</view>
