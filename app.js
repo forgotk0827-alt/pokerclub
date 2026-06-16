@@ -1,6 +1,6 @@
 const state = require('./utils/state')
 
-const DEFAULT_SHARE_TITLE = '破壳派酒吧'
+const DEFAULT_SHARE_TITLE = '破壳派酒馆'
 
 function buildSharePath(page) {
   const route = page && page.route ? page.route : 'pages/home/home'
@@ -68,6 +68,6 @@ App({
     state.syncServerData()
   },
   globalData: {
-    brand: '破壳派酒吧'
+    brand: '破壳派酒馆'
   }
 })

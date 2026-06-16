@@ -94,10 +94,11 @@ function migrateBrandNames() {
 function replaceBrandText(value) {
   if (typeof value === 'string') {
     return value
-      .replace(/《德友酒吧》/g, '《破壳派酒吧》')
-      .replace(/《德友酒馆》/g, '《破壳派酒吧》')
-      .replace(/德友酒吧/g, '破壳派酒吧')
-      .replace(/德友酒馆/g, '破壳派酒吧')
+      .replace(/《德友酒吧》/g, '《破壳派酒馆》')
+      .replace(/《德友酒馆》/g, '《破壳派酒馆》')
+      .replace(/德友酒吧/g, '破壳派酒馆')
+      .replace(/德友酒馆/g, '破壳派酒馆')
+      .replace(/破壳派酒吧/g, '破壳派酒馆')
       .replace(/德友/g, '破壳派')
   }
   if (Array.isArray(value)) return value.map(replaceBrandText)
@@ -293,7 +294,7 @@ function normalizeRechargePackages(packages) {
 
 function defaultPrintTemplate() {
   return [
-    '<CB>破壳派酒吧</CB>',
+    '<CB>破壳派酒馆</CB>',
     '<C>{{storeName}}</C>',
     '------------------------------',
     '门店：{{storeName}}',
@@ -325,6 +326,10 @@ function legacyPrintTemplate() {
   return '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
 }
 
+function legacyTavernPrintTemplate() {
+  return '破壳派酒馆订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
+}
+
 function hasCompletePrintTemplate(template) {
   return [
     '{{storeName}}',
@@ -349,7 +354,7 @@ function hasCompletePrintTemplate(template) {
 
 function normalizePrintTemplate(template) {
   const value = String(template || '').trim()
-  if (!value || value === legacyPrintTemplate()) return defaultPrintTemplate()
+  if (!value || value === legacyPrintTemplate() || value === legacyTavernPrintTemplate()) return defaultPrintTemplate()
   if (!hasCompletePrintTemplate(value)) return defaultPrintTemplate()
   return value
 }
@@ -979,10 +984,16 @@ function createOrderWithWechatPay(options = {}, callback) {
 }
 
 function syncPaidActivitySignups(cartItems, callback) {
-  const activityIds = Array.from(new Set((cartItems || [])
+  const activityIds = (cartItems || [])
     .filter((item) => item && item.categoryId === 'activity')
-    .map((item) => item.activityId || String(item.id || '').replace(/^signup-/, ''))
-    .filter(Boolean)))
+    .reduce((result, item) => {
+      const activityId = item.activityId || String(item.id || '').replace(/^signup-/, '')
+      const count = Math.max(1, Number(item.count || 1))
+      for (let index = 0; index < count; index += 1) {
+        if (activityId) result.push(activityId)
+      }
+      return result
+    }, [])
   if (!activityIds.length) {
     if (callback) callback()
     return
@@ -999,12 +1010,6 @@ function syncPaidActivitySignups(cartItems, callback) {
     }
   }
   activityIds.forEach((activityId) => {
-    const member = getMember()
-    const alreadySigned = getSignups().some((item) => item.activityId === activityId && item.memberId === member.id)
-    if (alreadySigned) {
-      done()
-      return
-    }
     addSignup(getActivity(activityId) || { id: activityId }, done)
   })
 }
@@ -2485,16 +2490,18 @@ function addToCart(product, count = 1, options = {}) {
   const payType = options.payType === 'points' && Number(product.points || 0) > 0 ? 'points' : 'cash'
   const cartKey = `${product.id}::${payType}`
   const index = cart.findIndex((item) => (item.cartKey || `${item.id}::${item.payType || 'cash'}`) === cartKey)
-  if (index > -1) {
-    cart[index].count += count
-    cart[index].payType = payType
-    cart[index].cartKey = cartKey
-    cart[index].points = Number(product.points || 0)
-  } else {
-    cart.push({
-      id: product.id,
-      cartKey,
-      name: product.name,
+	  if (index > -1) {
+	    cart[index].count += count
+	    cart[index].payType = payType
+	    cart[index].cartKey = cartKey
+	    cart[index].points = Number(product.points || 0)
+	    cart[index].activityId = product.activityId || cart[index].activityId || ''
+	  } else {
+	    cart.push({
+	      id: product.id,
+	      cartKey,
+	      activityId: product.activityId || '',
+	      name: product.name,
       price: Number(product.price || 0),
       points: Number(product.points || 0),
       payType,
@@ -3096,7 +3103,7 @@ function recordConsumption(amount) {
 
 function buildPrintTemplate(order) {
   return [
-    '破壳派酒吧订单小票',
+    '破壳派酒馆订单小票',
     `门店：${order.storeName}`,
     `桌号：${order.tableName || (order.tableNo ? `${order.tableNo}号桌` : '未指定')}`,
     `订单号：${order.id}`,
@@ -3181,10 +3188,6 @@ function addSignup(activity, callback) {
   if (isActivitySignupClosed(activity)) {
     wx.showToast({ title: '报名已截止', icon: 'none' })
     if (callback) callback(null)
-    return signups
-  }
-  if (signups.find((item) => item.activityId === activity.id && item.memberId === currentMember.id)) {
-    if (callback) callback(signups)
     return signups
   }
   const store = inferStoreByActivity(activity)
@@ -3397,6 +3400,35 @@ function updateCellarStatus(id, status, callback) {
   })
   if (requested) return getCellar()
   if (callback) callback(null, false)
+  return getCellar()
+}
+
+function createMerchantCellar(record, callback) {
+  const requested = requestMerchantApi('/api/merchant/cellar', 'POST', record || {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    const next = getCellar().filter((item) => item.id !== payload.id)
+    next.unshift(payload)
+    wx.setStorageSync(KEYS.cellar, next)
+    if (callback) callback(payload, true)
+  })
+  if (!requested && callback) callback(null, false)
+  return getCellar()
+}
+
+function deleteCellar(id, callback) {
+  const requested = requestMerchantApi(`/api/merchant/cellar/${encodeURIComponent(id)}`, 'DELETE', {}, (payload) => {
+    if (!payload) {
+      if (callback) callback(null, false)
+      return
+    }
+    const next = getCellar().filter((item) => item.id !== id)
+    wx.setStorageSync(KEYS.cellar, next)
+    if (callback) callback(payload, true)
+  })
+  if (!requested && callback) callback(null, false)
   return getCellar()
 }
 
@@ -4047,6 +4079,8 @@ module.exports = {
   getStoreCellar,
   submitCellar,
   updateCellarStatus,
+  createMerchantCellar,
+  deleteCellar,
   renewCellar,
   cellarReminder,
   adjustMemberPoints,

@@ -3,7 +3,7 @@ const state = require('../../utils/state')
 Page({
   data: {
     tabs: state.leaderboardTabs,
-    activeType: 'weekly',
+    activeType: 'yearly',
     list: []
   },
   onShow() {

@@ -111,7 +111,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'GET' && pathname === '/api/merchant/signups') return sendOk(res, scopedList(db.signups, merchant))
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/signups/:id/status')) return await handleSignupStatus(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/cellar') return sendOk(res, scopedList(db.cellar, merchant))
+      if (req.method === 'POST' && pathname === '/api/merchant/cellar') return await handleMerchantCreateCellar(req, res, merchant)
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/cellar/:id/status')) return await handleCellarStatus(req, res, pathname, merchant)
+      if (req.method === 'DELETE' && match(pathname, '/api/merchant/cellar/:id')) return await handleDeleteCellar(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/products') return sendOk(res, scopedProducts(merchant))
       if (req.method === 'POST' && pathname === '/api/merchant/products') return await handleSaveProduct(req, res, merchant)
       if (req.method === 'DELETE' && match(pathname, '/api/merchant/products/:id')) return await handleDeleteProduct(req, res, pathname, merchant)
@@ -589,7 +591,7 @@ async function handleCreateOrderPayment(req, res, user) {
   }
   const payment = await createWechatJsapiPayment({
     outTradeNo: order.outTradeNo,
-    description: `破壳派酒吧订单 ${order.id}`,
+    description: `破壳派酒馆订单 ${order.id}`,
     total,
     openid: user.member.openid,
     attach: JSON.stringify({ type: 'order', id: order.id })
@@ -629,7 +631,7 @@ async function handleCreateRechargePayment(req, res, user) {
   await persist()
   const payment = await createWechatJsapiPayment({
     outTradeNo: record.outTradeNo,
-    description: `破壳派酒吧充值 ${record.id}`,
+    description: `破壳派酒馆充值 ${record.id}`,
     total: payAmount,
     openid: user.member.openid,
     attach: JSON.stringify({ type: 'recharge', id: record.id })
@@ -656,6 +658,43 @@ async function handleSubmitCellar(req, res, user) {
     createdAt: now(created),
     expireAt: dateOnly(expire),
     reminder: '待商家审核通过后开始存放'
+  }
+  db.cellar.unshift(record)
+  await persist()
+  sendOk(res, record)
+}
+
+async function handleMerchantCreateCellar(req, res, merchant) {
+  const body = await readJson(req)
+  const memberId = String(body.memberId || '').trim()
+  const member = db.members.find((item) => item.id === memberId)
+  if (!member) throw httpError(404, '会员不存在')
+  const wineName = String(body.wineName || '').trim()
+  if (!wineName) throw httpError(400, '请填写酒品名称')
+  const quantity = Math.max(1, Number(body.quantity || 1))
+  const months = Math.max(1, Number(body.months || 3))
+  const storeId = isSuperMerchant(merchant) ? String(body.storeId || '').trim() : merchant.storeId
+  if (!storeId) throw httpError(400, '请选择门店')
+  const store = db.stores.find((item) => item.id === storeId)
+  if (!store) throw httpError(400, '门店不存在')
+  ensureMerchantStoreAccess(merchant, storeId)
+  const created = new Date()
+  const expire = new Date(created)
+  expire.setMonth(expire.getMonth() + months)
+  const record = {
+    id: `CJ${Date.now()}`,
+    memberId: member.id,
+    nickname: member.nickname || '',
+    storeId,
+    storeName: store.shortName || store.name || '',
+    wineName,
+    quantity,
+    months,
+    status: '存放中',
+    createdAt: now(created),
+    expireAt: dateOnly(expire),
+    reminder: '到期前7天提醒',
+    operator: merchant.username || merchant.name || '商家'
   }
   db.cellar.unshift(record)
   await persist()
@@ -699,9 +738,6 @@ async function handleCreateSignup(req, res, user) {
   const deadlineAt = parseDeadlineAt(activity.deadlineAt || activity.deadline)
   if (deadlineAt && Date.now() > deadlineAt.getTime()) throw httpError(400, '报名已截止')
   if (activity.status && activity.status !== 'open') throw httpError(400, '活动暂不可报名')
-  if (db.signups.find((item) => item.memberId === user.member.id && item.activityId === activity.id)) {
-    throw httpError(409, '你已经报名该活动')
-  }
   const quota = Number(activity.quota || 0)
   const joined = Number(activity.joined || 0)
   if (quota && joined >= quota) throw httpError(400, '活动名额已满')
@@ -764,7 +800,6 @@ function syncOrderActivitySignups(order, member) {
   activityIds.forEach((activityId) => {
     const activity = db.activities.find((item) => item.id === activityId)
     if (!activity) return
-    if (db.signups.find((item) => item.memberId === member.id && item.activityId === activity.id)) return
     const deadlineAt = parseDeadlineAt(activity.deadlineAt || activity.deadline)
     if (deadlineAt && Date.now() > deadlineAt.getTime()) return
     const quota = Number(activity.quota || 0)
@@ -822,6 +857,15 @@ async function handleCellarStatus(req, res, pathname, merchant) {
   } else if (item.reminder === '待商家审核通过后开始存放') {
     item.reminder = ''
   }
+  await persist()
+  sendOk(res, item)
+}
+
+async function handleDeleteCellar(req, res, pathname, merchant) {
+  const { id } = params(pathname, '/api/merchant/cellar/:id')
+  const item = findById(db.cellar, id, '存酒不存在')
+  ensureMerchantStoreAccess(merchant, item.storeId)
+  db.cellar = db.cellar.filter((entry) => entry.id !== id)
   await persist()
   sendOk(res, item)
 }
@@ -1636,7 +1680,7 @@ async function createWechatJsapiPayment({ outTradeNo, description, total, openid
   const body = {
     appid: process.env.WX_PAY_APPID || process.env.WECHAT_APPID,
     mchid: process.env.WX_PAY_MCH_ID,
-    description: String(description || '破壳派酒吧支付').slice(0, 127),
+    description: String(description || '破壳派酒馆支付').slice(0, 127),
     out_trade_no: outTradeNo,
     notify_url: process.env.WX_PAY_NOTIFY_URL,
     amount: {
@@ -1958,7 +2002,7 @@ function postJson(url, body) {
 
 function defaultPrintTemplate() {
   return [
-    '<CB>破壳派酒吧</CB>',
+    '<CB>破壳派酒馆</CB>',
     '<C>{{storeName}}</C>',
     '------------------------------',
     '门店：{{storeName}}',
@@ -1990,6 +2034,10 @@ function legacyPrintTemplate() {
   return '破壳派酒吧订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
 }
 
+function legacyTavernPrintTemplate() {
+  return '破壳派酒馆订单小票\n门店：{{storeName}}\n订单号：{{orderId}}\n合计：¥{{total}}'
+}
+
 function hasCompletePrintTemplate(template) {
   return [
     '{{storeName}}',
@@ -2014,7 +2062,7 @@ function hasCompletePrintTemplate(template) {
 
 function normalizePrintTemplate(template) {
   const value = String(template || '').trim()
-  if (!value || value === legacyPrintTemplate()) return defaultPrintTemplate()
+  if (!value || value === legacyPrintTemplate() || value === legacyTavernPrintTemplate()) return defaultPrintTemplate()
   if (!hasCompletePrintTemplate(value)) return defaultPrintTemplate()
   return value
 }
@@ -2042,7 +2090,7 @@ function buildReceiptContext(order, store) {
   const itemCount = items.reduce((sum, item) => sum + Number(item.count || 0), 0)
   const pointsUsed = items.reduce((sum, item) => sum + Number(item.pointsSubtotal || 0), 0)
   return {
-    barName: '破壳派酒吧',
+    barName: '破壳派酒馆',
     storeName,
     orderId: order.id || '',
     orderNo: order.id || '',

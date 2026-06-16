@@ -94,6 +94,12 @@ Page({
     pointsDelta: '',
     pointsReason: '',
     pointLogs: [],
+    cellarForm: {
+      memberKey: '',
+      wineName: '',
+      quantity: '1',
+      months: '3'
+    },
     cellar: [],
     reservations: [],
     signups: [],
@@ -159,7 +165,7 @@ Page({
       voucherLogs: []
     },
     rankTabs: state.leaderboardTabs,
-    activeRankType: 'weekly',
+    activeRankType: 'yearly',
     leaderboard: [],
     selectedRankUser: null,
     rankUsername: '',
@@ -567,12 +573,85 @@ Page({
     render()
     state.fetchMerchantBasics(render)
   },
+  inputCellarField(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`cellarForm.${field}`]: event.detail.value })
+  },
+  createCellarForMember() {
+    const form = this.data.cellarForm || {}
+    const memberKey = String(form.memberKey || '').trim()
+    const wineName = String(form.wineName || '').trim()
+    const quantity = Number(form.quantity || 0)
+    const months = Number(form.months || 0)
+    if (!memberKey) {
+      wx.showToast({ title: '请填写会员ID', icon: 'none' })
+      return
+    }
+    if (!wineName) {
+      wx.showToast({ title: '请填写酒品名称', icon: 'none' })
+      return
+    }
+    if (!quantity || quantity < 1) {
+      wx.showToast({ title: '请填写存酒数量', icon: 'none' })
+      return
+    }
+    if (!months || months < 1) {
+      wx.showToast({ title: '请填写存放月数', icon: 'none' })
+      return
+    }
+    this.openMemberPicker({
+      memberKey,
+      title: '选择存酒会员',
+      hint: '确认会员后，将直接生成存放中的存酒记录',
+      confirmText: '确认存酒',
+      action: (member) => {
+        const storeId = this.activeStoreId() || (this.data.stores[0] && this.data.stores[0].id) || ''
+        state.createMerchantCellar({
+          memberId: member.id,
+          storeId,
+          wineName,
+          quantity,
+          months
+        }, (saved) => {
+          if (!saved) return
+          this.setData({
+            cellarForm: {
+              memberKey: '',
+              wineName: '',
+              quantity: '1',
+              months: '3'
+            }
+          })
+          this.refreshBasics()
+          this.refreshDataManagement()
+          wx.showToast({ title: '存酒已创建', icon: 'success' })
+        })
+      }
+    })
+  },
   handleCellar(event) {
     const { id, status } = event.currentTarget.dataset
     state.updateCellarStatus(id, status, () => {
       this.refreshBasics()
       this.refreshDataManagement()
       wx.showToast({ title: '已处理', icon: 'success' })
+    })
+  },
+  deleteCellar(event) {
+    const id = event.currentTarget.dataset.id
+    const item = this.data.cellar.find((entry) => entry.id === id)
+    wx.showModal({
+      title: '删除存酒',
+      content: `确认删除 ${item ? item.wineName : '这条存酒记录'}？`,
+      success: (res) => {
+        if (!res.confirm) return
+        state.deleteCellar(id, (deleted) => {
+          if (!deleted) return
+          this.refreshBasics()
+          this.refreshDataManagement()
+          wx.showToast({ title: '存酒已删除', icon: 'success' })
+        })
+      }
     })
   },
   handleSignup(event) {

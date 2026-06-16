@@ -706,6 +706,21 @@
   </view>
 
   <view wx:elif="{{activeTab === '基础'}}" class="panel">
+    <view class="menu-editor">
+      <view class="editor-title">商家存酒</view>
+      <view class="form-grid">
+        <input value="{{cellarForm.memberKey}}" placeholder="会员ID/手机号后几位" data-field="memberKey" bindinput="inputCellarField" />
+        <input value="{{cellarForm.wineName}}" placeholder="酒品名称" data-field="wineName" bindinput="inputCellarField" />
+      </view>
+      <view class="form-grid">
+        <input value="{{cellarForm.quantity}}" type="number" placeholder="数量" data-field="quantity" bindinput="inputCellarField" />
+        <input value="{{cellarForm.months}}" type="number" placeholder="存放月数" data-field="months" bindinput="inputCellarField" />
+      </view>
+      <view class="dual-actions">
+        <view class="solid-action" bindtap="createCellarForMember">选中会员并存酒</view>
+      </view>
+    </view>
+
     <view class="sub-title">存酒申请</view>
     <view wx:if="{{!cellar.length}}" class="empty small">暂无存酒</view>
     <view class="basic-card" wx:for="{{cellar}}" wx:for-item="item" wx:key="id">
@@ -717,6 +732,7 @@
       <view class="action-row">
         <view class="ghost-action" data-id="{{item.id}}" data-status="已提取" bindtap="handleCellar">提取</view>
         <view class="solid-action" data-id="{{item.id}}" data-status="存放中" bindtap="handleCellar">审核通过</view>
+        <view class="ghost-action danger" data-id="{{item.id}}" bindtap="deleteCellar">删除</view>
       </view>
     </view>
 
