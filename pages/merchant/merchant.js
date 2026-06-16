@@ -1,5 +1,6 @@
 const state = require('../../utils/state')
 const config = require('../../utils/config')
+const { buildOrderDateSummary } = require('../../utils/merchant-order-filter')
 const fallbackReminderAudio = '/assets/new-order.wav'
 
 let speechPlugin = null
@@ -88,6 +89,9 @@ Page({
     activeStatus: '全部',
     orders: [],
     orderCount: 0,
+    orderDateFilter: '',
+    orderDateCount: 0,
+    orderDateIncome: '0.00',
     lastOrderIds: [],
     member: {},
     pointsMemberKey: '',
@@ -322,18 +326,28 @@ Page({
   selectStatus(event) {
     this.setData({ activeStatus: event.currentTarget.dataset.status }, () => this.refreshOrders(false))
   },
+  selectOrderDate(event) {
+    this.setData({ orderDateFilter: event.detail.value || '', activeStatus: '\u5168\u90e8' }, () => this.refreshOrders(false))
+  },
+  clearOrderDateFilter() {
+    this.setData({ orderDateFilter: '' }, () => this.refreshOrders(false))
+  },
   refreshOrders(showNotice = true) {
     const session = this.data.session || state.getMerchantSession()
     if (!session) return
     const render = () => {
       const storeId = this.activeStoreId()
-      const orders = state.getStoreOrders(storeId, this.data.activeStatus)
+      const statusOrders = state.getStoreOrders(storeId, this.data.activeStatus)
       const allOrders = state.getStoreOrders(storeId, '\u5168\u90e8')
+      const orderSummary = buildOrderDateSummary(statusOrders, this.data.orderDateFilter)
+      const dateSummary = buildOrderDateSummary(allOrders, this.data.orderDateFilter)
       const allIds = allOrders.map((item) => item.id)
       const newOrders = allOrders.filter((item) => this.data.lastOrderIds.length && !this.data.lastOrderIds.includes(item.id))
       this.setData({
-        orders,
+        orders: orderSummary.orders,
         orderCount: allOrders.length,
+        orderDateCount: dateSummary.count,
+        orderDateIncome: dateSummary.income,
         lastOrderIds: allIds
       })
       if (showNotice && newOrders.length) this.notifyNewOrders(newOrders)

@@ -35,6 +35,15 @@
     <scroll-view scroll-x class="status-tabs" enable-flex>
       <view wx:for="{{orderStatuses}}" wx:for-item="status" wx:key="*this" class="status-tab {{activeStatus === status ? 'status-active' : ''}}" data-status="{{status}}" bindtap="selectStatus">{{status}}</view>
     </scroll-view>
+    <view class="order-filter-card">
+      <picker mode="date" value="{{orderDateFilter}}" bindchange="selectOrderDate">
+        <view class="picker-input">{{orderDateFilter || '选择订单日期'}}</view>
+      </picker>
+      <view class="ghost-action" bindtap="clearOrderDateFilter">清除日期</view>
+    </view>
+    <view class="order-date-summary" wx:if="{{orderDateFilter}}">
+      {{orderDateFilter}} 共 {{orderDateCount}} 单 · 收入 ¥{{orderDateIncome}}
+    </view>
     <view wx:if="{{!orders.length}}" class="empty">暂无订单</view>
     <view class="order-card" wx:for="{{orders}}" wx:for-item="item" wx:key="id">
       <view class="card-top">
@@ -42,6 +51,7 @@
         <view class="tag">{{item.status}}</view>
       </view>
       <view class="muted-line">{{item.storeName}} · {{item.tableName || '未指定桌号'}} · {{item.createdAt}} · {{item.mode}} · ¥{{item.total}}</view>
+      <view class="muted-line">付款人：{{item.nickname || item.memberName || '未知会员'}} · {{item.phone || item.memberPhone || item.memberId || '无手机号'}}</view>
       <view class="goods" wx:for="{{item.items}}" wx:for-item="goods" wx:key="id">
         {{goods.name}} · <text wx:if="{{goods.payType === 'points'}}">{{goods.points || goods.originPoints || 0}}积分</text><text wx:else>¥{{goods.price}}</text> x{{goods.count}}
       </view>

@@ -99,7 +99,7 @@ const server = http.createServer(async (req, res) => {
       ensureMerchantPermission(merchant, pathname)
       if (req.method === 'GET' && pathname === '/api/merchant/data/overview') return sendOk(res, getOverview(merchant))
       if (req.method === 'GET' && pathname === '/api/merchant/data/export') return sendText(res, exportSummary(merchant))
-      if (req.method === 'GET' && pathname === '/api/merchant/orders') return sendOk(res, scopedList(db.orders, merchant))
+      if (req.method === 'GET' && pathname === '/api/merchant/orders') return sendOk(res, ordersWithMemberInfo(scopedList(db.orders, merchant)))
       if (req.method === 'PATCH' && match(pathname, '/api/merchant/orders/:id/status')) return await handleOrderStatus(req, res, pathname, merchant)
       if (req.method === 'POST' && match(pathname, '/api/merchant/orders/:id/print')) return await handlePrintOrder(req, res, pathname, merchant)
       if (req.method === 'GET' && pathname === '/api/merchant/table-qrcodes') return sendOk(res, tableQrcodeList(merchant))
@@ -412,6 +412,7 @@ async function handleCreateOrder(req, res, user) {
     id: `DY${Date.now()}`,
     memberId: user.member.id,
     nickname: user.member.nickname,
+    phone: user.member.phone || '',
     storeId: store.id,
     storeName: store.shortName || store.name,
     tableNo: table ? table.tableNo : '',
@@ -528,6 +529,7 @@ async function handleCreateOrderPayment(req, res, user) {
     id: `DY${Date.now()}`,
     memberId: user.member.id,
     nickname: user.member.nickname,
+    phone: user.member.phone || '',
     storeId: store.id,
     storeName: store.shortName || store.name,
     tableNo: table ? table.tableNo : '',
@@ -1363,6 +1365,18 @@ function cellarWithMemberInfo(list) {
       phone: item.phone || member.phone || '',
       memberName: item.nickname || member.nickname || '',
       memberPhone: item.phone || member.phone || ''
+    })
+  })
+}
+
+function ordersWithMemberInfo(list) {
+  return (list || []).map((item) => {
+    const member = db.members.find((entry) => entry.id === item.memberId) || {}
+    return Object.assign({}, item, {
+      nickname: item.nickname || member.nickname || '',
+      phone: item.phone || member.phone || '',
+      memberName: item.memberName || item.nickname || member.nickname || '',
+      memberPhone: item.memberPhone || item.phone || member.phone || ''
     })
   })
 }
