@@ -1,4 +1,5 @@
 const state = require('../../utils/state')
+const { buildActivitySignupAvatars } = require('../../utils/activity-signup-avatars')
 
 Page({
   data: {
@@ -41,10 +42,7 @@ Page({
     })
     state.fetchActivitySignups(activity.id, (list) => {
       this.setData({
-        avatars: (list || []).slice(0, 12).map((item, index) => ({
-          id: item.id || `signup-${index}`,
-          avatarUrl: item.avatarUrl || '',
-          avatarText: item.avatarText || (item.displayName || '').slice(0, 1) || '会',
+        avatars: buildActivitySignupAvatars(list || [], 12).map((item) => Object.assign({}, item, {
           displayName: item.displayName || '会员'
         }))
       })

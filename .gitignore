@@ -3,6 +3,7 @@ node_modules/
 backend/node_modules/
 
 # Runtime data and logs
+.backup/
 *.log
 *.pid
 backend/data.json

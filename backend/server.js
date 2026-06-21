@@ -346,6 +346,7 @@ function handleGetActivitySignups(req, res, pathname) {
     .filter((item) => item.activityId === id)
     .map((item, index) => ({
       id: item.id || `${id}-${index}`,
+      memberKey: item.memberId || '',
       avatarUrl: item.avatarUrl || '',
       avatarText: activitySignupDisplayName(item, index).slice(0, 1),
       displayName: activitySignupDisplayName(item, index),
@@ -798,7 +799,14 @@ function createActivitySignup(activity, member) {
 
 function syncOrderActivitySignups(order, member) {
   if (!order || !member) return false
-  const activityIds = Array.from(new Set((order.items || []).map(activityIdFromOrderItem).filter(Boolean)))
+  if (order.signupSynced) return false
+  const activityIds = (order.items || []).reduce((result, item) => {
+    const activityId = activityIdFromOrderItem(item)
+    const count = Math.max(1, Number((item && item.count) || 1))
+    for (let index = 0; activityId && index < count; index += 1) result.push(activityId)
+    return result
+  }, [])
+  if (!activityIds.length) return false
   let changed = false
   activityIds.forEach((activityId) => {
     const activity = db.activities.find((item) => item.id === activityId)
@@ -812,6 +820,7 @@ function syncOrderActivitySignups(order, member) {
     activity.joined = joined + 1
     changed = true
   })
+  order.signupSynced = true
   return changed
 }
 

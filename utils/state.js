@@ -998,19 +998,10 @@ function syncPaidActivitySignups(cartItems, callback) {
     if (callback) callback()
     return
   }
-  let pending = activityIds.length
-  const done = () => {
-    pending -= 1
-    if (pending <= 0) {
-      fetchMySignups(() => {
-        fetchActivities(() => {
-          if (callback) callback()
-        })
-      })
-    }
-  }
-  activityIds.forEach((activityId) => {
-    addSignup(getActivity(activityId) || { id: activityId }, done)
+  fetchMySignups(() => {
+    fetchActivities(() => {
+      if (callback) callback()
+    })
   })
 }
 
@@ -3235,6 +3226,7 @@ function anonymizeActivitySignup(signup, index = 0) {
   const displayName = (signup && signup.displayName) || activitySignupDisplayName(signup)
   return {
     id: (signup && signup.id) || `signup-${index}`,
+    memberKey: (signup && (signup.memberKey || signup.memberId || signup.userId || signup.openid)) || '',
     avatarUrl: (signup && signup.avatarUrl) || '',
     avatarText: displayName.slice(0, 1),
     displayName

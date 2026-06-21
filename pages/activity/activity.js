@@ -1,4 +1,5 @@
 const state = require('../../utils/state')
+const { buildActivitySignupAvatars } = require('../../utils/activity-signup-avatars')
 const MAX_ACTIVITY_AVATARS = 10
 
 Page({
@@ -114,13 +115,7 @@ Page({
     })
   },
   buildSignupAvatars(signups) {
-    return (signups || [])
-      .slice(0, MAX_ACTIVITY_AVATARS)
-      .map((signup, index) => ({
-        id: signup.id || signup.memberId || `signup-avatar-${index}`,
-        avatarUrl: signup.avatarUrl || '',
-        avatarText: signup.avatarText || (signup.displayName || signup.nickname || '').slice(0, 1) || '人'
-      }))
+    return buildActivitySignupAvatars(signups, MAX_ACTIVITY_AVATARS)
   },
   dayLabel(key) {
     return {
