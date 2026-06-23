@@ -161,7 +161,7 @@
         </picker>
       </view>
       <view class="form-grid">
-        <input value="{{activityForm.price}}" type="number" placeholder="活动价格" data-field="price" bindinput="inputActivityField" />
+        <input value="{{activityForm.price}}" type="digit" placeholder="活动价格" data-field="price" bindinput="inputActivityField" />
         <input value="{{activityForm.remainingQuota}}" type="number" placeholder="剩余名额" data-field="remainingQuota" bindinput="inputActivityField" />
       </view>
       <input class="desc-input" value="{{activityForm.dayLabel}}" placeholder="日期标签，如 今天/明天/后天" data-field="dayLabel" bindinput="inputActivityField" />
