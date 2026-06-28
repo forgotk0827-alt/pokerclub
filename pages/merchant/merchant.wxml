@@ -284,7 +284,7 @@
       <view class="editor-title">手动调整余额</view>
       <view class="recharge-setting-grid">
         <input value="{{rechargeForm.memberKey}}" placeholder="会员ID" data-field="memberKey" bindinput="inputRechargeForm" />
-        <input value="{{rechargeForm.delta}}" type="digit" placeholder="调整金额" data-field="delta" bindinput="inputRechargeForm" />
+        <input value="{{rechargeForm.delta}}" type="text" placeholder="调整金额" data-field="delta" bindinput="inputRechargeForm" />
       </view>
       <input class="desc-input" value="{{rechargeForm.note}}" placeholder="调整备注" data-field="note" bindinput="inputRechargeForm" />
       <view class="dual-actions">

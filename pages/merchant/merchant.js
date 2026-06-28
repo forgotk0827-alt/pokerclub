@@ -1,6 +1,7 @@
 const state = require('../../utils/state')
 const config = require('../../utils/config')
 const { buildOrderDateSummary } = require('../../utils/merchant-order-filter')
+const { normalizeSignedAmountInput } = require('../../utils/amount-input')
 const fallbackReminderAudio = '/assets/new-order.wav'
 
 let speechPlugin = null
@@ -1625,7 +1626,8 @@ Page({
   },
   inputRechargeForm(event) {
     const field = event.currentTarget.dataset.field
-    this.setData({ [`rechargeForm.${field}`]: event.detail.value })
+    const value = field === 'delta' ? normalizeSignedAmountInput(event.detail.value) : event.detail.value
+    this.setData({ [`rechargeForm.${field}`]: value })
   },
   adjustRechargeBalance() {
     const key = String(this.data.rechargeForm.memberKey || '').trim()
