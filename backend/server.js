@@ -1462,6 +1462,9 @@ function tableDefinitions() {
     const filename = `table-${String(tableNo).padStart(3, '0')}.png`
     const relative = `/api/uploads/qrcodes/${filename}`
     const filePath = path.join(UPLOAD_ROOT, 'qrcodes', filename)
+    const exists = fs.existsSync(filePath)
+    const version = exists ? Math.floor(fs.statSync(filePath).mtimeMs) : 0
+    const versionedRelative = version ? `${relative}?v=${version}` : relative
     return {
       id: `table-${tableNo}`,
       tableNo,
@@ -1470,9 +1473,9 @@ function tableDefinitions() {
       storeName: store.shortName || store.name || storeId,
       scene: `t=${tableNo}`,
       page: 'pages/menu/menu',
-      url: `${PUBLIC_BASE_URL}${relative}`,
-      path: relative,
-      exists: fs.existsSync(filePath)
+      url: `${PUBLIC_BASE_URL}${versionedRelative}`,
+      path: versionedRelative,
+      exists
     }
   })
 }
