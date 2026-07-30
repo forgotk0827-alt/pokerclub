@@ -9,7 +9,7 @@ const menuSource = fs.readFileSync(path.join(root, 'pages/menu/menu.js'), 'utf8'
 
 assert(serverSource.includes("sendOk(res, publicCategories(url.searchParams.get('storeId')))"))
 assert(serverSource.includes('function publicCategories(storeId)'))
-assert(serverSource.includes('return db.categories.filter((item) => !item.storeId || item.storeId === id)'))
+assert(serverSource.includes('return sortedStoreList(db.categories, id)'))
 
 assert(stateSource.includes("const url = storeId ? `/api/categories?storeId=${encodeURIComponent(storeId)}` : '/api/categories'"))
 

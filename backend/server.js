@@ -1396,13 +1396,13 @@ function scopedStores(merchant) {
 }
 
 function scopedProducts(merchant) {
-  if (isSuperMerchant(merchant)) return db.products
-  return db.products.filter((item) => !item.storeId || item.storeId === merchant.storeId)
+  if (isSuperMerchant(merchant)) return sortedBySortOrder(db.products)
+  return sortedStoreList(db.products, merchant.storeId)
 }
 
 function scopedCategories(merchant) {
-  if (isSuperMerchant(merchant)) return db.categories
-  return db.categories.filter((item) => !item.storeId || item.storeId === merchant.storeId)
+  if (isSuperMerchant(merchant)) return sortedBySortOrder(db.categories)
+  return sortedStoreList(db.categories, merchant.storeId)
 }
 
 function scopedInventory(merchant) {
@@ -1504,14 +1504,14 @@ function isDefaultProduct(product) {
 
 function publicProducts(storeId) {
   const id = String(storeId || '').trim()
-  if (!id) return db.products
-  return db.products.filter((item) => isDefaultProduct(item) || item.storeId === id)
+  if (!id) return sortedBySortOrder(db.products)
+  return sortedStoreList(db.products, id)
 }
 
 function publicCategories(storeId) {
   const id = String(storeId || '').trim()
-  if (!id) return db.categories.filter((item) => !item.storeId)
-  return db.categories.filter((item) => !item.storeId || item.storeId === id)
+  if (!id) return sortedBySortOrder(db.categories.filter((item) => !item.storeId))
+  return sortedStoreList(db.categories, id)
 }
 
 function scopedMembers(merchant) {
@@ -2620,6 +2620,27 @@ function exportSummary(merchant) {
 function toSortOrder(value, fallback) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function compareSortOrder(left, right) {
+  const leftOrder = Number(left && left.sortOrder ? left.sortOrder : 0)
+  const rightOrder = Number(right && right.sortOrder ? right.sortOrder : 0)
+  if (leftOrder !== rightOrder) return leftOrder - rightOrder
+  const leftName = String(left && (left.name || left.title || '')).trim()
+  const rightName = String(right && (right.name || right.title || '')).trim()
+  return leftName.localeCompare(rightName)
+}
+
+function sortedBySortOrder(list) {
+  return (Array.isArray(list) ? list : []).slice().sort(compareSortOrder)
+}
+
+function sortedStoreList(list, storeId) {
+  const id = String(storeId || '').trim()
+  if (!id) return sortedBySortOrder(list)
+  const storeItems = (Array.isArray(list) ? list : []).filter((item) => item.storeId === id)
+  if (storeItems.length) return sortedBySortOrder(storeItems)
+  return sortedBySortOrder((Array.isArray(list) ? list : []).filter((item) => !item.storeId))
 }
 
 function normalizeLeaderboardList(list) {
