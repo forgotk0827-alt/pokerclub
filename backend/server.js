@@ -66,7 +66,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/merchant/upload') return await handleMerchantUpload(req, res)
 
     if (req.method === 'GET' && pathname === '/api/stores') return sendOk(res, db.stores)
-    if (req.method === 'GET' && pathname === '/api/categories') return sendOk(res, db.categories)
+    if (req.method === 'GET' && pathname === '/api/categories') return sendOk(res, publicCategories(url.searchParams.get('storeId')))
     if (req.method === 'GET' && pathname === '/api/products') return sendOk(res, publicProducts(url.searchParams.get('storeId')))
     if (req.method === 'GET' && pathname === '/api/activities') return sendOk(res, db.activities)
     if (req.method === 'GET' && match(pathname, '/api/activities/:id/signups')) return await handleGetActivitySignups(req, res, pathname)
@@ -1506,6 +1506,12 @@ function publicProducts(storeId) {
   const id = String(storeId || '').trim()
   if (!id) return db.products
   return db.products.filter((item) => isDefaultProduct(item) || item.storeId === id)
+}
+
+function publicCategories(storeId) {
+  const id = String(storeId || '').trim()
+  if (!id) return db.categories.filter((item) => !item.storeId)
+  return db.categories.filter((item) => !item.storeId || item.storeId === id)
 }
 
 function scopedMembers(merchant) {

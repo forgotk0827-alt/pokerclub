@@ -32,7 +32,7 @@ Page({
       store,
       tableContext: state.getTableContext(),
       products: visibleProducts,
-      categories: state.getProductCategories(visibleProducts, { includeEmpty: true }),
+      categories: state.getProductCategories(visibleProducts, { includeEmpty: true, storeId: store.id }),
       cartSummary: state.getCartSummary()
     })
     this.buildList()
@@ -46,7 +46,8 @@ Page({
       const inKeyword = !keyword || name.includes(keyword) || desc.includes(keyword)
       return inKeyword
     })
-    const categories = state.getProductCategories(visibleProducts, { includeEmpty: true })
+    const storeId = this.data.store ? this.data.store.id : ''
+    const categories = state.getProductCategories(visibleProducts, { includeEmpty: true, storeId })
     const activeCategory = categories.some((category) => category.id === this.data.activeCategory)
       ? this.data.activeCategory
       : (categories[0] && categories[0].id) || ''

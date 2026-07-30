@@ -1389,7 +1389,9 @@ function fetchStores(callback) {
 }
 
 function fetchCategories(callback) {
-  requestApi('/api/categories', 'GET', {}, (payload) => {
+  const storeId = String((getStore() || {}).id || '').trim()
+  const url = storeId ? `/api/categories?storeId=${encodeURIComponent(storeId)}` : '/api/categories'
+  requestApi(url, 'GET', {}, (payload) => {
     if (Array.isArray(payload)) {
       const saved = saveCategories(payload)
       if (callback) callback(saved)
