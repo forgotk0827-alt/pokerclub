@@ -800,45 +800,6 @@ input {
   height: 170rpx;
 }
 
-.group-qr-manager {
-  margin-top: 18rpx;
-  display: grid;
-  grid-template-columns: 240rpx minmax(0, 1fr);
-  gap: 18rpx;
-  align-items: stretch;
-}
-
-.group-qr-preview {
-  width: 240rpx;
-  height: 240rpx;
-  border-radius: 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-  border: 1rpx solid #e5e7eb;
-  overflow: hidden;
-}
-
-.group-qr-image {
-  width: 216rpx;
-  height: 216rpx;
-  display: block;
-}
-
-.group-qr-empty {
-  color: #9ca3af;
-  font-size: 24rpx;
-  font-weight: 900;
-}
-
-.group-qr-side {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
 .compact-actions {
   margin-top: 14rpx;
 }
