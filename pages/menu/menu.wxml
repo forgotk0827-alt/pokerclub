@@ -42,8 +42,8 @@
                     <view class="tag" wx:elif="{{!product.sale}}">售罄</view>
                   </view>
                   <view class="menu-desc" wx:if="{{product.desc && product.categoryId !== 'dishes'}}">{{product.desc}}</view>
-                  <view wx:if="{{product.points}}" class="points"><text>{{product.points}}</text> 积分兑换</view>
                   <view class="menu-price">¥{{product.price}}.00/<text>{{product.unit}}</text></view>
+                  <view wx:if="{{product.points}}" class="points"><text>{{product.points}}</text> 积分兑换</view>
                 </view>
                 <view class="menu-add {{!product.sale ? 'disabled' : ''}}" data-id="{{product.id}}" bindtap="addCart" aria-label="加入购物车">
                   <view class="plus-line plus-h"></view>

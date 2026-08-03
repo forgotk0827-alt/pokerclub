@@ -258,19 +258,23 @@
 }
 
 .points {
-  margin-top: 6rpx;
-  color: #a9a9a9;
-  font-size: 25rpx;
-  line-height: 31rpx;
-  font-weight: 800;
+  display: inline-block;
+  margin-top: 8rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  color: #b8a7d6;
+  background: rgba(139, 92, 246, 0.14);
+  font-size: 21rpx;
+  line-height: 28rpx;
+  font-weight: 700;
 }
 
 .points text {
-  margin-right: 10rpx;
-  color: #ef5b58;
-  font-size: 34rpx;
-  line-height: 38rpx;
-  font-weight: 900;
+  margin-right: 6rpx;
+  color: #c4b5fd;
+  font-size: 22rpx;
+  line-height: 28rpx;
+  font-weight: 800;
 }
 
 .menu-price {
@@ -404,7 +408,6 @@
   color: #aab3b6;
 }
 
-.points text,
 .menu-price {
   color: #f0c15a;
 }
@@ -475,7 +478,6 @@
   color: #c6b8dc;
 }
 
-.points text,
 .menu-price {
   color: #d8b4fe;
 }
