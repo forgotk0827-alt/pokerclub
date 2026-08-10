@@ -43,6 +43,7 @@ let userSessionId = `${Date.now()}-${Math.random()}`
 let pendingWechatLoginCallback = null
 let serverSyncInFlight = false
 let serverSyncCallbacks = []
+let runtimeOrdersCache = []
 
 function ensureSeed() {
   if (!wx.getStorageSync(KEYS.store)) wx.setStorageSync(KEYS.store, data.stores[0].id)
@@ -235,6 +236,7 @@ function clearUserSessionLocally() {
   guestSessionMember = null
   userSessionId = `${Date.now()}-${Math.random()}`
   pendingWechatLoginCallback = null
+  runtimeOrdersCache = []
   wx.removeStorageSync(KEYS.auth)
   wx.removeStorageSync(KEYS.member)
 }
@@ -1093,6 +1095,7 @@ function merchantLogin(username, password, callback) {
 }
 
 function clearMerchantSessionLocally() {
+  runtimeOrdersCache = []
   wx.removeStorageSync(KEYS.merchantAuth)
 }
 
@@ -2994,11 +2997,20 @@ function getOrders() {
   if (!canReadPrivateData()) {
     return []
   }
-  return wx.getStorageSync(KEYS.orders) || []
+  const stored = wx.getStorageSync(KEYS.orders)
+  if (Array.isArray(stored) && stored.length) return stored
+  if (Array.isArray(runtimeOrdersCache) && runtimeOrdersCache.length) return runtimeOrdersCache
+  return Array.isArray(stored) ? stored : []
 }
 
 function saveOrders(orders) {
-  wx.setStorageSync(KEYS.orders, orders)
+  const normalized = Array.isArray(orders) ? orders : []
+  runtimeOrdersCache = normalized
+  try {
+    wx.setStorageSync(KEYS.orders, normalized)
+  } catch (err) {
+    // Large merchant order payloads can exceed storage limits; keep runtime cache.
+  }
   return getOrders()
 }
 
