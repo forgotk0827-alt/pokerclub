@@ -1516,14 +1516,10 @@ function publicCategories(storeId) {
 
 function scopedMembers(merchant) {
   if (isSuperMerchant(merchant)) return db.members
-  const memberIds = new Set()
-  scopedList(db.orders, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  scopedList(db.signups, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  scopedList(db.cellar, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  scopedList(db.rechargeRecords, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  scopedList(db.pointLogs, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  scopedList(db.voucherLogs, merchant).forEach((item) => { if (item.memberId) memberIds.add(item.memberId) })
-  return db.members.filter((item) => memberIds.has(item.id))
+  return db.members.filter((item) => {
+    const ids = memberStoreIds(item.id)
+    return !ids.size || ids.has(merchant.storeId)
+  })
 }
 
 function verifyBearer(req) {

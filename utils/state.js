@@ -44,6 +44,7 @@ let pendingWechatLoginCallback = null
 let serverSyncInFlight = false
 let serverSyncCallbacks = []
 let runtimeOrdersCache = []
+let runtimeMerchantMembersCache = []
 
 function ensureSeed() {
   if (!wx.getStorageSync(KEYS.store)) wx.setStorageSync(KEYS.store, data.stores[0].id)
@@ -237,6 +238,7 @@ function clearUserSessionLocally() {
   userSessionId = `${Date.now()}-${Math.random()}`
   pendingWechatLoginCallback = null
   runtimeOrdersCache = []
+  runtimeMerchantMembersCache = []
   wx.removeStorageSync(KEYS.auth)
   wx.removeStorageSync(KEYS.member)
 }
@@ -1096,6 +1098,7 @@ function merchantLogin(username, password, callback) {
 
 function clearMerchantSessionLocally() {
   runtimeOrdersCache = []
+  runtimeMerchantMembersCache = []
   wx.removeStorageSync(KEYS.merchantAuth)
 }
 
@@ -2301,7 +2304,7 @@ function fetchMerchantBasics(callback) {
   }
   fetchMerchantList('/api/merchant/signups', getSignups, (list) => wx.setStorageSync(KEYS.signups, list), done)
   fetchMerchantList('/api/merchant/cellar', getCellar, (list) => wx.setStorageSync(KEYS.cellar, list), done)
-  fetchMerchantList('/api/merchant/members', getMemberList, (list) => wx.setStorageSync(KEYS.members, list), done)
+  fetchMerchantList('/api/merchant/members', getMemberList, saveMerchantMembers, done)
   fetchMerchantList('/api/merchant/recharge-records', getRechargeRecords, (list) => wx.setStorageSync(KEYS.rechargeRecords, list), done)
   fetchMerchantList('/api/merchant/point-logs', getPointLogs, (list) => wx.setStorageSync(KEYS.pointLogs, list), done)
 }
@@ -3594,6 +3597,17 @@ function syncMemberCache(member) {
   }
 }
 
+function saveMerchantMembers(members) {
+  const list = (Array.isArray(members) ? members : []).filter((item) => item && !item.isGuest)
+  runtimeMerchantMembersCache = list
+  try {
+    wx.setStorageSync(KEYS.members, list)
+  } catch (err) {
+    // Keep merchant member list available even if storage is full.
+  }
+  return getMemberList()
+}
+
 function fetchPointLogs(callback) {
   fetchMerchantList('/api/merchant/point-logs', getPointLogs, (list) => wx.setStorageSync(KEYS.pointLogs, list), callback)
 }
@@ -3901,6 +3915,9 @@ function fetchDataOverview(callback) {
 }
 
 function getMemberList() {
+  if (isMerchantContext() && Array.isArray(runtimeMerchantMembersCache) && runtimeMerchantMembersCache.length) {
+    return runtimeMerchantMembersCache
+  }
   return (wx.getStorageSync(KEYS.members) || []).filter((item) => item && !item.isGuest)
 }
 
