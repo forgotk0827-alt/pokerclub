@@ -962,6 +962,7 @@ function createOrderWithWechatPay(options = {}, callback) {
       }
       requestWechatPayment(payload.payment, (paid) => {
         if (!paid) {
+          requestApi(`/api/wechat/pay/order/${encodeURIComponent(payload.order.id)}/cancel`, 'POST', {}, () => {})
           if (callback) callback(null)
           return
         }

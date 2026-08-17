@@ -91,6 +91,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST' && match(pathname, '/api/cellar/:id/renew')) return await handleRenewCellar(req, res, pathname, user)
       if (req.method === 'POST' && pathname === '/api/signups') return await handleCreateSignup(req, res, user)
       if (req.method === 'POST' && pathname === '/api/wechat/pay/order') return await handleCreateOrderPayment(req, res, user)
+      if (req.method === 'POST' && match(pathname, '/api/wechat/pay/order/:id/cancel')) return await handleCancelOrderPayment(req, res, pathname, user)
       if (req.method === 'POST' && pathname === '/api/wechat/pay/recharge') return await handleCreateRechargePayment(req, res, user)
     }
 
@@ -517,10 +518,12 @@ async function handleCreateOrderPayment(req, res, user) {
   const voucherDiscount = 0
   const voucherCountUsed = 0
   const payableBeforeBalance = cashTotal
-  const balanceAvailable = Number(user.member.balance || 0)
+  const balanceReserved = pendingOrderReservations(user.member.id, 'balance')
+  const balanceAvailable = Math.max(0, Number(user.member.balance || 0) - balanceReserved)
   const balanceUsed = Math.max(0, Math.min(Number(body.balanceUsed || 0), balanceAvailable, payableBeforeBalance))
   const total = Math.max(0, payableBeforeBalance - balanceUsed)
-  const pointsAvailable = Number(user.member.points || 0)
+  const pointsReserved = pendingOrderReservations(user.member.id, 'points')
+  const pointsAvailable = Math.max(0, Number(user.member.points || 0) - pointsReserved)
   if (pointsUsed > pointsAvailable) throw httpError(400, '积分不足')
   const paymentType = total > 0
     ? (balanceUsed > 0 || pointsUsed > 0 ? 'mixed' : 'wechat')
@@ -545,6 +548,7 @@ async function handleCreateOrderPayment(req, res, user) {
     cashTotal,
     pointsUsed,
     pointsDeducted: false,
+    balanceDeducted: false,
     voucherDiscount,
     voucherCountUsed,
     voucherRuleName: String(body.voucherRuleName || '').trim(),
@@ -554,27 +558,9 @@ async function handleCreateOrderPayment(req, res, user) {
     createdAt: now()
   }
   db.orders.unshift(order)
-  if (balanceUsed > 0) {
-    user.member.balance = Math.max(0, balanceAvailable - balanceUsed)
-  }
-  if (pointsUsed > 0) {
-    user.member.points = Math.max(0, pointsAvailable - pointsUsed)
-    user.member.level = levelBySpend(user.member.totalSpent || 0, user.member.points)
-    order.pointsDeducted = true
-    db.pointLogs.unshift({
-      id: `PT${Date.now()}`,
-      memberId: user.member.id,
-      nickname: user.member.nickname,
-      delta: -pointsUsed,
-      reason: `订单积分兑换 ${order.id}`,
-      storeId: store.id,
-      storeName: store.shortName || store.name,
-      operator: '系统',
-      createdAt: now()
-    })
-  }
   await persist()
   if (total <= 0) {
+    commitOrderDeductions(order, user.member)
     order.payStatus = 'paid'
     order.status = '已支付'
     order.transactionId = `BALANCE${Date.now()}`
@@ -600,6 +586,24 @@ async function handleCreateOrderPayment(req, res, user) {
     attach: JSON.stringify({ type: 'order', id: order.id })
   })
   sendOk(res, { order, payment })
+}
+
+async function handleCancelOrderPayment(req, res, pathname, user) {
+  const { id } = params(pathname, '/api/wechat/pay/order/:id/cancel')
+  const order = findById(db.orders, id, '订单不存在')
+  if (order.memberId !== user.member.id) throw httpError(403, '无权取消该订单')
+  if (order.payStatus === 'paid') {
+    sendOk(res, order)
+    return
+  }
+  if (order.payStatus !== 'cancelled') {
+    refundLegacyPendingOrderDeductions(order, user.member)
+    order.payStatus = 'cancelled'
+    order.status = '已取消'
+    order.cancelledAt = now()
+    await persist()
+  }
+  sendOk(res, order)
 }
 
 async function handleCreateRechargePayment(req, res, user) {
@@ -824,11 +828,75 @@ function syncOrderActivitySignups(order, member) {
   return changed
 }
 
+function pendingOrderReservations(memberId, type) {
+  const field = type === 'points' ? 'pointsUsed' : 'balanceUsed'
+  return db.orders
+    .filter((item) => item.memberId === memberId && item.payStatus === 'pending' && item.status === '待支付')
+    .reduce((sum, item) => sum + Math.max(0, Number(item[field] || 0)), 0)
+}
+
+function commitOrderDeductions(order, member) {
+  if (!order || !member) return
+  if (Number(order.balanceUsed || 0) > 0 && !order.balanceDeducted) {
+    member.balance = Math.max(0, Number(member.balance || 0) - Number(order.balanceUsed || 0))
+    order.balanceDeducted = true
+  }
+  if (Number(order.pointsUsed || 0) > 0 && !order.pointsDeducted) {
+    const pointsUsed = Number(order.pointsUsed || 0)
+    member.points = Math.max(0, Number(member.points || 0) - pointsUsed)
+    member.level = levelBySpend(member.totalSpent || 0, member.points)
+    order.pointsDeducted = true
+    db.pointLogs.unshift({
+      id: `PT${Date.now()}`,
+      memberId: member.id,
+      nickname: member.nickname,
+      delta: -pointsUsed,
+      reason: `订单积分兑换 ${order.id}`,
+      storeId: order.storeId,
+      storeName: order.storeName,
+      operator: '系统',
+      createdAt: now()
+    })
+  }
+}
+
+function refundLegacyPendingOrderDeductions(order, member) {
+  // Orders created before deferred deductions were introduced already lack these flags.
+  if (!order || !member || order.legacyDeductionsRefunded) return
+  if (order.balanceDeducted === undefined && Number(order.balanceUsed || 0) > 0) {
+    member.balance = Number(member.balance || 0) + Number(order.balanceUsed || 0)
+  }
+  if (order.pointsDeducted === true && Number(order.pointsUsed || 0) > 0) {
+    member.points = Number(member.points || 0) + Number(order.pointsUsed || 0)
+    member.level = levelBySpend(member.totalSpent || 0, member.points)
+    db.pointLogs.unshift({
+      id: `PT${Date.now()}`,
+      memberId: member.id,
+      nickname: member.nickname,
+      delta: Number(order.pointsUsed || 0),
+      reason: `取消订单退回积分 ${order.id}`,
+      storeId: order.storeId,
+      storeName: order.storeName,
+      operator: '系统',
+      createdAt: now()
+    })
+  }
+  order.balanceDeducted = false
+  order.pointsDeducted = false
+  order.legacyDeductionsRefunded = true
+}
+
 async function handleOrderStatus(req, res, pathname, merchant) {
   const { id } = params(pathname, '/api/merchant/orders/:id/status')
   const body = await readJson(req)
   const order = findById(db.orders, id, '订单不存在')
   ensureMerchantStoreAccess(merchant, order.storeId)
+  if (body.status === '已取消' && order.payStatus !== 'paid') {
+    const member = db.members.find((item) => item.id === order.memberId)
+    refundLegacyPendingOrderDeductions(order, member)
+    order.payStatus = 'cancelled'
+    order.cancelledAt = now()
+  }
   order.status = body.status || order.status
   await persist()
   sendOk(res, order)
@@ -1859,6 +1927,7 @@ async function applyWechatPaySuccess(transaction) {
   if (order) {
     const member = db.members.find((item) => item.id === order.memberId)
     if (order.payStatus !== 'paid') {
+      if (member) commitOrderDeductions(order, member)
       order.payStatus = 'paid'
       order.status = '已支付'
       order.transactionId = transactionId
