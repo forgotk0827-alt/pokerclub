@@ -1584,10 +1584,9 @@ function publicCategories(storeId) {
 
 function scopedMembers(merchant) {
   if (isSuperMerchant(merchant)) return db.members
-  return db.members.filter((item) => {
-    const ids = memberStoreIds(item.id)
-    return !ids.size || ids.has(merchant.storeId)
-  })
+  // Member accounts are shared across stores. Store staff need the same member
+  // directory so a customer can be selected regardless of where they first used it.
+  return db.members
 }
 
 function verifyBearer(req) {
@@ -2557,8 +2556,10 @@ function normalizeVoucherNote(note) {
 }
 
 function voucherCountForRecharge(pack = {}, payAmount = 0) {
-  const explicit = Number(pack.voucherCount || 0)
-  if (explicit > 0) return explicit
+  if (Object.prototype.hasOwnProperty.call(pack, 'voucherCount')) {
+    const explicit = Number(pack.voucherCount)
+    if (Number.isFinite(explicit) && explicit >= 0) return explicit
+  }
   const amount = Number(payAmount || pack.payAmount || 0)
   if (amount >= 9000) return 80
   if (amount >= 3000) return 20
@@ -2568,9 +2569,8 @@ function voucherCountForRecharge(pack = {}, payAmount = 0) {
 
 function normalizeRechargePackages(packages) {
   const source = Array.isArray(packages) ? packages : []
-  const hasOldDefault = source.some((item) => ['pkg-999', 'pkg-2000'].includes(String(item && item.id || '')))
   const usable = source.filter((item) => Number(item && item.payAmount || 0) > 0 && Number(item && item.creditAmount || 0) > 0)
-  const list = hasOldDefault || !usable.length ? defaultRechargeSettings().packages : usable
+  const list = usable.length ? usable : defaultRechargeSettings().packages
   return list.map((item) => Object.assign({}, item, {
     payAmount: Number(item.payAmount || 0),
     creditAmount: Number(item.creditAmount || 0),

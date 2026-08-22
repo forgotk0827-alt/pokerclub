@@ -1,15 +1,7 @@
-function signupIdentity(signup, index = 0) {
-  if (!signup) return `signup-${index}`
-  return String(signup.memberKey || signup.memberId || signup.userId || signup.openid || signup.id || `signup-${index}`)
-}
-
 function buildActivitySignupAvatars(signups, limit = 10) {
-  const seen = new Set()
   const avatars = []
   ;(signups || []).forEach((signup, index) => {
-    const key = signupIdentity(signup, index)
-    if (seen.has(key)) return
-    seen.add(key)
+    const key = String((signup && signup.id) || `signup-${index}`)
     avatars.push({
       id: signup.id || key,
       avatarUrl: signup.avatarUrl || '',

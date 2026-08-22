@@ -9,5 +9,6 @@ const signups = [
 
 assert.deepStrictEqual(buildActivitySignupAvatars(signups, 10), [
   { id: 'SU1', avatarUrl: '/a.png', avatarText: '帅', displayName: '帅哥' },
+  { id: 'SU2', avatarUrl: '/a.png', avatarText: '帅', displayName: '帅哥' },
   { id: 'SU3', avatarUrl: '/b.png', avatarText: '美', displayName: '美女' }
 ])
