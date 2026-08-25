@@ -2201,7 +2201,7 @@ function normalizeActivity(activity, index = 0) {
     {
       id: `act-${Date.now()}-${index}`,
       title: '',
-      type: '国际扑克',
+      type: '锦标赛',
       date: '',
       dayLabel: '',
       location: fallbackStore.address || '',
@@ -2222,6 +2222,8 @@ function normalizeActivity(activity, index = 0) {
     },
     activity || {},
     {
+      title: String(activity && activity.title || '').replace(/国际扑克/g, '锦标赛'),
+      type: String(activity && activity.type || '锦标赛').replace(/国际扑克/g, '锦标赛'),
       date: rolledDate,
       dayLabel: inferredDayLabel,
       quota,

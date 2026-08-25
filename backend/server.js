@@ -1015,7 +1015,7 @@ async function handleSaveActivity(req, res, merchant) {
   const activity = upsert(db.activities, body, {
     id: `act-${Date.now()}`,
     title: '',
-    type: '国际扑克',
+    type: '锦标赛',
     date: '',
     dayLabel,
     location: '',
@@ -2491,7 +2491,11 @@ function normalizeActivities(activities) {
         environmentImage: '/assets/hero-bar.svg',
         resultImage: item.image || '/assets/activity-card.svg'
       },
-      item
+      item,
+      {
+        title: String(item.title || '').replace(/国际扑克/g, '锦标赛'),
+        type: String(item.type || '锦标赛').replace(/国际扑克/g, '锦标赛')
+      }
     )
   )
 }

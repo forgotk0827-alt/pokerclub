@@ -157,8 +157,8 @@ const products = [
 const activities = [
   {
     id: 'act-mtt-sun',
-    title: '国际扑克标准中型MTT邀请赛 - 周日',
-    type: '国际扑克',
+    title: '锦标赛标准中型MTT邀请赛 - 周日',
+    type: '锦标赛',
     date: '05月10日 (周日)20:40',
     dayLabel: '今天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',
@@ -172,8 +172,8 @@ const activities = [
   },
   {
     id: 'act-sng-sun',
-    title: '国际扑克SNG快速邀请赛-周日',
-    type: '国际扑克',
+    title: '锦标赛SNG快速邀请赛-周日',
+    type: '锦标赛',
     date: '05月10日 (周日)19:30',
     dayLabel: '今天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',
@@ -188,7 +188,7 @@ const activities = [
   {
     id: 'act-mtt-tue',
     title: '中扑院标准MTT复活邀请赛 - 周二',
-    type: '国际扑克',
+    type: '锦标赛',
     date: '05月12日 (周二)20:10',
     dayLabel: '明天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',

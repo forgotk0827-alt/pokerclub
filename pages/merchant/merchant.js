@@ -27,7 +27,7 @@ const emptyActivityForm = {
   id: '',
   storeId: '',
   title: '',
-  type: '国际扑克',
+  type: '锦标赛',
   date: '',
   dateDate: '',
   dateTime: '',
@@ -51,7 +51,7 @@ const emptyActivityForm = {
   resultImage: '/assets/activity-card.svg'
 }
 
-const activityTypeOptions = ['国际扑克', '掼蛋']
+const activityTypeOptions = ['锦标赛', '掼蛋']
 const merchantTabOptions = ['订单', '菜单管理', '活动管理', '充值', '酒水券管理', '数据管理', '会员管理', '桌码', '轮播条', '精彩呈现', '加入我们', '通用设置', '门店管理', '基础', '库存', '排行']
 const superAdminTabs = merchantTabOptions.concat('店员管理')
 const defaultStaffPermissions = ['订单', '活动管理', '基础']
@@ -1053,7 +1053,7 @@ Page({
     state.updateActivity({
       id: form.id,
       title,
-      type: String(form.type || '国际扑克').trim(),
+      type: String(form.type || '锦标赛').trim().replace(/国际扑克/g, '锦标赛'),
       date,
       dayLabel: String(form.dayLabel || '').trim(),
       storeId,
