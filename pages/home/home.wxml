@@ -79,22 +79,6 @@
     </button>
   </view>
 
-  <view class="section-title">桌游套餐</view>
-  <view class="product-list">
-    <view class="product-card card" wx:for="{{featured}}" wx:key="id">
-      <image class="product-img" src="{{item.image}}" mode="aspectFill" />
-      <view class="product-info">
-        <view class="product-name">{{item.name}}</view>
-        <view class="product-desc">{{item.desc}}</view>
-        <view class="product-price">¥{{item.price}}.00/<text>{{item.unit}}</text></view>
-      </view>
-      <view class="add-btn" data-id="{{item.id}}" bindtap="addCart">
-        <view class="plus-line plus-h"></view>
-        <view class="plus-line plus-v"></view>
-      </view>
-    </view>
-  </view>
-
   <view class="section-head">
     <view class="section-name">排行榜</view>
     <view class="section-more" bindtap="goLeaderboard">更多</view>
