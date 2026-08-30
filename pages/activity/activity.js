@@ -8,7 +8,7 @@ Page({
     selectedStoreId: '',
     selectedStoreName: '',
     dates: [],
-    types: [{ name: '全部' }, { name: '锦标赛' }, { name: '掼蛋' }],
+    types: [{ name: '全部' }, { name: '桌游' }],
     activeDay: 'all',
     activeType: '全部',
     activities: [],
@@ -42,7 +42,7 @@ Page({
         if (!selectedStoreId) return true
         return !item.storeId || item.storeId === selectedStoreId
       })
-    const typePriority = { '锦标赛': 1, '掼蛋': 2 }
+    const typePriority = { '桌游': 1 }
     const typeNames = Array.from(new Set(activities.map((item) => String(item.type || '').trim()).filter(Boolean)))
       .sort((a, b) => (typePriority[a] || 99) - (typePriority[b] || 99))
     const types = [{ name: '全部' }].concat(typeNames.map((name) => ({ name })))

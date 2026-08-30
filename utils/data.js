@@ -157,8 +157,8 @@ const products = [
 const activities = [
   {
     id: 'act-mtt-sun',
-    title: '锦标赛标准中型MTT邀请赛 - 周日',
-    type: '锦标赛',
+    title: '桌游标准中型MTT邀请赛 - 周日',
+    type: '桌游',
     date: '05月10日 (周日)20:40',
     dayLabel: '今天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',
@@ -172,8 +172,8 @@ const activities = [
   },
   {
     id: 'act-sng-sun',
-    title: '锦标赛SNG快速邀请赛-周日',
-    type: '锦标赛',
+    title: '桌游SNG快速邀请赛-周日',
+    type: '桌游',
     date: '05月10日 (周日)19:30',
     dayLabel: '今天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',
@@ -188,7 +188,7 @@ const activities = [
   {
     id: 'act-mtt-tue',
     title: '中扑院标准MTT复活邀请赛 - 周二',
-    type: '锦标赛',
+    type: '桌游',
     date: '05月12日 (周二)20:10',
     dayLabel: '明天',
     location: '江宁区东山街道上元大街江宁供销商厦1层',
@@ -203,7 +203,7 @@ const activities = [
   {
     id: 'act-eggs',
     title: '破壳派酒吧掼蛋友谊局',
-    type: '掼蛋',
+    type: '桌游',
     date: '05月13日 (周三)19:30',
     dayLabel: '后天',
     location: '新街口店扑克主题桌游区',

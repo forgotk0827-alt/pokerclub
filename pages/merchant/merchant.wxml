@@ -141,7 +141,7 @@
         <picker mode="selector" range="{{activityTypeOptions}}" value="{{activityTypeIndex}}" bindchange="selectActivityType">
           <view class="picker-input">{{activityForm.type || '请选择比赛类型'}}</view>
         </picker>
-        <input value="{{activityForm.type}}" placeholder="比赛类型，可填锦标赛/掼蛋等" data-field="type" bindinput="inputActivityField" />
+        <input value="{{activityForm.type}}" placeholder="比赛类型" data-field="type" bindinput="inputActivityField" />
       </view>
       <view class="muted-line">比赛地点：{{activityForm.location || '请选择门店后自动带出'}}</view>
       <view class="form-grid date-time-grid">

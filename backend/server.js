@@ -1011,11 +1011,12 @@ async function handleSaveActivity(req, res, merchant) {
 
 
   const body = applyMerchantStore(await readJson(req), merchant)
+  body.type = '桌游'
   const dayLabel = String(body.dayLabel || '').trim() || inferActivityDayLabel(body.date)
   const activity = upsert(db.activities, body, {
     id: `act-${Date.now()}`,
     title: '',
-    type: '锦标赛',
+    type: '桌游',
     date: '',
     dayLabel,
     location: '',
@@ -2493,8 +2494,8 @@ function normalizeActivities(activities) {
       },
       item,
       {
-        title: String(item.title || '').replace(/国际扑克/g, '锦标赛'),
-        type: String(item.type || '锦标赛').replace(/国际扑克/g, '锦标赛')
+        title: String(item.title || '').replace(/国际扑克/g, '桌游'),
+        type: '桌游'
       }
     )
   )
