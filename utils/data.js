@@ -24,7 +24,7 @@ const products = [
     id: 'pkg-mtt',
     categoryId: 'packages',
     name: '中型MTT复活套餐(每日仅限3次复活)',
-    desc: '任选酒水饮料一杯+1万记分牌',
+    desc: '任选酒水饮料一杯',
     price: 268,
     points: 0,
     unit: '份',

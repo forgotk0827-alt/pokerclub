@@ -2372,6 +2372,12 @@ function normalizeDbShape(raw) {
   next.activities = normalizeActivities(Array.isArray(next.activities) ? next.activities : [])
   next.categories = syncSeedList(next.categories, sourceData.categories, true, false)
   next.products = syncSeedList(next.products, sourceData.products, true, false)
+  next.products = next.products.map((item) => {
+    if (!item || typeof item !== 'object') return item
+    return Object.assign({}, item, {
+      desc: String(item.desc || '').replace(/[+＋]?\s*\d+[万千百十]?\s*[记積积]分牌/g, '').replace(/\s{2,}/g, ' ').trim()
+    })
+  })
   next.activities = syncSeedList(next.activities, normalizeActivities(sourceData.activities), true, false)
   next.inventory = syncInventoryList(next.inventory, next.products)
   const rechargeSettings = Object.assign({}, defaultRechargeSettings(), next.rechargeSettings || {})
