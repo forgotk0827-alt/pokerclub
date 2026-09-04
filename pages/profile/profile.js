@@ -228,11 +228,6 @@ Page({
       }
     })
   },
-  openVip() {
-    state.requireLogin('开通会员', () => {
-      wx.navigateTo({ url: '/pages/vip-upgrade/vip-upgrade' })
-    })
-  },
   goSignups() {
     state.requireLogin('查看报名记录', () => {
       wx.navigateTo({ url: '/pages/profile-signups/profile-signups' })
