@@ -1505,20 +1505,21 @@ function ensureMerchantMemberAccess(merchant, memberId) {
 function tableStoreId(tableNo) {
   const no = Number(tableNo || 0)
   if (no >= 1 && no <= 40) return 'jiangning'
-  if (no >= 41 && no <= 80) return 'xinjiekou'
-  if (no >= 81 && no <= 120) return thirdStoreId()
+  if (no >= 41 && no <= 80) return storeIdByNameOrFallback('雨花', 'store-1789367367416')
+  if (no >= 81 && no <= 120) return storeIdByNameOrFallback('浦口', 'store-1778602441625')
   return ''
 }
 
-function thirdStoreId() {
-  const ids = db && Array.isArray(db.stores) ? db.stores.map((item) => item.id) : sourceData.stores.map((item) => item.id)
-  return ids.find((id) => id !== 'jiangning' && id !== 'xinjiekou') || 'store-1778602441625'
+function storeIdByNameOrFallback(keyword, fallback) {
+  const stores = db && Array.isArray(db.stores) ? db.stores : sourceData.stores
+  const store = stores.find((item) => `${item.name || ''}${item.shortName || ''}`.includes(keyword))
+  return store ? store.id : fallback
 }
 
 function tableRangeByStoreId(storeId) {
   if (storeId === 'jiangning') return { start: 1, end: 40 }
-  if (storeId === 'xinjiekou') return { start: 41, end: 80 }
-  if (storeId === thirdStoreId()) return { start: 81, end: 120 }
+  if (storeId === storeIdByNameOrFallback('雨花', 'store-1789367367416') || storeId === 'xinjiekou') return { start: 41, end: 80 }
+  if (storeId === storeIdByNameOrFallback('浦口', 'store-1778602441625')) return { start: 81, end: 120 }
   return null
 }
 

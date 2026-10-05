@@ -5,6 +5,9 @@ Page({
     store: null,
     globalSettings: null,
     featured: [],
+    leaderboardTabs: state.leaderboardTabs,
+    activeRankType: 'weekly',
+    leaderboardList: [],
     avatarList: ['客', '客', '客', '客', '客'],
     cartSummary: { count: 0, total: 0 },
     nearestStorePromptVisible: false,
@@ -20,8 +23,10 @@ Page({
       this.resolveInitialStore(() => {
         state.fetchProducts(() => {
           state.fetchGlobalSettings((globalSettings) => {
-            this.setData({ globalSettings })
-            this.loadHome()
+            state.fetchPublicLeaderboard(() => {
+              this.setData({ globalSettings })
+              this.loadHome()
+            }, 'weekly')
           })
         })
       })
@@ -60,6 +65,17 @@ Page({
       store,
       featured: storeProducts.filter((item) => item.categoryId === 'packages' && item.sale).slice(0, 3),
       cartSummary: state.getCartSummary()
+    }, () => this.loadLeaderboardPreview())
+  },
+  loadLeaderboardPreview() {
+    this.setData({
+      leaderboardList: state.getLeaderboard(this.data.activeRankType).slice(0, 5)
+    })
+  },
+  switchRankType(event) {
+    const type = event.currentTarget.dataset.type || 'weekly'
+    this.setData({ activeRankType: type, leaderboardList: [] }, () => {
+      state.fetchPublicLeaderboard(() => this.loadLeaderboardPreview(), type)
     })
   },
   switchStore() {

@@ -1710,13 +1710,18 @@ Page({
     wx.showToast({ title: '\u8f6e\u64ad\u6761\u5df2\u53d1\u5e03', icon: 'success' })
   },
   saveShowcaseSettings() {
-    const next = state.saveGlobalSettings({
+    state.saveGlobalSettings({
       videoTitle: this.data.globalSettings.videoTitle,
       showcaseImages: this.data.globalSettings.showcaseImages,
       showcaseText: this.data.globalSettings.showcaseText
+    }, (saved, success) => {
+      if (!success || !saved) {
+        wx.showToast({ title: '发布失败，请重试', icon: 'none' })
+        return
+      }
+      this.setData({ globalSettings: saved })
+      wx.showToast({ title: '精彩呈现已发布', icon: 'success' })
     })
-    this.setData({ globalSettings: next })
-    wx.showToast({ title: '\u7cbe\u5f69\u5448\u73b0\u5df2\u53d1\u5e03', icon: 'success' })
   },
   saveJoinUsSettings() {
     const next = state.saveGlobalSettings({
